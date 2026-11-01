@@ -42,7 +42,7 @@ export interface InfoMessage {
 }
 export type InboundMessage = SetupMessage | PromptMessage | InterruptMessage | DtmfMessage | ErrorMessage | InfoMessage;
 
-export type OutboundMessage = { type: 'text'; token: string; last: boolean; interruptible?: boolean } | { type: 'end'; handoffData?: string };
+export type OutboundMessage = { type: 'text'; token: string; last: boolean; interruptible?: boolean } | { type: 'end'; handoffData?: string } | { type: 'hints'; hints: string };
 
 export interface Turn {
   role: 'caller' | 'agent' | 'system';
@@ -67,8 +67,12 @@ export interface SessionOptions {
   responder: Responder;
   tierFor: (from: string) => Tier;
   greeting: string;
+  /** Speech-recognition vocabulary sent to Twilio at session start (comma-separated). */
+  speechHints?: string;
   /** Called when the session ends, with the full transcript, for the inbox. */
   onEnd: (summary: SessionSummary) => void | Promise<void>;
+  /** Grace after a farewell before the agent hangs up (ms). */
+  farewellGraceMs?: number;
   now?: () => number;
   /** Test hook: schedule the cap with a custom timer. */
   setTimer?: (fn: () => void, ms: number) => { clear(): void };
@@ -87,6 +91,8 @@ export interface SessionSummary {
   endedBy: 'cap' | 'caller' | 'error' | 'agent';
   interruptions: number;
 }
+
+const FAREWELL = /\b(good\s?bye|bye|talk to you later|have a (good|nice) (day|one))\b[.!]?\s*$/i;
 
 export class RelaySession {
   private setup: SetupMessage | null = null;
@@ -146,6 +152,7 @@ export class RelaySession {
     this.startedMs = this.now();
     this.tier = this.o.tierFor(m.from);
     this.note('system', `call from ${m.from} to ${m.to}, tier ${this.tier.name}, cap ${this.tier.maxSeconds}s`);
+    if (this.o.speechHints) this.send({ type: 'hints', hints: this.o.speechHints });
     // The greeting is spoken by us, not by Twilio's welcomeGreeting, so it is in the transcript and always says what the agent is.
     this.say(this.o.greeting);
     this.capTimer = this.setTimer(() => void this.endForCap(), this.tier.maxSeconds * 1000);
@@ -170,6 +177,11 @@ export class RelaySession {
     }
     if (!ac.signal.aborted && !this.ended) this.send({ type: 'text', token: '', last: true });
     if (spoken) this.note('agent', spoken);
+    // A farewell from either side ends the call instead of leaving the line open until the cap.
+    if (!ac.signal.aborted && !this.ended && (FAREWELL.test(text) || FAREWELL.test(spoken))) {
+      this.endedBy = 'agent';
+      this.setTimer(() => void this.finish(), this.o.farewellGraceMs ?? 1500);
+    }
   }
 
   private say(text: string): void {
@@ -238,10 +250,28 @@ export class ScriptedResponder implements Responder {
  */
 export class LlmResponder implements Responder {
   constructor(
-    private readonly cfg: { baseUrl: string; apiKey: string; model: string; systemPrompt: string; maxTokens?: number; fetchImpl?: typeof fetch },
+    private readonly cfg: {
+      baseUrl: string;
+      apiKey: string;
+      model: string;
+      systemPrompt: string;
+      maxTokens?: number;
+      fetchImpl?: typeof fetch;
+      /** Live, checkable facts to ground every answer; fetched per turn, cached briefly by the provider. */
+      facts?: () => Promise<string>;
+    },
   ) {}
   async *respond({ transcript, callerText }: { transcript: Turn[]; callerText: string }): AsyncIterable<string> {
     const f = this.cfg.fetchImpl ?? fetch;
+    let system = this.cfg.systemPrompt;
+    if (this.cfg.facts) {
+      try {
+        const facts = await this.cfg.facts();
+        if (facts) system += `\n\nLIVE FACTS (the only numbers you may state; say them in plain spoken form, e.g. "39.4 million dollars"):\n${facts}\nIf a figure is not in LIVE FACTS, say you don't have it on this call and that it is on reserves dot a9n9 dot net. Never estimate or invent a number.`;
+      } catch {
+        system += '\n\nLIVE FACTS are unavailable right now: do not state any figures; point the caller to reserves dot a9n9 dot net.';
+      }
+    }
     const history = transcript
       .filter((t) => t.role !== 'system')
       .slice(-12)
@@ -249,7 +279,7 @@ export class LlmResponder implements Responder {
     const res = await f(`${this.cfg.baseUrl.replace(/\/$/, '')}/v1/chat/completions`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${this.cfg.apiKey}` },
-      body: JSON.stringify({ model: this.cfg.model, stream: true, max_tokens: this.cfg.maxTokens ?? 160, messages: [{ role: 'system', content: this.cfg.systemPrompt }, ...history, { role: 'user', content: callerText }] }),
+      body: JSON.stringify({ model: this.cfg.model, stream: true, max_tokens: this.cfg.maxTokens ?? 160, messages: [{ role: 'system', content: system }, ...history, { role: 'user', content: callerText }] }),
       signal: AbortSignal.timeout(20_000),
     });
     if (!res.ok || !res.body) throw new Error(`llm ${res.status}`);

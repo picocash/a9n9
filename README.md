@@ -13,8 +13,7 @@ tab; this repo holds the code.
 |---|---|---|---|
 | Email, in and out | `services/email-worker` | Cloudflare Worker (Email Routing + Email Sending, R2, D1) | tested locally in Miniflare |
 | Inbox (all channels land here) | `services/inbox` | Node on the home box, `:8810` | tested locally |
-| Voice calls | `services/voice` | Node on the home box, `:8820`; Twilio ConversationRelay | tested in simulation |
-| SMS | — | Twilio Messaging on the same number | next |
+| Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio ConversationRelay + Messaging on one number | tested in simulation |
 | Procurement, event store, registry, probe, … | — | | planned |
 
 ## Conventions
@@ -22,7 +21,7 @@ tab; this repo holds the code.
 - `npm install` and `npm run typecheck` / `npm test` from the repo root (npm workspaces).
 - Secrets never live in the repo: production secrets go in `~/a9n9/secrets/*.env` (mode 600) on the home box, Worker secrets via `wrangler secret put`, local dev values in gitignored `.dev.vars`.
 - Every channel adapter posts to the inbox as a signed webhook (`x-a9n9-signature: sha256=<hmac>` over the raw body) and is idempotent by event id.
-- Public hostnames are added through the household Cloudflare Tunnel (per-service: `voice.a9n9.net → 10.0.1.101:8820`, and so on).
+- Public hostnames are added through the household Cloudflare Tunnel (one per service: `phone.a9n9.net → 10.0.1.101:8820`, and so on).
 
 ## Running locally
 
@@ -35,8 +34,8 @@ cd services/email-worker && npx wrangler d1 migrations apply a9n9-mail --local
 npx wrangler dev --local --port 8800 --var INBOX_WEBHOOK_URL:http://127.0.0.1:8810/hooks/email
 curl -X POST 'http://127.0.0.1:8800/cdn-cgi/local/email?from=a@b.c&to=agent@a9n9.net' --data-binary @message.eml
 
-# voice (scripted responder, signature checks off)
-cd services/voice && VOICE_SKIP_SIGNATURE=1 npm run dev
+# phone: voice + SMS (scripted responder, signature checks off)
+cd services/phone && PHONE_SKIP_SIGNATURE=1 npm run dev
 ```
 
 Licensed under Apache-2.0.

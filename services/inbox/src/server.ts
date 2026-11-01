@@ -99,7 +99,7 @@ const server = createServer(async (req, res) => {
     if (url.pathname.startsWith('/v1/')) {
       if (req.headers.authorization !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' });
       if (url.pathname === '/v1/events' && req.method === 'GET') return send(res, 200, { events: await list(Math.min(500, Number(url.searchParams.get('limit') ?? 50))) });
-      const one = url.pathname.match(/^\/v1\/events\/([a-z]+)\/([0-9a-zA-Z_-]{1,64})$/);
+      const one = url.pathname.match(/^\/v1\/events\/([a-z]+)\/([0-9a-zA-Z_:.-]{1,80})$/);
       if (one && req.method === 'GET') {
         try {
           return send(res, 200, JSON.parse(await readFile(join(DATA, 'events', one[1]!, `${one[2]}.json`), 'utf8')));

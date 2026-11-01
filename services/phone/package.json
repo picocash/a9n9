@@ -1,11 +1,11 @@
 {
-  "name": "@a9n9/voice",
+  "name": "@a9n9/phone",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "Voice channel for a9n9 agents: Twilio ConversationRelay websocket server with a pluggable responder, call-length caps by tier, and transcript events to the inbox.",
+  "description": "Phone channel for a9n9 agents on one Twilio number: voice through ConversationRelay (streamed replies, call caps by tier) and SMS (inbound webhook, outbound Messaging API, delivery status), both posting signed events to the inbox.",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",

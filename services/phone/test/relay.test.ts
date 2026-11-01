@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import WebSocket from 'ws';
 import { RelaySession, ScriptedResponder, type OutboundMessage, type SessionSummary } from '../src/relay.js';
-import { configFromEnv, createVoiceServer, twiml } from '../src/server.js';
+import { configFromEnv, createPhoneServer, twiml } from '../src/server.js';
 
 const setup = { type: 'setup', sessionId: 'VX1', callSid: 'CA1', from: '+15551234567', to: '+15557654321' };
 
@@ -75,11 +75,11 @@ describe('RelaySession', () => {
   });
 });
 
-describe('voice server', () => {
+describe('phone server', () => {
   let inbox: Server;
   let inboxPort = 0;
   const received: Array<{ sig: string; body: string }> = [];
-  let voice: ReturnType<typeof createVoiceServer>;
+  let voice: ReturnType<typeof createPhoneServer>;
   let voicePort = 0;
 
   beforeAll(async () => {
@@ -87,9 +87,9 @@ describe('voice server', () => {
     inbox.listen(0, '127.0.0.1');
     await once(inbox, 'listening');
     inboxPort = (inbox.address() as { port: number }).port;
-    const cfg = configFromEnv({ VOICE_SKIP_SIGNATURE: '1', PUBLIC_HOST: 'voice.a9n9.net', INBOX_URL: `http://127.0.0.1:${inboxPort}`, INBOX_WEBHOOK_SECRET: 'sek', VOICE_MAX_SECONDS_STRANGER: '1' });
+    const cfg = configFromEnv({ PHONE_SKIP_SIGNATURE: '1', PUBLIC_HOST: 'voice.a9n9.net', INBOX_URL: `http://127.0.0.1:${inboxPort}`, INBOX_WEBHOOK_SECRET: 'sek', VOICE_MAX_SECONDS_STRANGER: '1' });
     cfg.log = () => {};
-    voice = createVoiceServer(cfg);
+    voice = createPhoneServer(cfg);
     voice.server.listen(0, '127.0.0.1');
     await once(voice.server, 'listening');
     voicePort = (voice.server.address() as { port: number }).port;
@@ -108,7 +108,7 @@ describe('voice server', () => {
   it('rejects an unsigned voice webhook when signature checking is on', async () => {
     const cfg = configFromEnv({ TWILIO_AUTH_TOKEN: 'tok', PUBLIC_HOST: 'voice.a9n9.net' });
     cfg.log = () => {};
-    const strict = createVoiceServer(cfg);
+    const strict = createPhoneServer(cfg);
     strict.server.listen(0, '127.0.0.1');
     await once(strict.server, 'listening');
     const port = (strict.server.address() as { port: number }).port;
@@ -126,8 +126,9 @@ describe('voice server', () => {
     ws.send(JSON.stringify(setup));
     ws.send(JSON.stringify({ type: 'prompt', voicePrompt: 'Are you a human?', lang: 'en-US', last: true }));
     await once(ws, 'close'); // the 1-second stranger cap ends the call
-    expect(msgs[0]!.type).toBe('text');
-    expect((msgs[0] as { token: string }).token).toMatch(/autonomous software agent operated by a9n9/);
+    expect(msgs[0]!.type).toBe('hints'); // recognition vocabulary goes out first
+    expect(msgs[1]!.type).toBe('text');
+    expect((msgs[1] as { token: string }).token).toMatch(/autonomous software agent operated by a9n9/);
     const spoken = msgs.filter((m) => m.type === 'text').map((m) => (m as { token: string }).token).join('');
     expect(spoken).toMatch(/not a person/);
     expect(msgs.at(-1)).toEqual({ type: 'end' });
