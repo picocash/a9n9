@@ -25,9 +25,12 @@ Every event has these fields. Adapters fill them; the inbox adds `receivedAt`.
 | `sms.received` | phone | from, to, body, media, origin city | inbound correspondence |
 | `sms.sent` | phone | to, body, provider sid | the agent's reply (self-report until the status arrives) |
 | `sms.status` | phone (Twilio callback) | message sid, status, error code | delivery proof or failure |
+| `nostr.mention` | nostr | author pubkey/npub, event id, text, thread id | public correspondence on an open network |
+| `nostr.dm` | nostr | author, text, which encryption (NIP-04 or NIP-17 gift wrap), rumor id for NIP-17 | private correspondence |
+| `nostr.post` / `nostr.dm.sent` | nostr | event id, text, relays that accepted it | the agent's own output (self-report; the relays hold the signed copy) |
 | `email.received` | email worker | envelope, parsed headers, text, DKIM/SPF/DMARC verdicts, R2 key of the raw MIME | inbound correspondence with authentication result |
 
-Planned: `email.sent`, `telegram.message`, `nostr.dm`, `web.chat`, `x.post`,
+Planned: `email.sent`, `telegram.message`, `web.chat`, `x.post`,
 `x.mention`, `money.receipt` (a settled picocash or Stripe payment),
 `money.spend` (a metered tool call or rent), `agent.focus` (a declared focus
 or a change to it, with reasoning), `agent.review` (the daily evidence

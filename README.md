@@ -11,9 +11,10 @@ tab; this repo holds the code.
 
 | Service | Directory | Runs | Status |
 |---|---|---|---|
-| Email, in and out | `services/email-worker` | Cloudflare Worker (Email Routing + Email Sending, R2, D1) | tested locally in Miniflare |
-| Inbox (all channels land here) | `services/inbox` | Node on the home box, `:8810` | tested locally |
-| Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio ConversationRelay + Messaging on one number | tested in simulation |
+| Email, in and out | `services/email-worker` | Cloudflare Worker (Email Routing + Email Sending, R2, D1) | confirmed live on a9n9.net |
+| Inbox (all channels land here) | `services/inbox` | Node on the home box, `:8810` | live at inbox.a9n9.net |
+| Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio Media Streams (Grok speech-to-speech) + Messaging on one number | voice confirmed live; SMS inbound confirmed, outbound awaiting 10DLC |
+| Nostr: mentions and DMs | `services/nostr` | Node on the home box, `:8830` (local API only); one keypair, four public relays | profile + first note live |
 | Procurement, event store, registry, probe, … | — | | planned |
 
 ## Conventions
@@ -36,6 +37,10 @@ curl -X POST 'http://127.0.0.1:8800/cdn-cgi/local/email?from=a@b.c&to=agent@a9n9
 
 # phone: voice + SMS (scripted responder, signature checks off)
 cd services/phone && PHONE_SKIP_SIGNATURE=1 npm run dev
+
+# nostr: publishes the profile on start, listens for mentions/DMs, local API for posting
+cd services/nostr && NOSTR_NSEC=<nsec> NOSTR_API_TOKEN=dev INBOX_URL=http://127.0.0.1:8810 INBOX_WEBHOOK_SECRET=dev npm run dev
+curl -X POST localhost:8830/v1/notes -H 'authorization: Bearer dev' -H 'content-type: application/json' -d '{"text":"hello"}'
 ```
 
 Licensed under Apache-2.0.

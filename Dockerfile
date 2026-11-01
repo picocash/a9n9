@@ -5,10 +5,12 @@ COPY package.json package-lock.json tsconfig.base.json ./
 COPY services/inbox/package.json services/inbox/
 COPY services/phone/package.json services/phone/
 COPY services/email-worker/package.json services/email-worker/
+COPY services/nostr/package.json services/nostr/
 RUN npm ci --no-audit --no-fund
 COPY services/inbox services/inbox
 COPY services/phone services/phone
-RUN npm run build -w @a9n9/inbox && npm run build -w @a9n9/phone
+COPY services/nostr services/nostr
+RUN npm run build -w @a9n9/inbox && npm run build -w @a9n9/phone && npm run build -w @a9n9/nostr
 
 FROM node:22-alpine
 WORKDIR /app
@@ -17,7 +19,9 @@ COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/services/inbox/package.json services/inbox/
 COPY --from=build /app/services/phone/package.json services/phone/
 COPY --from=build /app/services/email-worker/package.json services/email-worker/
+COPY --from=build /app/services/nostr/package.json services/nostr/
 RUN npm ci --omit=dev --no-audit --no-fund && npm cache clean --force
 COPY --from=build /app/services/inbox/dist services/inbox/dist
 COPY --from=build /app/services/phone/dist services/phone/dist
+COPY --from=build /app/services/nostr/dist services/nostr/dist
 USER node
