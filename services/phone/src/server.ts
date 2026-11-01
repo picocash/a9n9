@@ -20,7 +20,9 @@
 import { createHmac } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import twilio from 'twilio';
-import { WebSocketServer, type WebSocket } from 'ws';
+import { WebSocketServer } from 'ws';
+import WebSocket from 'ws';
+import { GROK_VOICE_INSTRUCTIONS, GrokVoiceSession } from './grok-voice.js';
 import { LEGAL_PAGES } from './legal.js';
 import { LlmResponder, RelaySession, ScriptedResponder, type Responder, type SessionSummary, type Tier } from './relay.js';
 
@@ -43,6 +45,13 @@ export interface PhoneConfig {
   maxSecondsStranger: number;
   knownCallers: Set<string>;
   speechHints: string;
+  /** 'relay' = Twilio ConversationRelay (STT/TTS by Twilio, text model); 'grok' = xAI speech-to-speech over Media Streams. */
+  voiceEngine: 'relay' | 'grok';
+  xaiRealtimeUrl: string;
+  xaiApiKey: string;
+  xaiVoice: string;
+  grokInstructions: string;
+  facts: () => Promise<string>;
   smsDailyCap: number;
   responder: Responder;
   fetchImpl: typeof fetch;
@@ -79,6 +88,7 @@ export function reservesFacts(url: string, fetchImpl: typeof fetch = fetch, ttlM
 export const DEFAULT_SPEECH_HINTS = 'Tempo, pathUSD, path USD, OUSD, USDB, USDS, DLUSD, USDC, USDT, stablecoin, reserves, issuer, Bridge, a9n9, agent';
 
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig {
+  const facts = reservesFacts(env.RESERVES_URL ?? 'https://reserves.a9n9.net');
   const responder: Responder = env.LLM_BASE_URL
     ? new LlmResponder({
         baseUrl: env.LLM_BASE_URL,
@@ -91,7 +101,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig
           'If the caller says only a filler like "yeah", "okay", "hello" or "thanks", answer with a few words at most; do not ask "how can I help" more than once in a call. If they ask for something outside your work, say so briefly and offer what you can do instead.',
           'Numbers: only ever state figures that appear in LIVE FACTS below. Never estimate, round from memory, or guess.',
         ].join(' '),
-        facts: reservesFacts(env.RESERVES_URL ?? 'https://reserves.a9n9.net'),
+        facts,
       })
     : new ScriptedResponder([
         { match: /who|what are you|human|robot|bot/i, reply: "I'm an autonomous software agent operated by a9n9. I'm not a person, and this call is recorded in my public log." },
@@ -117,6 +127,12 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig
     maxSecondsStranger: Number(env.VOICE_MAX_SECONDS_STRANGER ?? 120),
     knownCallers: new Set((env.VOICE_KNOWN_CALLERS ?? '').split(',').map((s) => s.trim()).filter(Boolean)),
     speechHints: env.SPEECH_HINTS ?? DEFAULT_SPEECH_HINTS,
+    voiceEngine: env.VOICE_ENGINE === 'grok' ? 'grok' : 'relay',
+    xaiRealtimeUrl: env.XAI_REALTIME_URL ?? 'wss://api.x.ai/v1/realtime',
+    xaiApiKey: env.XAI_API_KEY ?? '',
+    xaiVoice: env.XAI_VOICE ?? 'ara',
+    grokInstructions: env.AGENT_VOICE_PROMPT_GROK ?? GROK_VOICE_INSTRUCTIONS,
+    facts,
     smsDailyCap: Number(env.SMS_DAILY_CAP ?? 100),
     responder,
     fetchImpl: fetch,
@@ -126,9 +142,14 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig
 
 export const escapeXml = (s: string) => s.replace(/[<>&'"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;' })[c]!);
 
-export function twiml(cfg: PhoneConfig): string {
-  const wss = `wss://${cfg.publicHost}/relay`;
+export function twiml(cfg: PhoneConfig, call: { from?: string | undefined; to?: string | undefined } = {}): string {
   const action = `https://${cfg.publicHost}/twilio/ended`;
+  if (cfg.voiceEngine === 'grok') {
+    // Media Streams carry raw μ-law both ways; from/to ride as custom parameters (the start event has neither).
+    const wss = `wss://${cfg.publicHost}/media`;
+    return `<?xml version="1.0" encoding="UTF-8"?><Response><Connect action="${escapeXml(action)}"><Stream url="${escapeXml(wss)}"><Parameter name="from" value="${escapeXml(call.from ?? '')}"/><Parameter name="to" value="${escapeXml(call.to ?? '')}"/></Stream></Connect></Response>`;
+  }
+  const wss = `wss://${cfg.publicHost}/relay`;
   // No welcomeGreeting: the session speaks the greeting itself so it is in the transcript.
   return `<?xml version="1.0" encoding="UTF-8"?><Response><Connect action="${escapeXml(action)}"><ConversationRelay url="${escapeXml(wss)}" interruptible="speech" dtmfDetection="true" /></Connect></Response>`;
 }
@@ -228,8 +249,8 @@ export function createPhoneServer(cfg: PhoneConfig) {
               void postEvent(cfg, 'voice', { type: 'voice.call', id: params.CallSid ?? `machine-${Date.now()}`, from: params.From ?? '', to: params.To ?? '', answeredBy, endedBy: 'machine', turns: [{ role: 'agent', text: MACHINE_MESSAGE, at: new Date().toISOString() }], seconds: 0 });
               return send(200, `<?xml version="1.0" encoding="UTF-8"?><Response><Pause length="1"/><Say>${escapeXml(MACHINE_MESSAGE)}</Say><Hangup/></Response>`, 'text/xml');
             }
-            cfg.log(`incoming call ${params.CallSid ?? '?'} from ${params.From ?? '?'}${answeredBy ? ` answered by ${answeredBy}` : ''}`);
-            return send(200, twiml(cfg), 'text/xml');
+            cfg.log(`incoming call ${params.CallSid ?? '?'} from ${params.From ?? '?'}${answeredBy ? ` answered by ${answeredBy}` : ''} engine=${cfg.voiceEngine}`);
+            return send(200, twiml(cfg, { from: params.From, to: params.To }), 'text/xml');
           }
           case '/twilio/ended':
             cfg.log(`voice session ended ${params.CallSid ?? '?'} status=${params.SessionStatus ?? '?'} duration=${params.SessionDuration ?? '?'}`);
@@ -280,22 +301,39 @@ export function createPhoneServer(cfg: PhoneConfig) {
   const wss = new WebSocketServer({ noServer: true });
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
-    if (url.pathname !== '/relay') { socket.destroy(); return; }
-    if (!validSignature(cfg, req, {})) { cfg.log(`rejected unsigned relay handshake from ${req.socket.remoteAddress}`); socket.write('HTTP/1.1 403 Forbidden\r\n\r\n'); socket.destroy(); return; }
+    if (url.pathname !== '/relay' && url.pathname !== '/media') { socket.destroy(); return; }
+    if (!validSignature(cfg, req, {})) { cfg.log(`rejected unsigned ${url.pathname} handshake from ${req.socket.remoteAddress}`); socket.write('HTTP/1.1 403 Forbidden\r\n\r\n'); socket.destroy(); return; }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
-  wss.on('connection', (ws: WebSocket) => {
+  const onEnd = async (summary: SessionSummary) => {
+    cfg.log(`call ${summary.callSid} ended by ${summary.endedBy} after ${summary.seconds}s, ${summary.turns.length} turns`);
+    const status = await postEvent(cfg, 'voice', { type: 'voice.call', id: summary.callSid, ...summary });
+    cfg.log(`inbox ${status} for call ${summary.callSid}`);
+  };
+
+  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+    const path = new URL(req.url ?? '/', 'http://x').pathname;
+    if (path === '/media') {
+      new GrokVoiceSession(ws, {
+        realtimeUrl: cfg.xaiRealtimeUrl,
+        apiKey: cfg.xaiApiKey,
+        voice: cfg.xaiVoice,
+        instructions: cfg.grokInstructions,
+        tierFor,
+        facts: cfg.facts,
+        onEnd,
+        connect: (u, headers) => new WebSocket(u, { headers }),
+        log: cfg.log,
+      });
+      return;
+    }
     const session = new RelaySession((m) => { if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(m)); if (m.type === 'end') setTimeout(() => ws.close(), 500); }, {
       responder: cfg.responder,
       tierFor,
       greeting: cfg.greeting,
       speechHints: cfg.speechHints,
-      onEnd: async (summary: SessionSummary) => {
-        cfg.log(`call ${summary.callSid} ended by ${summary.endedBy} after ${summary.seconds}s, ${summary.turns.length} turns`);
-        const status = await postEvent(cfg, 'voice', { type: 'voice.call', id: summary.callSid, ...summary });
-        cfg.log(`inbox ${status} for call ${summary.callSid}`);
-      },
+      onEnd,
     });
     ws.on('message', (data) => void session.handle(data.toString()));
     ws.on('close', () => void session.close('caller'));
@@ -310,7 +348,7 @@ if (isMain) {
   const cfg = configFromEnv();
   if (!cfg.authToken && !cfg.skipSignature) { console.error('TWILIO_AUTH_TOKEN is required (or PHONE_SKIP_SIGNATURE=1 for local tests)'); process.exit(2); }
   const { server } = createPhoneServer(cfg);
-  server.listen(cfg.port, cfg.host, () => cfg.log(`listening on http://${cfg.host}:${cfg.port}; public https://${cfg.publicHost}; sender ${cfg.messagingServiceSid || cfg.phoneNumber || 'unset'}; responder ${cfg.responder.constructor.name}`));
+  server.listen(cfg.port, cfg.host, () => cfg.log(`listening on http://${cfg.host}:${cfg.port}; public https://${cfg.publicHost}; sender ${cfg.messagingServiceSid || cfg.phoneNumber || 'unset'}; responder ${cfg.responder.constructor.name}; engine ${cfg.voiceEngine}${cfg.voiceEngine === 'grok' ? ` (${cfg.xaiVoice})` : ''}`));
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => server.close(() => process.exit(0)));
 }
 
