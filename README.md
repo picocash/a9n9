@@ -19,7 +19,8 @@ tab; this repo holds the code.
 | Agent page and web chat | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index | running; hostname pending |
 | Daily ledger anchoring | `services/anchor` | Node on the home box; `transferWithMemo` of the day's digest on Tempo mainnet (chain 4217) | dry run until the wallet is funded |
 | Off-box probe and paging | `services/email-worker` (cron) | Cloudflare cron every 5 min; pages by email once on sustained failure and on recovery; `GET /v1/probe` | deployed |
-| Procurement, registry, … | — | | planned |
+| Procurement: tools as picocash merchants | `services/tools` | Node on the home box, `:8860`; Parallel.ai search and Brave web search behind an MPP `charge` gate (settle-first, hosted testnet mint) | Parallel search bought end to end with picocash; Brave awaits its key |
+| Registry, … | — | | planned |
 
 ## Conventions
 

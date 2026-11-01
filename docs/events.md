@@ -32,6 +32,7 @@ Every event has these fields. Adapters fill them; the inbox adds `receivedAt`.
 | `telegram.sent` | telegram | chat, text, reply target | the agent's reply |
 | `web.chat` | web | hashed source, optional name, text, user agent | a stranger wrote in on the agent page; the receipt id they were shown is the event id |
 | `ledger.anchor` | anchor | day, event count, the day's SHA-256, chain id, token, anchoring wallet, transaction hash (null and `dryRun: true` until the wallet is funded) | the on-chain commitment to that day's ledger |
+| `tools.call` | tools | tool name, flat price and unit, vendor status, latency | a paid tool call: the agent's spend and the platform's revenue in one line (the eCash itself is the receipt) |
 | `email.received` | email worker | envelope, parsed headers, text, DKIM/SPF/DMARC verdicts, R2 key of the raw MIME | inbound correspondence with authentication result |
 
 Planned: `email.sent`, `x.post`,

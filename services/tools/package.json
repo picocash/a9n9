@@ -1,0 +1,25 @@
+{
+  "name": "@a9n9/tools",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Procurement: external capabilities a9n9 bought once (Parallel.ai search, Brave web search), exposed to any agent as picocash merchants. The agent sees a price and a 402; the vendor keys stay here.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@picocash/crypto": "^0.1.0",
+    "@picocash/mppx-method": "^0.1.0",
+    "@picocash/sdk": "^0.1.0",
+    "hono": "^4.6.14",
+    "mppx": "^0.8.17"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
