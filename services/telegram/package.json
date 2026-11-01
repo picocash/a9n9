@@ -1,0 +1,17 @@
+{
+  "name": "@a9n9/telegram",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Telegram channel for a9n9 agents (also the owner channel): Bot API long polling into signed inbox events, owner commands bound to one user id, outbound messages through a local API.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
