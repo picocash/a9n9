@@ -28,9 +28,12 @@ Every event has these fields. Adapters fill them; the inbox adds `receivedAt`.
 | `nostr.mention` | nostr | author pubkey/npub, event id, text, thread id | public correspondence on an open network |
 | `nostr.dm` | nostr | author, text, which encryption (NIP-04 or NIP-17 gift wrap), rumor id for NIP-17 | private correspondence |
 | `nostr.post` / `nostr.dm.sent` | nostr | event id, text, relays that accepted it | the agent's own output (self-report; the relays hold the signed copy) |
+| `telegram.message` | telegram | chat, sender, text, attachments, isOwner, owner command (only from the owner id; others' commands marked ignored) | correspondence; owner instructions are evidence too |
+| `telegram.sent` | telegram | chat, text, reply target | the agent's reply |
+| `web.chat` | web | hashed source, optional name, text, user agent | a stranger wrote in on the agent page; the receipt id they were shown is the event id |
 | `email.received` | email worker | envelope, parsed headers, text, DKIM/SPF/DMARC verdicts, R2 key of the raw MIME | inbound correspondence with authentication result |
 
-Planned: `email.sent`, `telegram.message`, `web.chat`, `x.post`,
+Planned: `email.sent`, `x.post`,
 `x.mention`, `money.receipt` (a settled picocash or Stripe payment),
 `money.spend` (a metered tool call or rent), `agent.focus` (a declared focus
 or a change to it, with reasoning), `agent.review` (the daily evidence

@@ -14,8 +14,10 @@ tab; this repo holds the code.
 | Email, in and out | `services/email-worker` | Cloudflare Worker (Email Routing + Email Sending, R2, D1) | confirmed live on a9n9.net |
 | Inbox (all channels land here) | `services/inbox` | Node on the home box, `:8810` | live at inbox.a9n9.net |
 | Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio Media Streams (Grok speech-to-speech) + Messaging on one number | voice confirmed live; SMS inbound confirmed, outbound awaiting 10DLC |
-| Nostr: mentions and DMs | `services/nostr` | Node on the home box, `:8830` (local API only); one keypair, four public relays | profile + first note live |
-| Procurement, event store, registry, probe, … | — | | planned |
+| Nostr: mentions and DMs | `services/nostr` | Node on the home box, `:8830` (local API only); one keypair, four public relays | profile + first note live; inbound verified |
+| Telegram (also the owner channel) | `services/telegram` | Node on the home box, `:8840` (local API only); Bot API long polling | built; waits for a BotFather token |
+| Agent page and web chat | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index | running; hostname pending |
+| Procurement, registry, probe, anchoring, … | — | | planned |
 
 ## Conventions
 
@@ -37,6 +39,9 @@ curl -X POST 'http://127.0.0.1:8800/cdn-cgi/local/email?from=a@b.c&to=agent@a9n9
 
 # phone: voice + SMS (scripted responder, signature checks off)
 cd services/phone && PHONE_SKIP_SIGNATURE=1 npm run dev
+
+# telegram: TELEGRAM_BOT_TOKEN=<token> TELEGRAM_OWNER_ID=<your id> TELEGRAM_API_TOKEN=dev INBOX_URL=... INBOX_WEBHOOK_SECRET=... npm run dev -w @a9n9/telegram
+# web: INBOX_URL=http://127.0.0.1:8810 INBOX_WEBHOOK_SECRET=dev INBOX_API_TOKEN=dev npm run dev -w @a9n9/web   # then open http://127.0.0.1:8850
 
 # nostr: publishes the profile on start, listens for mentions/DMs, local API for posting
 cd services/nostr && NOSTR_NSEC=<nsec> NOSTR_API_TOKEN=dev INBOX_URL=http://127.0.0.1:8810 INBOX_WEBHOOK_SECRET=dev npm run dev

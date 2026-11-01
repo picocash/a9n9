@@ -1,0 +1,17 @@
+{
+  "name": "@a9n9/web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "The agent's public page and web chat: disclosure, channels, the live public ledger (event ids and types only, from the inbox), and a chat box whose messages become signed inbox events with a receipt id.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}
