@@ -1,0 +1,20 @@
+{
+  "name": "@a9n9/anchor",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Daily ledger anchoring: once a day, the inbox digest of the previous UTC day (SHA-256 over the day's index lines) is written to Tempo as the memo of a TIP-20 transferWithMemo from the anchoring wallet to itself; the transaction hash is recorded back into the inbox.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "viem": "^2.55.19"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

@@ -22,6 +22,11 @@ export interface Env {
   SENDER_DOMAINS?: string;
   INBOX_WEBHOOK_SECRET?: string;
   API_TOKEN?: string;
+  /** Comma-separated https URLs the cron probes; a 2xx within 10 s is healthy. */
+  PROBE_TARGETS?: string;
+  /** Where the page goes (defaults to FORWARD_TO) and who it is from. */
+  PROBE_PAGE_TO?: string;
+  PROBE_FROM?: string;
 }
 
 /** Cloudflare Email Sending binding (object form). */
@@ -114,7 +119,59 @@ async function postWebhook(env: Env, payload: InboundWebhook): Promise<number> {
 
 const authorized = (req: Request, env: Env) => !!env.API_TOKEN && req.headers.get('authorization') === `Bearer ${env.API_TOKEN}`;
 
+/**
+ * Off-box probe. Cloudflare runs this every five minutes from outside the
+ * house, so a dead tunnel, box or container is noticed even when the home-box
+ * probe would be dead with it. Each target is paged once when it goes down
+ * and once when it comes back; state lives in D1.
+ */
+export async function runProbe(env: Env, now = new Date()): Promise<Array<{ target: string; ok: boolean; error?: string | undefined; paged?: boolean }>> {
+  const targets = (env.PROBE_TARGETS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  if (!targets.length) return [];
+  const results: Array<{ target: string; ok: boolean; error?: string | undefined; paged?: boolean }> = [];
+  const checks = await Promise.all(targets.map(async (target) => {
+    try {
+      const res = await fetch(target, { redirect: 'manual', signal: AbortSignal.timeout(10_000), headers: { 'user-agent': 'a9n9-probe/1' } });
+      return { target, ok: res.status >= 200 && res.status < 300, error: res.ok ? undefined : `HTTP ${res.status}` };
+    } catch (err) {
+      return { target, ok: false, error: err instanceof Error ? err.message : String(err) };
+    }
+  }));
+  const iso = now.toISOString();
+  for (const c of checks) {
+    const prev = await env.MAIL_DB.prepare('SELECT ok, since, paged_at FROM probe_state WHERE target = ?1').bind(c.target).first<{ ok: number; since: string; paged_at: string | null }>();
+    const changed = !prev || Boolean(prev.ok) !== c.ok;
+    const since = changed ? iso : prev!.since;
+    let paged = false;
+    // Page on the transition to down (after it has been down for two consecutive checks) and on recovery.
+    const downFor = !c.ok && prev && !prev.ok ? now.getTime() - new Date(prev.since).getTime() : 0;
+    const shouldPage = (!c.ok && prev && !prev.ok && !prev.paged_at && downFor >= 4 * 60_000) || (c.ok && prev && !prev.ok && prev.paged_at);
+    if (shouldPage && env.EMAIL) {
+      const to = env.PROBE_PAGE_TO || env.FORWARD_TO;
+      const from = env.PROBE_FROM || 'agent001@a9n9.net';
+      const subject = c.ok ? `[a9n9 probe] UP again: ${new URL(c.target).host}` : `[a9n9 probe] DOWN: ${new URL(c.target).host}`;
+      const text = c.ok
+        ? `${c.target} answers again as of ${iso}. It had been failing since ${prev!.since}.`
+        : `${c.target} has failed every check since ${prev!.since} (${Math.round(downFor / 60_000)} min). Last error: ${c.error}. Checks run from Cloudflare every 5 minutes; this is the only page until it recovers.`;
+      try {
+        await env.EMAIL.send({ from, to, subject, text });
+        paged = true;
+      } catch (err) {
+        console.error('probe page failed', err instanceof Error ? err.message : String(err));
+      }
+    }
+    const pagedAt = c.ok ? null : paged ? iso : prev && !prev.ok ? prev.paged_at : null;
+    await env.MAIL_DB.prepare('INSERT INTO probe_state (target, ok, since, last_checked, last_error, paged_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6) ON CONFLICT(target) DO UPDATE SET ok = excluded.ok, since = excluded.since, last_checked = excluded.last_checked, last_error = excluded.last_error, paged_at = excluded.paged_at')
+      .bind(c.target, c.ok ? 1 : 0, since, iso, c.error ?? null, pagedAt).run();
+    results.push({ ...c, paged });
+  }
+  return results;
+}
+
 export default {
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    ctx.waitUntil(runProbe(env).then((r) => console.log('probe', JSON.stringify(r))));
+  },
   async email(message: ForwardableEmailMessage, env: Env, ctx: ExecutionContext): Promise<void> {
     const id = crypto.randomUUID();
     const receivedAt = new Date().toISOString();
@@ -186,6 +243,10 @@ export default {
       const obj = await env.MAIL.get(row.r2_key);
       if (!obj) return json({ error: 'raw message missing from storage' }, 410);
       return new Response(obj.body, { headers: { 'content-type': 'message/rfc822', 'cache-control': 'no-store' } });
+    }
+    if (url.pathname === '/v1/probe' && request.method === 'GET') {
+      const rows = await env.MAIL_DB.prepare('SELECT target, ok, since, last_checked, last_error, paged_at FROM probe_state ORDER BY target').all();
+      return json({ targets: rows.results });
     }
     if (url.pathname === '/v1/send' && request.method === 'POST') {
       const body = (await request.json().catch(() => null)) as { from?: string; to?: string; subject?: string; text?: string; html?: string; inReplyTo?: string; references?: string } | null;

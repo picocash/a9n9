@@ -22,6 +22,10 @@ migrations_dir = "migrations"
 [[send_email]]
 name = "EMAIL"
 
+# Off-box probe: every 5 minutes from Cloudflare; pages FORWARD_TO by email on a sustained failure and on recovery.
+[triggers]
+crons = ["*/5 * * * *"]
+
 [vars]
 # Every inbound message is also forwarded here, verified as an Email Routing destination.
 FORWARD_TO = "arun+agent001@visybl.com"
@@ -31,6 +35,8 @@ INBOX_WEBHOOK_URL = "https://inbox.a9n9.net/hooks/email"
 SENDER_DOMAINS = "a9n9.net"
 # Optional narrower allow-list of exact addresses (comma-separated). Empty = any on SENDER_DOMAINS.
 ALLOWED_SENDERS = ""
+# What the probe checks (2xx within 10 s).
+PROBE_TARGETS = "https://inbox.a9n9.net/livez,https://phone.a9n9.net/livez,https://reserves.a9n9.net/,https://mint.picocash.dev/v1/status"
 
 # Secrets (wrangler secret put ...; .dev.vars locally):
 #   INBOX_WEBHOOK_SECRET  HMAC key for webhooks to the inbox

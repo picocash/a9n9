@@ -31,9 +31,11 @@ Every event has these fields. Adapters fill them; the inbox adds `receivedAt`.
 | `telegram.message` | telegram | chat, sender, text, attachments, isOwner, owner command (only from the owner id; others' commands marked ignored) | correspondence; owner instructions are evidence too |
 | `telegram.sent` | telegram | chat, text, reply target | the agent's reply |
 | `web.chat` | web | hashed source, optional name, text, user agent | a stranger wrote in on the agent page; the receipt id they were shown is the event id |
+| `ledger.anchor` | anchor | day, event count, the day's SHA-256, chain id, token, anchoring wallet, transaction hash (null and `dryRun: true` until the wallet is funded) | the on-chain commitment to that day's ledger |
 | `email.received` | email worker | envelope, parsed headers, text, DKIM/SPF/DMARC verdicts, R2 key of the raw MIME | inbound correspondence with authentication result |
 
 Planned: `email.sent`, `x.post`,
+`probe.check` (the off-box probe's verdicts today live in the email Worker's D1, `GET /v1/probe`),
 `x.mention`, `money.receipt` (a settled picocash or Stripe payment),
 `money.spend` (a metered tool call or rent), `agent.focus` (a declared focus
 or a change to it, with reasoning), `agent.review` (the daily evidence
