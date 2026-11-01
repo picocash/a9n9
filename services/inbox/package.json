@@ -1,0 +1,17 @@
+{
+  "name": "@a9n9/inbox",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Home-box inbox: receives signed channel webhooks (email first), stores them, and hands them to the agent runtime.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

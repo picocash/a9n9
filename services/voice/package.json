@@ -1,0 +1,22 @@
+{
+  "name": "@a9n9/voice",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Voice channel for a9n9 agents: Twilio ConversationRelay websocket server with a pluggable responder, call-length caps by tier, and transcript events to the inbox.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx src/server.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "twilio": "^6.2.0",
+    "ws": "^8.22.1"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.0"
+  }
+}

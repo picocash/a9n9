@@ -1,0 +1,38 @@
+name = "a9n9-email"
+main = "src/worker.ts"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = false
+
+# Raw MIME of every inbound message. Create with: wrangler r2 bucket create a9n9-mail
+[[r2_buckets]]
+binding = "MAIL"
+bucket_name = "a9n9-mail"
+
+# Inbound index. Create with: wrangler d1 create a9n9-mail, then paste the id,
+# then: wrangler d1 migrations apply a9n9-mail [--local]
+[[d1_databases]]
+binding = "MAIL_DB"
+database_name = "a9n9-mail"
+database_id = "local-dev-database"
+migrations_dir = "migrations"
+
+# Outbound through Cloudflare Email Sending (Workers Paid). The home box sends
+# through this Worker's POST /v1/send, so no Cloudflare token ever lives there.
+[[send_email]]
+name = "EMAIL"
+remote = true
+
+[vars]
+# Every inbound message is also forwarded here, verified as an Email Routing destination.
+FORWARD_TO = ""
+# The home box inbox service, reached through the tunnel.
+INBOX_WEBHOOK_URL = ""
+# Domains this Worker may send from (comma-separated); never anything else.
+SENDER_DOMAINS = "a9n9.net"
+# Optional narrower allow-list of exact addresses (comma-separated). Empty = any on SENDER_DOMAINS.
+ALLOWED_SENDERS = ""
+
+# Secrets (wrangler secret put ...; .dev.vars locally):
+#   INBOX_WEBHOOK_SECRET  HMAC key for webhooks to the inbox
+#   API_TOKEN             bearer token for /v1/* (the home box holds the same value)

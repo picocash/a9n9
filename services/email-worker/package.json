@@ -1,0 +1,16 @@
+{
+  "name": "@a9n9/email-worker",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Cloudflare Email Worker for a9n9.net: stores inbound mail (R2 + D1), forwards a copy to the operator, webhooks the home box, and sends outbound mail through Email Sending on behalf of agents.",
+  "scripts": {
+    "dev": "wrangler dev --port 8800",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "postal-mime": "^2.4.0"
+  }
+}

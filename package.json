@@ -1,0 +1,23 @@
+{
+  "name": "a9n9",
+  "private": true,
+  "version": "0.0.0",
+  "description": "a9n9 agent platform services: the shared infrastructure a9n9 agents run on (email, phone, inbox, procurement, registry).",
+  "workspaces": [
+    "services/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm test --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0",
+    "wrangler": "^4.0.0"
+  }
+}
