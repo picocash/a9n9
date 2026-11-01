@@ -9,7 +9,7 @@
  *   INBOX_WEBHOOK_SECRET   HMAC key shared with the adapters (required)
  *   INBOX_API_TOKEN        bearer token for GET /v1/events (required)
  */
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -67,13 +67,33 @@ async function store(ev: StoredEvent): Promise<boolean> {
   }
 }
 
-async function list(limit: number): Promise<Array<Pick<StoredEvent, 'id' | 'type' | 'channel' | 'receivedAt'>>> {
+type IndexLine = Pick<StoredEvent, 'id' | 'type' | 'channel' | 'receivedAt'>;
+
+async function indexLines(): Promise<string[]> {
   try {
-    const lines = (await readFile(join(DATA, 'events', 'index.jsonl'), 'utf8')).trim().split('\n').filter(Boolean);
-    return lines.slice(-limit).reverse().map((l) => JSON.parse(l));
+    return (await readFile(join(DATA, 'events', 'index.jsonl'), 'utf8')).trim().split('\n').filter(Boolean);
   } catch {
     return [];
   }
+}
+
+/** Newest first; optional filters by channel, type prefix, and receivedAt lower bound. */
+async function list(limit: number, f: { channel?: string | undefined; type?: string | undefined; since?: string | undefined } = {}): Promise<IndexLine[]> {
+  const rows = (await indexLines()).map((l) => JSON.parse(l) as IndexLine);
+  return rows
+    .filter((r) => (!f.channel || r.channel === f.channel) && (!f.type || r.type.startsWith(f.type)) && (!f.since || r.receivedAt >= f.since))
+    .slice(-limit)
+    .reverse();
+}
+
+/**
+ * The day's events in order and a SHA-256 over their index lines — the value
+ * anchored on-chain once a day. Recomputable by anyone holding the export.
+ */
+export async function digest(day: string): Promise<{ day: string; count: number; ids: string[]; sha256: string }> {
+  const lines = (await indexLines()).filter((l) => (JSON.parse(l) as IndexLine).receivedAt.startsWith(day));
+  const sha256 = createHash('sha256').update(lines.join('\n')).digest('hex');
+  return { day, count: lines.length, ids: lines.map((l) => (JSON.parse(l) as IndexLine).id), sha256 };
 }
 
 const server = createServer(async (req, res) => {
@@ -98,7 +118,15 @@ const server = createServer(async (req, res) => {
 
     if (url.pathname.startsWith('/v1/')) {
       if (req.headers.authorization !== `Bearer ${TOKEN}`) return send(res, 401, { error: 'unauthorized' });
-      if (url.pathname === '/v1/events' && req.method === 'GET') return send(res, 200, { events: await list(Math.min(500, Number(url.searchParams.get('limit') ?? 50))) });
+      if (url.pathname === '/v1/events' && req.method === 'GET') {
+        const q = url.searchParams;
+        return send(res, 200, { events: await list(Math.min(500, Number(q.get('limit') ?? 50)), { channel: q.get('channel') ?? undefined, type: q.get('type') ?? undefined, since: q.get('since') ?? undefined }) });
+      }
+      if (url.pathname === '/v1/digest' && req.method === 'GET') {
+        const day = url.searchParams.get('day') ?? new Date().toISOString().slice(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return send(res, 400, { error: 'day must be YYYY-MM-DD' });
+        return send(res, 200, await digest(day));
+      }
       const one = url.pathname.match(/^\/v1\/events\/([a-z]+)\/([0-9a-zA-Z_:.-]{1,80})$/);
       if (one && req.method === 'GET') {
         try {
