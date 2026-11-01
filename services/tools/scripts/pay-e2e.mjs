@@ -2,6 +2,7 @@
 // search from the tools service with it. Needs PICOCASH_E2E_PAYER_KEY (a
 // faucet-funded Tempo Moderato wallet) in the environment.
 //   TOOLS_URL=http://127.0.0.1:8860 node services/tools/scripts/pay-e2e.mjs
+// Any picocash merchant works: TARGET_URL=<url> BODY='<json>' overrides the search call.
 import { createPublicClient, createWalletClient, defineChain, http, parseAbi } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { Wallet } from '@picocash/sdk';
@@ -43,9 +44,12 @@ const pay = Fetch.from({
   onChallenge: async (challenge, { createCredential }) => { presented = held; console.log(`402 → paying ${challenge.request.amount} base units`); return createCredential(); },
 });
 const before = sum(held);
-const res = await pay(`${TOOLS}/v1/search`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ objective: 'What are the published reserves backing pathUSD on Tempo?', queries: ['pathUSD reserves Tempo'], max_results: 3 }) });
+const target = process.env.TARGET_URL ?? `${TOOLS}/v1/search`;
+const reqBody = process.env.BODY ?? JSON.stringify({ objective: 'What are the published reserves backing pathUSD on Tempo?', queries: ['pathUSD reserves Tempo'], max_results: 3 });
+const res = await pay(target, { method: 'POST', headers: { 'content-type': 'application/json' }, body: reqBody });
 const body = await res.json();
 console.log(`response ${res.status}; price header ${res.headers.get('X-Picocash-Price')}; receipt ${res.headers.get('Payment-Receipt') ? 'present' : 'absent'}`);
 console.log(`paid ${before - sum(held)} base units; ${sum(held)} left as change`);
 const first = body.results?.[0];
-console.log('first result:', first ? `${first.title} — ${first.url}` : JSON.stringify(body).slice(0, 300));
+const said = body.choices?.[0]?.message?.content;
+console.log('result:', first ? `${first.title} — ${first.url}` : said ? said.slice(0, 200) : JSON.stringify(body).slice(0, 300));
