@@ -16,6 +16,8 @@ export interface Tool {
 export const CATALOG: Tool[] = [
   { name: 'search', path: '/v1/search', price: process.env.PRICE_SEARCH ?? '0.0100', description: 'Parallel.ai web search: an objective and/or up to 5 queries → ranked results with excerpts', requiresEnv: 'PARALLEL_API_KEY' },
   { name: 'web-search', path: '/v1/web-search', price: process.env.PRICE_WEB_SEARCH ?? '0.0080', description: 'Brave Search API: a query → up to 20 web results', requiresEnv: 'BRAVE_API_KEY' },
+  { name: 'exa', path: '/v1/exa', price: process.env.PRICE_EXA ?? '0.0100', description: 'Exa neural/keyword search: a query → up to 10 results with highlights', requiresEnv: 'EXA_API_KEY' },
+  { name: 'tavily', path: '/v1/tavily', price: process.env.PRICE_TAVILY ?? '0.0100', description: 'Tavily search: a query → up to 10 results with content snippets and an optional answer', requiresEnv: 'TAVILY_API_KEY' },
 ];
 
 export class ToolInputError extends Error {}
@@ -40,4 +42,21 @@ export function braveQuery(body: Record<string, unknown>): URLSearchParams {
   const country = str(body.country, 2);
   if (country) p.set('country', country);
   return p;
+}
+
+/** Exa /search request from a client body. */
+export function exaRequest(body: Record<string, unknown>): { query: string; type: string; numResults: number; contents: { highlights: boolean } } {
+  const query = str(body.q ?? body.query, 1000);
+  if (!query) throw new ToolInputError('query required');
+  const n = typeof body.num_results === 'number' ? Math.max(1, Math.min(10, Math.floor(body.num_results))) : 5;
+  const type = ['auto', 'neural', 'keyword', 'fast'].includes(String(body.type)) ? String(body.type) : 'auto';
+  return { query, type, numResults: n, contents: { highlights: true } };
+}
+
+/** Tavily /search request from a client body. */
+export function tavilyRequest(body: Record<string, unknown>): { query: string; max_results: number; search_depth: 'basic'; include_answer: boolean } {
+  const query = str(body.q ?? body.query, 400);
+  if (!query) throw new ToolInputError('query required');
+  const n = typeof body.max_results === 'number' ? Math.max(1, Math.min(10, Math.floor(body.max_results))) : 5;
+  return { query, max_results: n, search_depth: 'basic', include_answer: Boolean(body.include_answer) };
 }

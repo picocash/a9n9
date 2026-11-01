@@ -19,7 +19,7 @@ tab; this repo holds the code.
 | Agent page and web chat | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index | running; hostname pending |
 | Daily ledger anchoring | `services/anchor` | Node on the home box; `transferWithMemo` of the day's digest on Tempo mainnet (chain 4217) | dry run until the wallet is funded |
 | Off-box probe and paging | `services/email-worker` (cron) | Cloudflare cron every 5 min; pages by email once on sustained failure and on recovery; `GET /v1/probe` | deployed |
-| Procurement: tools as picocash merchants | `services/tools` | Node on the home box, `:8860`; Parallel.ai search and Brave web search behind an MPP `charge` gate (settle-first, hosted testnet mint) | Parallel search bought end to end with picocash; Brave awaits its key |
+| Procurement: tools as picocash merchants | `services/tools` | Node on the home box, `:8860`; Parallel.ai, Exa, Tavily and Brave search behind an MPP `charge` gate (settle-first, hosted testnet mint) | Parallel, Exa and Tavily searches each bought end to end with picocash; Brave awaits its key |
 | LLM access | picocash `apps/paid-llm` run from the checkout (compose service `llm`) | Node on the home box, `:8870`; OpenAI-compatible, Grok upstream, picocash per request | a completion bought end to end with picocash |
 | Registry, … | — | | planned |
 

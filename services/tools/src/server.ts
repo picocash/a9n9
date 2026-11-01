@@ -22,7 +22,7 @@ const { lockPubkey, keyset, app } = await createToolsApp({
   realm: env.TOOLS_REALM ?? `http://localhost:${PORT}`,
   secretKey: need('MPP_SECRET_KEY'),
   lockKey: hexToBytes(need('TOOLS_LOCK_KEY')),
-  vendorKeys: { ...(env.PARALLEL_API_KEY ? { PARALLEL_API_KEY: env.PARALLEL_API_KEY } : {}), ...(env.BRAVE_API_KEY ? { BRAVE_API_KEY: env.BRAVE_API_KEY } : {}) },
+  vendorKeys: { ...(env.PARALLEL_API_KEY ? { PARALLEL_API_KEY: env.PARALLEL_API_KEY } : {}), ...(env.BRAVE_API_KEY ? { BRAVE_API_KEY: env.BRAVE_API_KEY } : {}), ...(env.EXA_API_KEY ? { EXA_API_KEY: env.EXA_API_KEY } : {}), ...(env.TAVILY_API_KEY ? { TAVILY_API_KEY: env.TAVILY_API_KEY } : {}) },
   ...(env.INBOX_URL && env.INBOX_WEBHOOK_SECRET ? { inbox: { url: env.INBOX_URL, secret: env.INBOX_WEBHOOK_SECRET } } : {}),
   log,
 });
