@@ -30,6 +30,18 @@ if (!INBOX_URL || !INBOX_SECRET || !INBOX_TOKEN) {
 const log = (m: string) => console.log(`${new Date().toISOString()} [web] ${m}`);
 /** Directory of static evidence pages served under /evidence/ (read-only mount); unset = none. */
 const STATIC = env.WEB_EVIDENCE_DIR ?? '';
+/** Agent runtime heartbeat: reads the Hermes cron state (read-only mount). 503 when the scheduler ticker is older than 10 min or no job has completed in 3 h. */
+const HERMES_CRON = env.HERMES_CRON_DIR ?? '';
+async function heartbeat(): Promise<{ ok: boolean; tickerAgeSec: number | null; lastJobAgeSec: number | null; jobs: Array<{ name: string; lastRun: string | null; status: string | null }> }> {
+  if (!HERMES_CRON) return { ok: false, tickerAgeSec: null, lastJobAgeSec: null, jobs: [] };
+  let tickerAgeSec: number | null = null; try { const t = (await readFile(join(HERMES_CRON, 'ticker_heartbeat'), 'utf8')).trim().split(/\s+/)[0]!; const n = Number(t); const ms = Number.isFinite(n) ? (n < 1e12 ? n * 1000 : n) : Date.parse(t); tickerAgeSec = Math.round((Date.now() - ms) / 1000); } catch {}
+  let jobs: Array<{ name: string; lastRun: string | null; status: string | null }> = []; let lastJobAgeSec: number | null = null;
+  try { const raw = JSON.parse(await readFile(join(HERMES_CRON, 'jobs.json'), 'utf8')) as unknown; const list = (Array.isArray(raw) ? raw : Object.values((raw as { jobs?: unknown }).jobs ?? raw as object)) as Array<{ name?: string; last_run_at?: string; last_status?: string; enabled?: boolean }>;
+    jobs = list.filter((j) => j.enabled !== false).map((j) => ({ name: j.name ?? '?', lastRun: j.last_run_at ?? null, status: j.last_status ?? null }));
+    const newest = Math.max(...jobs.map((j) => (j.lastRun ? Date.parse(j.lastRun) : 0))); if (newest > 0) lastJobAgeSec = Math.round((Date.now() - newest) / 1000); } catch {}
+  const ok = tickerAgeSec !== null && tickerAgeSec < 600 && lastJobAgeSec !== null && lastJobAgeSec < 3 * 3600;
+  return { ok, tickerAgeSec, lastJobAgeSec, jobs };
+}
 /** The agent's request-signing identity (Web Bot Auth / Visa TAP): public key served at the well-known directory, private seed from the secrets file. */
 const SIGNERS: Signer[] = env.AGENT_SIGNING_SEED && env.AGENT_SIGNING_X ? [signerFromSeed(env.AGENT_SIGNING_SEED, env.AGENT_SIGNING_X)] : [];
 const PUBLIC_HOST = env.AGENT_PUBLIC_HOST ?? 'agent001.a9n9.net';
@@ -128,6 +140,7 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (url.pathname === '/livez') return send(res, 200, { ok: true });
+    if (url.pathname === '/heartbeat') { const h = await heartbeat(); return send(res, h.ok ? 200 : 503, { ...h, meaning: h.ok ? 'agent runtime alive' : 'agent runtime stalled or heartbeat unavailable' }); }
     if (url.pathname === '/.well-known/http-message-signatures-directory' && req.method === 'GET') {
       if (!SIGNERS.length) return send(res, 404, { error: 'no signing key configured' });
       const d = directoryResponse(PUBLIC_HOST, SIGNERS); res.writeHead(200, { ...d.headers, ...CORS }); return res.end(d.body);

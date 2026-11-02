@@ -5,7 +5,7 @@ describe('tool catalog', () => {
   it('prices are flat decimal strings with a vendor key requirement', () => {
     for (const t of CATALOG) {
       expect(t.price).toMatch(/^\d+\.\d{1,6}$/);
-      expect(t.requiresEnv).toMatch(/_API_KEY$/);
+      expect(t.requiresEnv).toMatch(/_(API_KEY|URL)$/);
     }
   });
   it('builds a Parallel request and refuses an empty one', () => {

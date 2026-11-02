@@ -14,14 +14,14 @@ import { Wallet } from '@picocash/sdk';
 import { PicocashAcceptor, type AcceptorStore } from '@picocash/mppx-method';
 import { charge, toBaseUnits } from '@picocash/mppx-method/mppx';
 import { p2pkPublicKey } from '@picocash/crypto';
-import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
+import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelRequest, reservesRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
 
 export interface ToolsOptions {
   mintUrl: string;
   realm: string;
   secretKey: string;
   lockKey: Uint8Array;
-  vendorKeys: { PARALLEL_API_KEY?: string; BRAVE_API_KEY?: string; EXA_API_KEY?: string; TAVILY_API_KEY?: string; XAI_API_KEY?: string };
+  vendorKeys: { PARALLEL_API_KEY?: string; BRAVE_API_KEY?: string; EXA_API_KEY?: string; TAVILY_API_KEY?: string; XAI_API_KEY?: string; RESERVES_URL?: string };
   inbox?: { url: string; secret: string };
   acceptorStore?: AcceptorStore;
   fetchImpl?: typeof fetch;
@@ -134,6 +134,7 @@ export async function createToolsApp(opts: ToolsOptions) {
         else if (tool.name === 'tavily') tavilyRequest(body);
         else if (tool.name === 'image') imageRequest(body);
         else if (tool.name === 'video') videoRequest(body);
+        else if (tool.name === 'reserves') reservesRequest(body);
         else braveQuery(body);
       } catch (err) {
         if (err instanceof ToolInputError) return c.json({ error: err.message }, 400);
@@ -147,6 +148,13 @@ export async function createToolsApp(opts: ToolsOptions) {
         if (tool.name === 'exa') {
           const res = await fetchImpl('https://api.exa.ai/search', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.EXA_API_KEY! }, body: JSON.stringify(exaRequest(body)), signal: AbortSignal.timeout(30_000) });
           return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
+        }
+        if (tool.name === 'reserves') {
+          const res = await fetchImpl(`${opts.vendorKeys.RESERVES_URL!.replace(/\/$/, '')}/v1/tokens`, { signal: AbortSignal.timeout(20_000) });
+          const j = (await res.json().catch(() => ({}))) as { tokens?: Array<Record<string, unknown>>; block?: number; blockTimestamp?: number; refreshedAt?: string };
+          const { symbol } = reservesRequest(body);
+          const tokens = (j.tokens ?? []).filter((t) => !symbol || String(t.symbol).toLowerCase() === symbol.toLowerCase());
+          return Response.json({ source: 'https://reserves.a9n9.net', block: j.block, blockTimestamp: j.blockTimestamp, refreshedAt: j.refreshedAt, servedAt: new Date().toISOString(), tokens }, { status: res.ok ? 200 : 502 });
         }
         if (tool.name === 'image') {
           const res = await fetchImpl('https://api.x.ai/v1/images/generations', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.vendorKeys.XAI_API_KEY!}` }, body: JSON.stringify(imageRequest(body)), signal: AbortSignal.timeout(90_000) });

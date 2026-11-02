@@ -19,6 +19,7 @@ export const CATALOG: Tool[] = [
   { name: 'exa', path: '/v1/exa', price: process.env.PRICE_EXA ?? '0.0100', description: 'Exa neural/keyword search: a query → up to 10 results with highlights', requiresEnv: 'EXA_API_KEY' },
   { name: 'image', path: '/v1/image', price: process.env.PRICE_IMAGE ?? '0.0300', description: 'xAI grok-imagine-image: a prompt (optionally a reference image_url) → one JPEG image URL', requiresEnv: 'XAI_API_KEY' },
   { name: 'video', path: '/v1/video', price: process.env.PRICE_VIDEO ?? '0.3000', description: 'xAI grok-imagine-video: a prompt (optionally a starting image_url) → one MP4 of up to 5 seconds; long renders return a request id to poll at GET /v1/video/{id}', requiresEnv: 'XAI_API_KEY' },
+  { name: 'reserves', path: '/v1/reserves', price: process.env.PRICE_RESERVES ?? '0.0200', description: 'a9n9 reserves evidence: every stablecoin on Tempo with on-chain supply, issuer-reported reserves, reconciliation checks and timestamps; optional {symbol} to select one', requiresEnv: 'RESERVES_URL' },
   { name: 'tavily', path: '/v1/tavily', price: process.env.PRICE_TAVILY ?? '0.0100', description: 'Tavily search: a query → up to 10 results with content snippets and an optional answer', requiresEnv: 'TAVILY_API_KEY' },
 ];
 
@@ -80,4 +81,11 @@ export function videoRequest(body: Record<string, unknown>): { model: string; pr
   const image_url = str(body.image_url, 2000);
   if (image_url && !/^https:\/\//.test(image_url)) throw new ToolInputError('image_url must be https');
   return { model: 'grok-imagine-video', prompt, duration: d, ...(image_url ? { image_url } : {}) };
+}
+
+/** Reserves evidence request: an optional symbol filter. */
+export function reservesRequest(body: Record<string, unknown>): { symbol?: string } {
+  const symbol = str(body.symbol, 20);
+  if (symbol && !/^[A-Za-z0-9.]+$/.test(symbol)) throw new ToolInputError('symbol must be alphanumeric');
+  return symbol ? { symbol } : {};
 }
