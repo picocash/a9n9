@@ -17,6 +17,8 @@ export const CATALOG: Tool[] = [
   { name: 'search', path: '/v1/search', price: process.env.PRICE_SEARCH ?? '0.0100', description: 'Parallel.ai web search: an objective and/or up to 5 queries → ranked results with excerpts', requiresEnv: 'PARALLEL_API_KEY' },
   { name: 'web-search', path: '/v1/web-search', price: process.env.PRICE_WEB_SEARCH ?? '0.0080', description: 'Brave Search API: a query → up to 20 web results', requiresEnv: 'BRAVE_API_KEY' },
   { name: 'exa', path: '/v1/exa', price: process.env.PRICE_EXA ?? '0.0100', description: 'Exa neural/keyword search: a query → up to 10 results with highlights', requiresEnv: 'EXA_API_KEY' },
+  { name: 'image', path: '/v1/image', price: process.env.PRICE_IMAGE ?? '0.0300', description: 'xAI grok-imagine-image: a prompt (optionally a reference image_url) → one JPEG image URL', requiresEnv: 'XAI_API_KEY' },
+  { name: 'video', path: '/v1/video', price: process.env.PRICE_VIDEO ?? '0.3000', description: 'xAI grok-imagine-video: a prompt (optionally a starting image_url) → one MP4 of up to 5 seconds; long renders return a request id to poll at GET /v1/video/{id}', requiresEnv: 'XAI_API_KEY' },
   { name: 'tavily', path: '/v1/tavily', price: process.env.PRICE_TAVILY ?? '0.0100', description: 'Tavily search: a query → up to 10 results with content snippets and an optional answer', requiresEnv: 'TAVILY_API_KEY' },
 ];
 
@@ -59,4 +61,23 @@ export function tavilyRequest(body: Record<string, unknown>): { query: string; m
   if (!query) throw new ToolInputError('query required');
   const n = typeof body.max_results === 'number' ? Math.max(1, Math.min(10, Math.floor(body.max_results))) : 5;
   return { query, max_results: n, search_depth: 'basic', include_answer: Boolean(body.include_answer) };
+}
+
+/** xAI /v1/images/generations request from a client body. One image per call so the flat price holds. */
+export function imageRequest(body: Record<string, unknown>): { model: string; prompt: string; n: 1; response_format: 'url'; image_url?: string } {
+  const prompt = str(body.prompt, 4000);
+  if (!prompt) throw new ToolInputError('prompt required');
+  const image_url = str(body.image_url, 2000);
+  if (image_url && !/^https:\/\//.test(image_url)) throw new ToolInputError('image_url must be https');
+  return { model: 'grok-imagine-image', prompt, n: 1, response_format: 'url', ...(image_url ? { image_url } : {}) };
+}
+
+/** xAI /v1/videos/generations request from a client body. Duration is capped at 5 s so the flat price covers the vendor cost ($0.05/s). */
+export function videoRequest(body: Record<string, unknown>): { model: string; prompt: string; duration: number; image_url?: string } {
+  const prompt = str(body.prompt, 4000);
+  if (!prompt) throw new ToolInputError('prompt required');
+  const d = typeof body.duration === 'number' ? Math.max(1, Math.min(5, Math.round(body.duration))) : 5;
+  const image_url = str(body.image_url, 2000);
+  if (image_url && !/^https:\/\//.test(image_url)) throw new ToolInputError('image_url must be https');
+  return { model: 'grok-imagine-video', prompt, duration: d, ...(image_url ? { image_url } : {}) };
 }

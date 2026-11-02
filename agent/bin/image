@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+// image '<prompt>' [--ref <https image url>] — generate one image through tools.a9n9.net (xAI grok-imagine-image), paid with picocash ($0.03).
+// The file is saved under state/media/ so it can be attached to a post or an evidence pack.
+import fs from 'node:fs';
+import { out, HOME } from './_lib.mjs';
+import { buy } from './_buy.mjs';
+const argv = process.argv.slice(2); const ri = argv.indexOf('--ref'); const ref = ri >= 0 ? argv[ri + 1] : undefined;
+const prompt = argv.filter((a, i) => a !== '--ref' && i !== ri + 1).join(' ').trim();
+if (!prompt) { out({ ok: false, error: "usage: image '<prompt>' [--ref <https url>]" }); process.exit(2); }
+const r = await buy('/v1/image', { prompt, ...(ref ? { image_url: ref } : {}) }, '0.0300');
+if (r.status !== 200 || !r.result?.url) { out({ ok: false, error: 'image call failed', status: r.status, detail: r.result, log: r.log }); process.exit(1); }
+fs.mkdirSync(`${HOME}/state/media`, { recursive: true });
+const file = `${HOME}/state/media/image-${Date.now()}.jpg`;
+try { const res = await fetch(r.result.url); fs.writeFileSync(file, Buffer.from(await res.arrayBuffer())); } catch {}
+out({ ok: true, url: r.result.url, file: fs.existsSync(file) ? file : null, model: r.result.model, paid_usd: 0.03, prompt });
+process.exit(0);

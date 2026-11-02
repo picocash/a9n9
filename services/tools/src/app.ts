@@ -14,14 +14,14 @@ import { Wallet } from '@picocash/sdk';
 import { PicocashAcceptor, type AcceptorStore } from '@picocash/mppx-method';
 import { charge, toBaseUnits } from '@picocash/mppx-method/mppx';
 import { p2pkPublicKey } from '@picocash/crypto';
-import { CATALOG, ToolInputError, braveQuery, exaRequest, parallelRequest, tavilyRequest, type Tool } from './catalog.js';
+import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
 
 export interface ToolsOptions {
   mintUrl: string;
   realm: string;
   secretKey: string;
   lockKey: Uint8Array;
-  vendorKeys: { PARALLEL_API_KEY?: string; BRAVE_API_KEY?: string; EXA_API_KEY?: string; TAVILY_API_KEY?: string };
+  vendorKeys: { PARALLEL_API_KEY?: string; BRAVE_API_KEY?: string; EXA_API_KEY?: string; TAVILY_API_KEY?: string; XAI_API_KEY?: string };
   inbox?: { url: string; secret: string };
   acceptorStore?: AcceptorStore;
   fetchImpl?: typeof fetch;
@@ -108,6 +108,16 @@ export async function createToolsApp(opts: ToolsOptions) {
     return gated ?? c.res;
   }
 
+  app.get('/v1/video/:id', async (c) => {
+    const id = c.req.param('id');
+    if (!/^[0-9a-f-]{36}$/.test(id) || !opts.vendorKeys.XAI_API_KEY) return c.json({ error: 'unknown request' }, 404);
+    const poll = await fetchImpl(`https://api.x.ai/v1/videos/${id}`, { headers: { authorization: `Bearer ${opts.vendorKeys.XAI_API_KEY}` }, signal: AbortSignal.timeout(20_000) });
+    const pj = (await poll.json().catch(() => ({}))) as { status?: string; video?: { url?: string; duration?: number }; progress?: number; error?: string };
+    if (pj.status === 'done' && pj.video?.url) return c.json({ url: pj.video.url, duration: pj.video.duration, mime_type: 'video/mp4', request_id: id });
+    if (pj.error) return c.json({ error: pj.error, request_id: id }, 502);
+    return c.json({ status: pj.status ?? 'pending', progress: pj.progress ?? null, request_id: id }, 202);
+  });
+
   for (const tool of CATALOG) {
     app.post(tool.path, async (c) => {
       if (!available(tool)) return c.json({ error: `${tool.name} is not available on this deployment yet` }, 503);
@@ -122,6 +132,8 @@ export async function createToolsApp(opts: ToolsOptions) {
         if (tool.name === 'search') parallelRequest(body);
         else if (tool.name === 'exa') exaRequest(body);
         else if (tool.name === 'tavily') tavilyRequest(body);
+        else if (tool.name === 'image') imageRequest(body);
+        else if (tool.name === 'video') videoRequest(body);
         else braveQuery(body);
       } catch (err) {
         if (err instanceof ToolInputError) return c.json({ error: err.message }, 400);
@@ -135,6 +147,26 @@ export async function createToolsApp(opts: ToolsOptions) {
         if (tool.name === 'exa') {
           const res = await fetchImpl('https://api.exa.ai/search', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.EXA_API_KEY! }, body: JSON.stringify(exaRequest(body)), signal: AbortSignal.timeout(30_000) });
           return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
+        }
+        if (tool.name === 'image') {
+          const res = await fetchImpl('https://api.x.ai/v1/images/generations', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.vendorKeys.XAI_API_KEY!}` }, body: JSON.stringify(imageRequest(body)), signal: AbortSignal.timeout(90_000) });
+          const j = (await res.json().catch(() => ({}))) as { data?: Array<{ url?: string; mime_type?: string }>; error?: string };
+          const img = j.data?.[0];
+          return Response.json(res.ok && img?.url ? { url: img.url, mime_type: img.mime_type ?? 'image/jpeg', model: 'grok-imagine-image' } : { error: j.error ?? 'image generation failed' }, { status: res.ok && img?.url ? 200 : 502 });
+        }
+        if (tool.name === 'video') {
+          const start = await fetchImpl('https://api.x.ai/v1/videos/generations', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.vendorKeys.XAI_API_KEY!}` }, body: JSON.stringify(videoRequest(body)), signal: AbortSignal.timeout(30_000) });
+          const sj = (await start.json().catch(() => ({}))) as { request_id?: string; error?: string };
+          if (!start.ok || !sj.request_id) return Response.json({ error: sj.error ?? 'video generation failed to start' }, { status: 502 });
+          const deadline = Date.now() + 110_000;
+          while (Date.now() < deadline) {
+            await new Promise((r) => setTimeout(r, 4000));
+            const poll = await fetchImpl(`https://api.x.ai/v1/videos/${sj.request_id}`, { headers: { authorization: `Bearer ${opts.vendorKeys.XAI_API_KEY!}` }, signal: AbortSignal.timeout(20_000) });
+            const pj = (await poll.json().catch(() => ({}))) as { status?: string; video?: { url?: string; duration?: number }; progress?: number; error?: string };
+            if (pj.status === 'done' && pj.video?.url) return Response.json({ url: pj.video.url, duration: pj.video.duration, mime_type: 'video/mp4', model: 'grok-imagine-video', request_id: sj.request_id });
+            if (pj.status === 'failed' || pj.error) return Response.json({ error: pj.error ?? 'video generation failed', request_id: sj.request_id }, { status: 502 });
+          }
+          return Response.json({ status: 'pending', request_id: sj.request_id, status_url: `/v1/video/${sj.request_id}`, note: 'still rendering; poll the status url (free) until it returns a url' }, { status: 202 });
         }
         if (tool.name === 'tavily') {
           const res = await fetchImpl('https://api.tavily.com/search', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${opts.vendorKeys.TAVILY_API_KEY!}` }, body: JSON.stringify(tavilyRequest(body)), signal: AbortSignal.timeout(30_000) });

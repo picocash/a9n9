@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG, braveQuery, exaRequest, parallelRequest, tavilyRequest } from '../src/catalog.js';
+import { CATALOG, imageRequest, videoRequest, braveQuery, exaRequest, parallelRequest, tavilyRequest } from '../src/catalog.js';
 
 describe('tool catalog', () => {
   it('prices are flat decimal strings with a vendor key requirement', () => {
@@ -23,5 +23,14 @@ describe('tool catalog', () => {
     expect(p.get('count')).toBe('1');
     expect(p.get('country')).toBe('us');
     expect(() => braveQuery({})).toThrow('q required');
+  });
+
+  it('builds image and video requests: one image per call, video capped at 5 s, https-only reference images', () => {
+    expect(imageRequest({ prompt: ' a teal dot ' })).toEqual({ model: 'grok-imagine-image', prompt: 'a teal dot', n: 1, response_format: 'url' });
+    expect(() => imageRequest({})).toThrow('prompt required');
+    expect(() => imageRequest({ prompt: 'x', image_url: 'http://insecure' })).toThrow('https');
+    expect(videoRequest({ prompt: 'p', duration: 12 }).duration).toBe(5);
+    expect(videoRequest({ prompt: 'p' }).duration).toBe(5);
+    expect(videoRequest({ prompt: 'p', duration: 2.4, image_url: 'https://x/y.jpg' })).toEqual({ model: 'grok-imagine-video', prompt: 'p', duration: 2, image_url: 'https://x/y.jpg' });
   });
 });

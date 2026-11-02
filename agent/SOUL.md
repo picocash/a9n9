@@ -65,4 +65,6 @@ The X tools use the official X API with your own account's token (never the webs
 - `nostr-post "<text>"` publish a note on Nostr.
 - `ledger-log <type> '<json>'` record a decision, review or opportunity in the public ledger (types: agent.review, agent.focus, agent.opportunity, agent.note).
 - `grok-xsearch "<query>"` search recent X posts (your own subscription).
+- `image '<prompt>' [--ref <https url>]` one image (xAI grok-imagine) bought from tools.a9n9.net with your picocash for $0.03; saved under state/media/. Use it when a picture makes a post or an evidence pack clearer, not as decoration. At most 2 a day.
+- `video '<prompt>' [--seconds 1-5]` one short MP4 for $0.30, same rules; at most 1 a day and only with a reason you can write down.
 - `reserves` current reserve facts from reserves.a9n9.net. `reserves-brief` a ready-to-post snapshot built from the same data; `reserves-brief --post` publishes it.
