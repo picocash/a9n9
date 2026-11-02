@@ -46,6 +46,15 @@ export interface StoredEvent {
   payload: unknown;
 }
 
+/** The agent's sandbox signs with its own key, good only for what its tools report. Money received, receipts and anchors never come from the agent. */
+const AGENT_SECRET = env.INBOX_AGENT_WEBHOOK_SECRET ?? '';
+const AGENT_TYPES = /^(agent\.(review|focus|opportunity|note)|x\.(post|reply|follow|delete|mention)|bsky\.(post|reply|follow|delete|mention)|email\.sent|money\.spend)$/;
+function verifyAgent(sigHeader: string | undefined, body: string): boolean {
+  if (!AGENT_SECRET || !sigHeader) return false;
+  const got = Buffer.from(sigHeader.replace(/^sha256=/, ''), 'hex'); const want = createHmac('sha256', AGENT_SECRET).update(body).digest();
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return false;
+  try { return AGENT_TYPES.test(String((JSON.parse(body) as { type?: unknown }).type)); } catch { return false; }
+}
 function verify(sigHeader: string | undefined, body: string): boolean {
   if (!sigHeader?.startsWith('sha256=')) return false;
   const expected = createHmac('sha256', SECRET).update(body).digest('hex');
@@ -116,7 +125,7 @@ const server = createServer(async (req, res) => {
     if (hook && req.method === 'POST') {
       const channel = hook[1]!;
       const body = await readBody(req);
-      if (!verify(req.headers['x-a9n9-signature'] as string | undefined, body)) {
+      if (!verify(req.headers['x-a9n9-signature'] as string | undefined, body) && !verifyAgent(req.headers['x-a9n9-signature'] as string | undefined, body)) {
         log(`rejected unsigned ${channel} webhook from ${req.socket.remoteAddress}`);
         return send(res, 401, { error: 'bad signature' });
       }

@@ -19,7 +19,7 @@ const get = (path: string) => fetch(`http://127.0.0.1:${PORT}${path}`, { headers
 describe('inbox', () => {
   beforeAll(async () => {
     const data = mkdtempSync(join(tmpdir(), 'inbox-'));
-    proc = spawn(process.execPath, ['--import', 'tsx', 'src/server.ts'], { env: { ...process.env, INBOX_PORT: String(PORT), INBOX_HOST: '127.0.0.1', INBOX_DATA: data, INBOX_WEBHOOK_SECRET: SECRET, INBOX_API_TOKEN: TOKEN }, stdio: ['ignore', 'pipe', 'pipe'] });
+    proc = spawn(process.execPath, ['--import', 'tsx', 'src/server.ts'], { env: { ...process.env, INBOX_PORT: String(PORT), INBOX_HOST: '127.0.0.1', INBOX_DATA: data, INBOX_AGENT_WEBHOOK_SECRET: 'agent-secret', INBOX_WEBHOOK_SECRET: SECRET, INBOX_API_TOKEN: TOKEN }, stdio: ['ignore', 'pipe', 'pipe'] });
     for (let i = 0; i < 100; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/livez`)).ok) break; } catch { /* not yet */ } await new Promise((r) => setTimeout(r, 50)); }
   }, 20000);
   afterAll(() => { proc.kill(); });
@@ -51,5 +51,17 @@ describe('inbox', () => {
     expect(d2.sha256).toBe(d1.sha256);
     expect((await (await get('/v1/digest?day=1999-12-31')).json()).count).toBe(0);
     expect((await get('/v1/digest?day=yesterday')).status).toBe(400);
+  });
+
+  it('accepts the agent key only for what the agent reports', async () => {
+    const sig = (b: unknown) => `sha256=${createHmac('sha256', 'agent-secret').update(JSON.stringify(b)).digest('hex')}`;
+    const ok = { id: 'a1', type: 'agent.note' };
+    expect((await post('agent', ok, sig(ok))).status).toBe(201);
+    for (const type of ['money.income', 'money.fund', 'receipt.helped', 'ledger.anchor', 'email.received']) {
+      const bad = { id: `f-${type}`, type };
+      expect((await post('money', bad, sig(bad))).status).toBe(401);
+    }
+    const noType = { id: 'f-none' };
+    expect((await post('money', noType, sig(noType))).status).toBe(401);
   });
 });

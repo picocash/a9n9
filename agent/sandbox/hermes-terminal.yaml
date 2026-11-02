@@ -1,6 +1,7 @@
 # The terminal section of ~/.hermes/config.yaml for agent 001. After changing it, restart hermes-gateway: the scheduler keeps the backend it started with.
 # Not mounted on purpose: creditcard, cloudflare, postgres, twilio, vaultwarden, anchor wallet, other repos, ~/.ssh.
 # Network a9n9-sandbox holds only inbox, nostr and tools; firewall.sh (systemd a9n9-sandbox-firewall) blocks the host and LAN.
+# secrets/inbox.env inside the sandbox is agent-inbox.env: a signing key good only for what the agent's tools report.
 terminal:
   backend: docker
   docker_image: a9n9-agent-sandbox:local
@@ -22,7 +23,7 @@ terminal:
   - /home/ubuntu/a9n9/secrets/bluesky.env:/home/ubuntu/a9n9/secrets/bluesky.env:ro
   - /home/ubuntu/a9n9/secrets/email.env:/home/ubuntu/a9n9/secrets/email.env:ro
   - /home/ubuntu/a9n9/secrets/email-worker.url:/home/ubuntu/a9n9/secrets/email-worker.url:ro
-  - /home/ubuntu/a9n9/secrets/inbox.env:/home/ubuntu/a9n9/secrets/inbox.env:ro
+  - /home/ubuntu/a9n9/secrets/agent-inbox.env:/home/ubuntu/a9n9/secrets/inbox.env:ro
   - /home/ubuntu/a9n9/secrets/nostr.env:/home/ubuntu/a9n9/secrets/nostr.env:ro
   - /home/ubuntu/a9n9/secrets/resend.env:/home/ubuntu/a9n9/secrets/resend.env:ro
   - /home/ubuntu/a9n9/secrets/agent-payer.env:/home/ubuntu/a9n9/secrets/agent-payer.env:ro
