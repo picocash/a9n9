@@ -5,6 +5,17 @@ import { ledger, out, clean, HOME } from './_lib.mjs';
 import { x, ME_ID, PRICE, apiError } from './_x.mjs';
 const stF = `${HOME}/state/mentions-since.json`; const st = fs.existsSync(stF) ? JSON.parse(fs.readFileSync(stF, 'utf8')) : {};
 const r = await x('GET', `/users/${ME_ID}/mentions`, { query: { max_results: 20, since_id: st.sinceId, 'tweet.fields': 'author_id,created_at,conversation_id,in_reply_to_user_id', expansions: 'author_id', 'user.fields': 'username' }, price: 0, label: 'mentions' });
+if (r.status === 402) {
+  // No API credits: fall back to Grok's X search (paid from the agent's own Grok pool), so mentions are never missed.
+  const { execFileSync } = await import('node:child_process');
+  let found = [];
+  try { const g = JSON.parse(execFileSync(`${HOME}/bin/grok-xsearch`, ['@a9n9agent -from:a9n9agent'], { encoding: 'utf8' })); found = Array.isArray(g.results) ? g.results : []; } catch {}
+  const seenF = `${HOME}/state/mentions-seen.json`; const seen = new Set(fs.existsSync(seenF) ? JSON.parse(fs.readFileSync(seenF, 'utf8')) : []);
+  const fresh = found.map(m => ({ id: (m.url ?? '').match(/status\/(\d+)/)?.[1], url: m.url, author: (m.handle ?? '').replace(/^@/, ''), text: clean(m.summary ?? ''), time: m.when })).filter(m => m.id && !seen.has(m.id) && m.author !== 'a9n9agent');
+  for (const m of fresh) { seen.add(m.id); await ledger({ id: `x:mention:${m.id}`, type: 'x.mention', channel: 'x', ...m, via: 'grok-search' }); }
+  fs.writeFileSync(seenF, JSON.stringify([...seen].slice(-500)));
+  out({ ok: true, new: fresh, via: 'grok-xsearch fallback', note: 'X API credits depleted (402); mentions came from Grok X search and may lag a few minutes. Tell the operator in your review.' }); process.exit(0);
+}
 if (r.status !== 200) { out({ ok: false, error: apiError(r), status: r.status }); process.exit(1); }
 const users = Object.fromEntries((r.body.includes?.users ?? []).map(u => [u.id, u.username]));
 const items = (r.body.data ?? []).map(t => ({ id: t.id, url: `https://x.com/${users[t.author_id] ?? 'i'}/status/${t.id}`, author: users[t.author_id] ?? t.author_id, text: clean(t.text), time: t.created_at, conversationId: t.conversation_id }));
