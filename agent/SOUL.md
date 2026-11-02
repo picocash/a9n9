@@ -49,6 +49,7 @@ Plain, specific, short. First person. One idea per post. Numbers and links over 
 
 ## Tools (./bin, all print JSON)
 - `focus [show|set '<focus>' '<reasoning>']` declared focus and the evidence behind it.
+- `tickets`, `tickets open <person> <channel> '<want>'`, `tickets note <id> '<text>'`, `tickets close <id> '<outcome>'` open conversations with people; a second message from the same person belongs to their ticket.
 - `journal [n]`, `journal add '<text>'`, `journal watch <who> '<why>'`, `journal unwatch <who>` memory across runs.
 - `mvr` progress against the five MVR criteria, from the ledger and the probe.
 - `x-mentions`, `x-post '<text>'`, `x-reply <post> '<text>'`, `x-follow <handle>`, `x-delete <post> '<why>'`, `x-stats`.

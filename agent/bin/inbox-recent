@@ -6,11 +6,16 @@ const e = env('/home/ubuntu/a9n9/secrets/inbox.env');
 const since = new Date(Date.now() - hours * 3600_000).toISOString();
 const h = { authorization: `Bearer ${e.INBOX_API_TOKEN}` };
 const list = await (await fetch(`http://127.0.0.1:8810/v1/events?limit=60&since=${encodeURIComponent(since)}`, { headers: h })).json();
+const AUTOMATED = /noreply|no-reply|notifications?@|invoice|receipt|verification|statements|mailer|postmaster|daemon|alerts?@|security@|support@|welcome|do-not-reply|@e\.link\.com|@stripe\.com|@tempo\.xyz|@twilio\.com|@x\.com|@bsky\.app|@github\.com|vaultwarden|bitwarden|your code|verification code|is your .* code/i;
+const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy|starbuilder|a9n9agent/i;
+const label = (from, subject, text) => AFFILIATE.test(from) ? 'affiliate' : AUTOMATED.test(`${from} ${subject ?? ''} ${(text ?? '').slice(0, 160)}`) ? 'automated' : 'human';
 const events = [];
 for (const ev of list.events) {
   if (!/^(email\.received|sms\.received|voice\.call|nostr\.(mention|dm)|web\.chat|telegram\.message|x\.mention)$/.test(ev.type)) continue;
   const full = await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json();
   const p = full.payload ?? {};
-  events.push({ id: ev.id, type: ev.type, at: ev.receivedAt, from: p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? null, subject: p.subject ?? null, text: String(p.text ?? p.body ?? p.transcript ?? '').slice(0, 600) });
+  const from = p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? null;
+  events.push({ id: ev.id, type: ev.type, at: ev.receivedAt, kind: label(String(from ?? ''), p.subject, p.text ?? p.body), from, subject: p.subject ?? null, text: String(p.text ?? p.body ?? p.transcript ?? '').slice(0, 600) });
 }
-out({ ok: true, hours, events });
+const counts = events.reduce((a, e) => ({ ...a, [e.kind]: (a[e.kind] ?? 0) + 1 }), {});
+out({ ok: true, hours, counts, note: 'kind=human needs an answer within the hour; automated and affiliate need none', events: events.filter(e => e.kind === 'human').concat(events.filter(e => e.kind !== 'human').map(e => ({ id: e.id, type: e.type, at: e.at, kind: e.kind, from: e.from, subject: e.subject }))) });

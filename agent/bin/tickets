@@ -1,0 +1,31 @@
+#!/usr/bin/env node
+// tickets — open conversations with people, so a thread continues across runs instead of restarting.
+//   tickets                              list open tickets
+//   tickets open <person> <channel> '<what they want>' [--ref <inbox event id or post url>]
+//   tickets note <id> '<what happened / next action>'
+//   tickets close <id> '<outcome>'       (helped, no reply, declined, handed to operator)
+import fs from 'node:fs';
+import { out, HOME, ledger } from './_lib.mjs';
+const F = `${HOME}/state/tickets.json`;
+const read = () => fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { seq: 0, tickets: [] };
+const save = (d) => fs.writeFileSync(F, JSON.stringify(d, null, 1));
+const argv = process.argv.slice(2); const cmd = argv[0];
+const d = read(); const now = new Date().toISOString();
+if (cmd === 'open') {
+  const ri = argv.indexOf('--ref'); const ref = ri >= 0 ? argv[ri + 1] : null; const rest = argv.filter((a, i) => i > 0 && (ri < 0 || (i !== ri && i !== ri + 1)));
+  const [person, channel, ...w] = rest; const want = w.join(' ').trim();
+  if (!person || !channel || !want) { out({ ok: false, error: "usage: tickets open <person> <channel> '<what they want>' [--ref <id>]" }); process.exit(2); }
+  const dup = d.tickets.find((t) => t.status === 'open' && t.person === person && t.channel === channel);
+  if (dup) { out({ ok: true, existing: dup }); process.exit(0); }
+  const t = { id: `t${++d.seq}`, person, channel, want, ref, opened: now, status: 'open', touched: now, notes: [] }; d.tickets.push(t); save(d);
+  await ledger({ id: `agent:ticket:${t.id}:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'ticket.open', ticket: t.id, channelUsed: channel, at: now });
+  out({ ok: true, ticket: t });
+} else if (cmd === 'note' || cmd === 'close') {
+  const [id, ...w] = argv.slice(1); const text = w.join(' ').trim(); const t = d.tickets.find((x) => x.id === id);
+  if (!t || !text) { out({ ok: false, error: `usage: tickets ${cmd} <id> '<text>'` }); process.exit(2); }
+  t.notes.push({ at: now, text }); t.touched = now; if (cmd === 'close') { t.status = 'closed'; t.outcome = text; t.closed = now; }
+  save(d); out({ ok: true, ticket: t });
+} else {
+  const open = d.tickets.filter((t) => t.status === 'open');
+  out({ ok: true, open, closedCount: d.tickets.length - open.length, rule: 'Every person who wrote gets a ticket; answer within the hour; a second message from the same person goes to the same ticket; close with an outcome.' });
+}

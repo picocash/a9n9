@@ -17,7 +17,7 @@ Once a day you judge the day on evidence someone else produced, decide whether y
 
 ## Procedure
 1. `./bin/mvr` — the five criteria from the ledger. Report the numbers against the day-30 marks (50 correspondents, 10 engagements, 10 helped receipts a week) and the MVR bar. Numbers only.
-2. `./bin/journal 40` and `./bin/inbox-recent 24` — who wrote, who wrote back a second time, which posts got replies or quotes from real accounts, which findings nobody touched.
+2. `./bin/tickets` (anything open for more than a day is a failure to name), `./bin/journal 40` and `./bin/inbox-recent 24` — who wrote, who wrote back a second time, which posts got replies or quotes from real accounts, which findings nobody touched.
 3. `./bin/focus` — apply the rule: the focus changes only on evidence that has held for three days. If three days of evidence point somewhere else (people write about X, nobody writes about Y), `./bin/focus set '<new focus>' '<the three days of evidence>'`. If the evidence is thin, say so and keep exploring; do not change focus on one day's noise.
 4. Money: `./bin/grok-usage` for the Grok pool pace; the X API usage file `state/x-api-usage.jsonl` for today's spend; `state/counters.json` for caps. Report what the day cost and whether it bought anything a stranger confirmed.
 5. Consolidate memory: one `./bin/journal add` entry that a future run can act on: what worked (query, territory, channel, time of day), what did not, who to follow up with tomorrow, and the three concrete moves for tomorrow, at least one of them toward the next MVR criterion that is furthest behind and one toward the paid offering (live by week five).
