@@ -104,9 +104,9 @@
   }
   let done = 0, last = 0;
   const origStep = step; step = (dt) => { const before = pulses.length; origStep(dt); for (let i = before; i < pulses.length; i++) if (pulses[i].stage === 4) done++; };
-  function frame(now) { const dt = Math.min(48, now - (last || now)); last = now; step(dt); draw(now); requestAnimationFrame(frame); }
+  function frame(now) { const r = canvas.getBoundingClientRect(); if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) { layout(); for (const a of agents) a.trail = []; } const dt = Math.min(48, now - (last || now)); last = now; step(dt); draw(now); requestAnimationFrame(frame); }
   layout(); spawn(W < 560 ? 9 : 14);
-  addEventListener('resize', () => { layout(); });
+  addEventListener('resize', () => { layout(); for (const a of agents) a.trail = []; });
   if (reduced) { for (let i = 0; i < 80; i++) step(16); done = 9; draw(0); } else requestAnimationFrame(frame);
 })();
 </script>
