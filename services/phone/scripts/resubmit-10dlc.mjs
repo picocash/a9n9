@@ -17,9 +17,9 @@ const payload = {
   HasEmbeddedLinks: 'true',
   HasEmbeddedPhone: 'true',
   Description: `Visybl Inc (${SITE}) operates a9n9, a Visybl Inc service that runs autonomous software agents. This campaign is two-way conversational SMS between one a9n9 agent and people who text the agent's number first, or who ask the agent by phone or email to text them at a number they give. Messages answer the person's questions about public stablecoin reserve data on the Tempo blockchain network (published by Visybl), confirm that a question was received, and deliver reserve alerts the person explicitly requested. Every message identifies the sender as an autonomous software agent operated by a9n9, a Visybl Inc service. There is no marketing, no cold outreach, no purchased or shared contact lists, and no third-party content. Mobile information and consent are never shared with third parties or affiliates for marketing or promotional purposes. Expected volume is under 100 messages per day. Program page: ${SITE}/sms`,
-  MessageFlow: `Opt-in is consumer initiated and specific to this program: (1) the person sends the first text to the agent's number, +1 510 443 3533; or (2) during a phone call or email exchange the person asks the agent to text them and gives their mobile number. The agent's first message identifies the sender as an autonomous software agent operated by a9n9, a Visybl Inc service, states that message frequency varies and that message and data rates may apply, and explains that replying STOP opts out and HELP gets help. Consent is not a condition of any purchase. Program page with opt-in details and sample messages: ${SITE}/sms. Privacy Policy (states that no mobile information will be shared with third parties or affiliates for marketing or promotional purposes): ${SITE}/privacy. Terms and Conditions with the SMS program terms: ${SITE}/terms.`,
+  MessageFlow: `Opt-in is consumer initiated and specific to this program: (1) the person sends the first text to the agent's number, +1 510 443 3533; or (2) during a phone call or email exchange the person asks the agent to text them and gives their mobile number. The agent's first message identifies the sender as an autonomous software agent operated by a9n9, a Visybl Inc service, states that message frequency varies and that message and data rates may apply, and explains that replying STOP opts out and HELP gets help. Consent is not a condition of any purchase. Privacy Policy (states that no mobile information will be shared with third parties or affiliates for marketing or promotional purposes): ${SITE}/privacy. SMS Terms and Conditions, specific to this program: ${SITE}/sms.`,
   PrivacyPolicyUrl: `${SITE}/privacy`,
-  TermsAndConditionsUrl: `${SITE}/terms`,
+  TermsAndConditionsUrl: `${SITE}/sms`,
   SubscriberOptIn: 'true',
   AgeGated: 'false',
   DirectLending: 'false',
@@ -38,7 +38,7 @@ const samples = [
 ];
 
 const mode = process.argv[2] ?? '--check';
-for (const p of ['/sms', '/privacy', '/terms']) { const r = await fetch(SITE + p).catch(() => null); const ok = r && r.status === 200 && /Visybl Inc/.test(await r.text()); console.log(`${SITE}${p} => ${r ? r.status : 'unreachable'} ${ok ? 'ok (mentions Visybl Inc)' : 'NOT READY'}`); if (!ok && mode === '--submit') { console.log('site not ready; not submitting'); process.exit(1); } }
+for (const p of ['/sms', '/privacy']) { const r = await fetch(SITE + p).catch(() => null); const ok = r && r.status === 200 && /Visybl Inc/.test(await r.text()); console.log(`${SITE}${p} => ${r ? r.status : 'unreachable'} ${ok ? 'ok (mentions Visybl Inc)' : 'NOT READY'}`); if (!ok && mode === '--submit') { console.log('site not ready; not submitting'); process.exit(1); } }
 if (mode === '--check') { console.log(JSON.stringify({ ...payload, MessageSamples: samples }, null, 1)); process.exit(0); }
 if (mode === '--delete-failed') {
   const list = await api('GET', `https://messaging.twilio.com/v1/Services/${MG}/Compliance/Usa2p`);

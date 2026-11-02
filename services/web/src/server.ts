@@ -140,6 +140,11 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (url.pathname === '/livez') return send(res, 200, { ok: true });
+    if (url.pathname === '/record-health') {
+      // The homepage scoreboard feed: 503 when record.json is missing or older than an hour, so the probe pages the operator.
+      try { const r = JSON.parse(await readFile(join(env.SITE_DIR ?? '/site', 'record.json'), 'utf8')) as { at: string }; const ageSec = Math.round((Date.now() - Date.parse(r.at)) / 1000); return send(res, ageSec < 3600 ? 200 : 503, { ok: ageSec < 3600, at: r.at, ageSec }); }
+      catch { return send(res, 503, { ok: false, error: 'record.json unreadable' }); }
+    }
     if (url.pathname === '/heartbeat') { const h = await heartbeat(); return send(res, h.ok ? 200 : 503, { ...h, meaning: h.ok ? 'agent runtime alive' : 'agent runtime stalled or heartbeat unavailable' }); }
     if (url.pathname === '/.well-known/http-message-signatures-directory' && req.method === 'GET') {
       if (!SIGNERS.length) return send(res, 404, { error: 'no signing key configured' });

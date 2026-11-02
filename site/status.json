@@ -1,0 +1,6 @@
+{
+  "_note": "Status tags on the homepage. A string replaces the tag; null hides it once the thing is simply live. Checked hourly by scripts/status-check.mjs.",
+  "sms": "SMS replies: awaiting carrier approval",
+  "ecash": "eCash: testnet today",
+  "anchoring": "On-chain anchoring: dry run"
+}

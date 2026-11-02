@@ -36,7 +36,7 @@ SENDER_DOMAINS = "a9n9.net"
 # Optional narrower allow-list of exact addresses (comma-separated). Empty = any on SENDER_DOMAINS.
 ALLOWED_SENDERS = ""
 # What the probe checks (2xx within 10 s).
-PROBE_TARGETS = "https://inbox.a9n9.net/livez,https://phone.a9n9.net/livez,https://reserves.a9n9.net/,https://mint.picocash.dev/v1/status,https://agent001.a9n9.net/heartbeat,https://tools.a9n9.net/livez,https://www.visybl.com/livez"
+PROBE_TARGETS = "https://inbox.a9n9.net/livez,https://phone.a9n9.net/livez,https://reserves.a9n9.net/,https://mint.picocash.dev/v1/status,https://agent001.a9n9.net/heartbeat,https://tools.a9n9.net/livez,https://www.visybl.com/livez,https://agent001.a9n9.net/record-health"
 
 # Secrets (wrangler secret put ...; .dev.vars locally):
 #   INBOX_WEBHOOK_SECRET  HMAC key for webhooks to the inbox
