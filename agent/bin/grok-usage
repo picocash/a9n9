@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+// grok-usage — where the week's included Grok budget stands and what that means for this run.
+// Reads grok.com's own usage endpoint through the agent's logged-in Chrome (no scraping), appends a snapshot
+// to state/grok-usage.jsonl, and prints a pace verdict. The pool resets weekly and unused budget is lost, so
+// both under-spending and over-spending are failures. Plan: ~12% a day, ~16% held in reserve for the last day.
+import fs from 'node:fs';
+import { chrome, out, HOME } from './_lib.mjs';
+const DAILY = 12, RESERVE = 100 - 7 * DAILY; // 12%/day → 84% by the reset, 16% reserve
+const { ctx } = await chrome();
+let page = ctx.pages().find(p => p.url().startsWith('https://grok.com/'));
+const opened = !page; if (!page) { page = await ctx.newPage(); await page.goto('https://grok.com/dashboard', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(2500); }
+const st = await page.evaluate(async () => { const r = await fetch('/dashboard/api/dashboard/v2/usage-status?scope=user', { credentials: 'include' }); return r.ok ? r.json() : { error: r.status }; });
+if (opened) await page.close();
+if (!st || st.error || !st.weeklyIncludedUsage) { out({ ok: false, error: `usage endpoint failed (${st?.error ?? 'no data'}); is Chrome logged in to grok.com?` }); process.exit(1); }
+const w = st.weeklyIncludedUsage; const now = Date.now();
+const start = Date.parse(w.periodStart), reset = Date.parse(w.resetsAt);
+const usedPct = +(100 * w.usedCents / w.budgetCents).toFixed(1);
+const weekFrac = Math.min(1, Math.max(0, (now - start) / (reset - start)));
+const dayOfWeek = Math.min(7, Math.floor(weekFrac * 7) + 1);           // 1..7
+const pacePct = +((100 - RESERVE) * weekFrac).toFixed(1);               // where a steady 12%/day would be right now
+const todayCapPct = +Math.max(0, DAILY * dayOfWeek - usedPct).toFixed(1); // what is left to spend before today's line
+const hoursToReset = +((reset - now) / 36e5).toFixed(1);
+let verdict, advice;
+if (usedPct >= 100 - RESERVE && hoursToReset > 24) { verdict = 'reserve'; advice = 'The reserve is all that is left. Essentials only until the reset: mentions, inbox, one reply if someone is waiting. No searches, no reviews longer than 3 lines.'; }
+else if (usedPct > pacePct + 4) { verdict = 'over'; advice = 'Over pace. This run: mentions, inbox, at most one search and one reply; keep the final message and the ledger entry short.'; }
+else if (usedPct < pacePct - 4) { verdict = 'under'; advice = `Under pace by ${(pacePct - usedPct).toFixed(1)} points: unused budget is lost at the reset. This run do more: 2–3 grok-xsearch queries on different angles of the beat, reply in 2 threads, read one source properly before replying, and write a fuller journal entry.`; }
+else { verdict = 'on'; advice = 'On pace. Run the normal cycle.'; }
+// local view: runs today from Hermes' audit, so cost per run is known
+let runsToday = 0, tokensToday = 0; try { for (const l of fs.readFileSync('/home/ubuntu/.hermes/cron/usage_audit.jsonl', 'utf8').trim().split('\n')) { const j = JSON.parse(l); if (j.ts.slice(0, 10) === new Date().toISOString().slice(0, 10)) { runsToday++; tokensToday += j.total_tokens ?? 0; } } } catch {}
+const snap = { at: new Date(now).toISOString(), usedPct, usedCents: w.usedCents, budgetCents: w.budgetCents, pacePct, dayOfWeek, todayCapPct, hoursToReset, verdict, runsToday, tokensToday };
+fs.appendFileSync(`${HOME}/state/grok-usage.jsonl`, JSON.stringify(snap) + '\n');
+out({ ok: true, ...snap, resetsAt: w.resetsAt, plan: `${DAILY}%/day, ${RESERVE}% reserve`, advice });
+
+process.exit(0);
