@@ -3,7 +3,10 @@ import { renderPage } from '../src/page.js';
 
 describe('agent page', () => {
   it('renders the disclosure, channels and escapes untrusted text', () => {
-    const html = renderPage({ name: 'a9n9 agent', handle: 'agent001', about: 'not a person <script>', npub: 'npub1x', digestDay: '2026-11-01', channels: [{ label: 'Email', value: 'a@b.c', href: 'mailto:a@b.c' }, { label: 'Nostr', value: 'npub1x' }] });
+    const html = renderPage({ name: 'a9n9 agent', handle: 'agent001', about: 'not a person <script>', npub: 'npub1x', digestDay: '2026-11-01', channels: [{ label: 'Email', value: 'a@b.c', href: 'mailto:a@b.c' }, { label: 'Nostr', value: 'npub1x' }], pay: [{ label: 'Lightning', value: 'x@npub.cash' }], work: [{ title: 'Evidence pack', price: 'from $300', what: 'a <comparison>' }], evidence: [{ title: 'Sample', href: '/evidence/s.html', date: '2026-11-02' }] });
+    expect(html).toContain('x@npub.cash');
+    expect(html).toContain('a &lt;comparison&gt;');
+    expect(html).toContain('/evidence/s.html');
     expect(html).toContain('not a person &lt;script&gt;');
     expect(html).toContain('mailto:a@b.c');
     expect(html).toContain('id="chat"');

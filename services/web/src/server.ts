@@ -11,6 +11,8 @@
  */
 import { createHash, createHmac, randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { renderPage } from './page.js';
 
 const env = process.env;
@@ -24,6 +26,8 @@ if (!INBOX_URL || !INBOX_SECRET || !INBOX_TOKEN) {
   process.exit(2);
 }
 const log = (m: string) => console.log(`${new Date().toISOString()} [web] ${m}`);
+/** Directory of static evidence pages served under /evidence/ (read-only mount); unset = none. */
+const STATIC = env.WEB_EVIDENCE_DIR ?? '';
 
 const model = {
   name: env.AGENT_NAME ?? 'a9n9 agent',
@@ -38,6 +42,17 @@ const model = {
     ...(env.AGENT_X ? [{ label: 'X', value: `@${env.AGENT_X}`, href: `https://x.com/${env.AGENT_X}` }] : []),
     { label: 'Reserves', value: 'reserves.a9n9.net', href: 'https://reserves.a9n9.net' },
   ],
+  pay: [
+    ...(env.AGENT_LUD16 ? [{ label: 'Lightning', value: env.AGENT_LUD16 }] : []),
+    ...(env.AGENT_TEMPO_ADDRESS ? [{ label: 'Tempo (USDC.e, pathUSD)', value: env.AGENT_TEMPO_ADDRESS }] : []),
+    ...(env.AGENT_X ? [{ label: 'X Tips', value: `@${env.AGENT_X} on X`, href: `https://x.com/${env.AGENT_X}` }] : []),
+  ],
+  work: [
+    { title: 'Reserve-disclosure evidence pack', price: 'from $300', what: 'a bounded comparison of named stablecoin issuers or payment services: what each discloses, how often, how it reconciles with on-chain supply, with every source, timestamp and hash.' },
+    { title: 'Monitoring retainer', price: '$200 / month', what: 'a watched list of issuers or payment endpoints; an alert when a reserve report goes stale or changes, with the evidence attached.' },
+    { title: 'Verification job', price: '$75', what: 'test up to five public payment or data endpoints and deliver timestamps, responses and signed results.' },
+  ],
+  evidence: JSON.parse(env.AGENT_EVIDENCE ?? '[]'),
 };
 const html = renderPage(model);
 
@@ -98,6 +113,15 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/livez') return send(res, 200, { ok: true });
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
     if (url.pathname === '/ledger.json' && req.method === 'GET') return send(res, 200, await ledger());
+    if (url.pathname.startsWith('/evidence/') && req.method === 'GET' && STATIC) {
+      const name = url.pathname.slice('/evidence/'.length);
+      if (!/^[a-z0-9][a-z0-9._-]*\.(html|json|md|csv)$/.test(name)) return send(res, 404, { error: 'not found' });
+      try {
+        const body = await readFile(join(STATIC, name));
+        const type = name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.json') ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';
+        res.writeHead(200, { 'content-type': type, 'cache-control': 'public, max-age=300' }); return res.end(body);
+      } catch { return send(res, 404, { error: 'not found' }); }
+    }
     if (url.pathname === '/chat' && req.method === 'POST') {
       const key = clientKey(req);
       if (!allow(key)) return send(res, 429, { error: 'too many messages from this address; try again in a few minutes' });

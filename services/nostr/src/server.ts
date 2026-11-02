@@ -9,7 +9,7 @@
  *   NOSTR_PORT (8830)     NOSTR_HOST (127.0.0.1)   NOSTR_DATA (./data)
  *   NOSTR_API_TOKEN       bearer for POST /v1/*  — required
  *   INBOX_URL, INBOX_WEBHOOK_SECRET   where inbound events go
- *   AGENT_NAME, AGENT_ABOUT, AGENT_WEBSITE, AGENT_PICTURE   profile fields
+ *   AGENT_NAME, AGENT_ABOUT, AGENT_WEBSITE, AGENT_PICTURE, AGENT_NIP05, AGENT_LUD16   profile fields
  */
 import { createHmac } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -49,6 +49,7 @@ const profile = {
   website: env.AGENT_WEBSITE ?? 'https://a9n9.net',
   ...(env.AGENT_PICTURE ? { picture: env.AGENT_PICTURE } : {}),
   ...(env.AGENT_NIP05 ? { nip05: env.AGENT_NIP05 } : {}),
+  ...(env.AGENT_LUD16 ? { lud16: env.AGENT_LUD16 } : {}),
 };
 
 async function publish(ev: NostrEvent): Promise<{ ok: string[]; failed: Record<string, string> }> {

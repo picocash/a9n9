@@ -29,6 +29,8 @@ export interface Profile {
   website?: string;
   picture?: string;
   nip05?: string;
+  /** Lightning address (LUD-16) so anyone can zap the agent; no audience gate. */
+  lud16?: string;
   bot?: boolean;
 }
 
