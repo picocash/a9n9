@@ -19,7 +19,8 @@ const correspondence = { humanEmailsReceived: received.length, threadsWithReply:
 const mentions = idx.filter((x) => x.type === 'x.mention' || x.type === 'nostr.mention' || x.type === 'bsky.mention'); const authors = new Set(); for (const ev of mentions) { const p = await full(ev); if ((p.author || p.fromNpub) && !/e2e|throwaway key/i.test(String(p.text ?? ''))) authors.add(p.author ?? p.fromNpub); }
 // helped receipts and paid work
 const helped = idx.filter((x) => x.type === 'receipt.helped'); let helpedYes = 0; for (const ev of helped) { const p = await full(ev); if (p.helped) helpedYes++; }
-const paid = []; for (const ev of idx.filter((x) => x.type === 'money.income')) { const p = await full(ev); if (Number(p.amount_usd) >= 10 && !AFFILIATE.test(String(p.payer ?? ''))) paid.push(p); }
+const reversed = new Set(); for (const ev of idx.filter((x) => x.type === 'money.refund' || x.type === 'money.dispute')) { const p = await full(ev); if (p.payment_intent) reversed.add(p.payment_intent); }
+const paid = []; for (const ev of idx.filter((x) => x.type === 'money.income')) { const p = await full(ev); if (Number(p.amount_usd) >= 10 && p.livemode !== false && !reversed.has(p.payment_intent) && !AFFILIATE.test(String(p.payer ?? ''))) paid.push(p); }
 // reach
 const statsF = `${HOME}/state/x-stats.jsonl`; const stats = fs.existsSync(statsF) ? fs.readFileSync(statsF, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : []; const followers = stats.at(-1)?.followers ?? null;
 let bskyFollowers = null; try { const { xrpc } = await import('./_bsky.mjs'); const pr = await xrpc('GET', 'app.bsky.actor.getProfile', { query: { actor: 'agent001.a9n9.net' } }); bskyFollowers = pr.body?.followersCount ?? null; } catch {}

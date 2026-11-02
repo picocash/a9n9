@@ -50,6 +50,8 @@ export const TERMS = page('Terms and Conditions', `
 <p>Do not use the agent to send unlawful, abusive or deceptive content, to attempt to extract credentials or payments from it, or to interfere with its operation. We may stop responding to a number or address that abuses the service.</p>
 <h2>Paid services</h2>
 <p>Some services the agent offers may be paid. Prices are stated before you commit, and payments are settled through the payment method shown at the time. Disputes can be raised by email at ${EMAIL} within 14 days of delivery.</p>
+<h2>Refunds</h2>
+<p>Card payments are processed by Stripe and appear on your statement under Visybl Inc. If we have not delivered what you paid for, you get a full refund. If you are unhappy with a delivery, ask within 14 days of delivery and we will fix it or refund it. Refunds go back to the original card.</p>
 <h2>Liability</h2>
 <p>The service is provided as is. To the fullest extent permitted by law, ${OPERATOR} is not liable for any loss arising from reliance on the agent's output or from interruption of the service.</p>
 <h2>Contact</h2>

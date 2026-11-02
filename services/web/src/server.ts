@@ -15,6 +15,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { renderPage } from './page.js';
 import { renderBotPage } from './botpage.js';
+import { toLedgerEvent, verifyStripeSignature } from './stripe.js';
 import { renderRules } from './rules.js';
 import { directoryResponse, makeKeyFetcher, signerFromSeed, verifyRequest, type Signer } from './httpsig.js';
 
@@ -115,10 +116,10 @@ function allow(key: string): boolean {
 }
 const clientKey = (req: IncomingMessage) => createHash('sha256').update(String(req.headers['cf-connecting-ip'] ?? req.socket.remoteAddress ?? '')).digest('hex').slice(0, 16);
 
-async function postToInbox(payload: { id: string; type: string } & Record<string, unknown>): Promise<{ status: number; receivedAt: string }> {
+async function postToInbox(payload: { id: string; type: string } & Record<string, unknown>, hook = 'web'): Promise<{ status: number; receivedAt: string }> {
   const body = JSON.stringify(payload);
   const sig = createHmac('sha256', INBOX_SECRET).update(body).digest('hex');
-  const res = await fetch(`${INBOX_URL}/hooks/web`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-a9n9-signature': `sha256=${sig}`, 'x-a9n9-event': payload.type, 'x-a9n9-id': payload.id }, body, signal: AbortSignal.timeout(8000) });
+  const res = await fetch(`${INBOX_URL}/hooks/${hook}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-a9n9-signature': `sha256=${sig}`, 'x-a9n9-event': payload.type, 'x-a9n9-id': payload.id }, body, signal: AbortSignal.timeout(8000) });
   return { status: res.status, receivedAt: new Date().toISOString() };
 }
 
@@ -150,6 +151,18 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/.well-known/http-message-signatures-directory' && req.method === 'GET') {
       if (!SIGNERS.length) return send(res, 404, { error: 'no signing key configured' });
       const d = directoryResponse(PUBLIC_HOST, SIGNERS); res.writeHead(200, { ...d.headers, ...CORS }); return res.end(d.body);
+    }
+    if (url.pathname === '/stripe/webhook' && req.method === 'POST') {
+      const secret = env.STRIPE_WEBHOOK_SECRET;
+      if (!secret) return send(res, 404, { error: 'not configured' });
+      const chunks: Buffer[] = []; let size = 0;
+      for await (const c of req) { size += (c as Buffer).length; if (size > 1_000_000) return send(res, 413, { error: 'too large' }); chunks.push(c as Buffer); }
+      const raw = Buffer.concat(chunks).toString('utf8');
+      if (!verifyStripeSignature(raw, req.headers['stripe-signature'] as string | undefined, secret)) return send(res, 400, { error: 'bad signature' });
+      const ev = toLedgerEvent(JSON.parse(raw), secret);
+      // A failed ledger write answers 500 so Stripe retries; the event id makes the retry a no-op once stored.
+      if (ev) { const r = await postToInbox(ev, 'stripe'); if (r.status >= 300) return send(res, 500, { error: 'ledger write failed' }); }
+      return send(res, 200, { received: true, recorded: ev?.type ?? null });
     }
     if (url.pathname === '/verify' && (req.method === 'GET' || req.method === 'POST')) {
       // Any agent can test its Web Bot Auth / TAP signature here; a verified call is written to the ledger as a receipt.
