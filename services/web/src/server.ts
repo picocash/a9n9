@@ -14,6 +14,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { renderPage } from './page.js';
+import { directoryResponse, makeKeyFetcher, signerFromSeed, verifyRequest, type Signer } from './httpsig.js';
 
 const env = process.env;
 const PORT = Number(env.WEB_PORT ?? 8850);
@@ -28,6 +29,12 @@ if (!INBOX_URL || !INBOX_SECRET || !INBOX_TOKEN) {
 const log = (m: string) => console.log(`${new Date().toISOString()} [web] ${m}`);
 /** Directory of static evidence pages served under /evidence/ (read-only mount); unset = none. */
 const STATIC = env.WEB_EVIDENCE_DIR ?? '';
+/** The agent's request-signing identity (Web Bot Auth / Visa TAP): public key served at the well-known directory, private seed from the secrets file. */
+const SIGNERS: Signer[] = env.AGENT_SIGNING_SEED && env.AGENT_SIGNING_X ? [signerFromSeed(env.AGENT_SIGNING_SEED, env.AGENT_SIGNING_X)] : [];
+const PUBLIC_HOST = env.AGENT_PUBLIC_HOST ?? 'agent001.a9n9.net';
+const fetchKey = makeKeyFetcher({ tapDirectory: env.TAP_KEY_DIRECTORY });
+/** Verify an incoming request's agent signature (never throws). Cloudflare puts the original host in the Host header through the tunnel. */
+const verifyIncoming = (req: IncomingMessage, url: URL) => verifyRequest({ method: req.method ?? 'GET', authority: String(req.headers.host ?? PUBLIC_HOST), path: url.pathname + url.search, scheme: 'https', headers: req.headers as Record<string, string | string[] | undefined> }, fetchKey);
 
 const model = {
   name: env.AGENT_NAME ?? 'a9n9 agent',
@@ -111,6 +118,16 @@ const server = createServer(async (req, res) => {
   try {
     if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (url.pathname === '/livez') return send(res, 200, { ok: true });
+    if (url.pathname === '/.well-known/http-message-signatures-directory' && req.method === 'GET') {
+      if (!SIGNERS.length) return send(res, 404, { error: 'no signing key configured' });
+      const d = directoryResponse(PUBLIC_HOST, SIGNERS); res.writeHead(200, { ...d.headers, ...CORS }); return res.end(d.body);
+    }
+    if (url.pathname === '/verify' && (req.method === 'GET' || req.method === 'POST')) {
+      // Any agent can test its Web Bot Auth / TAP signature here; a verified call is written to the ledger as a receipt.
+      const v = await verifyIncoming(req, url);
+      if (v.ok) { const id = `web:signed:${randomUUID()}`; await postToInbox({ id, type: 'web.signed-agent', channel: 'web', tag: v.tag, kid: v.kid, agent: v.agent, path: url.pathname, at: new Date().toISOString() }).catch(() => null); ledgerCache = null; return send(res, 200, { ...v, receipt: id }); }
+      return send(res, v.signed ? 401 : 400, { ...v, hint: v.signed ? 'signature present but not verified' : 'no Signature-Input/Signature headers; see https://developers.cloudflare.com/bots/concepts/bot/verified-bots/web-bot-auth/' });
+    }
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
     if (url.pathname === '/ledger.json' && req.method === 'GET') return send(res, 200, await ledger());
     if (url.pathname.startsWith('/evidence/') && req.method === 'GET' && STATIC) {
@@ -130,7 +147,8 @@ const server = createServer(async (req, res) => {
       const who = String(body.who ?? '').trim().slice(0, 80);
       if (!text || text.length > 4000) return send(res, 400, { error: 'message required (≤4000 chars)' });
       const id = `web:${randomUUID()}`;
-      const r = await postToInbox({ id, type: 'web.chat', channel: 'web', who, text, source: key, userAgent: String(req.headers['user-agent'] ?? '').slice(0, 200), sentAt: new Date().toISOString() });
+      const v = await verifyIncoming(req, url);
+      const r = await postToInbox({ id, type: 'web.chat', channel: 'web', who, text, source: key, userAgent: String(req.headers['user-agent'] ?? '').slice(0, 200), sentAt: new Date().toISOString(), ...(v.signed ? { signedAgent: { ok: v.ok, tag: v.tag, kid: v.kid, agent: v.agent, reason: v.reason } } : {}) });
       if (r.status !== 201) return send(res, 502, { error: 'could not record the message; please try again' });
       ledgerCache = null;
       log(`web.chat ${id} from ${key}`);

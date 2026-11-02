@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // reserves — current reserve facts from reserves.a9n9.net
 import { out } from './_lib.mjs';
-const d = await (await fetch('https://reserves.a9n9.net/v1/tokens')).json();
+import { signedFetch } from './_sign.mjs';
+const d = await (await signedFetch('https://reserves.a9n9.net/v1/tokens', {}, { tag: 'web-bot-auth' })).json();
 out({ ok: true, source: 'https://reserves.a9n9.net', asOf: new Date().toISOString(), tokens: d });

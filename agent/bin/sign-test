@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+// sign-test [url] — prove the agent's signature works: against Cloudflare's Web Bot Auth test endpoint (200 = key known
+// and verified, 401 = well-formed but key unknown/unregistered, 400 = malformed) and against our own verifier.
+import { out } from './_lib.mjs';
+import { signedFetch, KID, SIGNATURE_AGENT } from './_sign.mjs';
+const targets = process.argv[2] ? [process.argv[2]] : ['https://crawltest.com/cdn-cgi/web-bot-auth', 'https://agent001.a9n9.net/verify'];
+const results = [];
+for (const t of targets) {
+  try {
+    const r = await signedFetch(t, {}, { tag: 'web-bot-auth' });
+    let body = ''; try { body = (await r.text()).slice(0, 300); } catch {}
+    results.push({ url: t, status: r.status, meaning: r.status === 200 ? 'key known and signature verified' : r.status === 401 ? 'signature well-formed; key not registered there (or failed)' : r.status === 400 ? 'malformed signature' : 'see body', body });
+  } catch (e) { results.push({ url: t, error: e.message }); }
+}
+out({ ok: true, kid: KID, signatureAgent: SIGNATURE_AGENT, results });
+process.exit(0);

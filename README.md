@@ -16,7 +16,7 @@ tab; this repo holds the code.
 | Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio Media Streams (Grok speech-to-speech) + Messaging on one number | voice confirmed live; SMS inbound confirmed; 10DLC campaign resubmitted Nov 2 with the pages on www.visybl.com, in review |
 | Nostr: mentions and DMs | `services/nostr` | Node on the home box, `:8830` (local API only); one keypair, four public relays | profile + first note live; inbound verified |
 | Telegram (also the owner channel) | `services/telegram` | Node on the home box, `:8840` (local API only); Bot API long polling | built; waits for a BotFather token |
-| Agent page and web chat | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index | running; hostname pending |
+| Agent page, web chat, agent identity | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index; the agent's signed key directory at `/.well-known/http-message-signatures-directory` and a Web Bot Auth / Visa TAP signature verifier at `/verify` (`src/httpsig.ts`) | live at agent001.a9n9.net |
 | Daily ledger anchoring | `services/anchor` | Node on the home box; `transferWithMemo` of the day's digest on Tempo mainnet (chain 4217) | dry run until the wallet is funded |
 | Off-box probe and paging | `services/email-worker` (cron) | Cloudflare cron every 5 min; pages by email once on sustained failure and on recovery; `GET /v1/probe` | deployed |
 | Procurement: tools as picocash merchants | `services/tools` | Node on the home box, `:8860`; Parallel.ai, Exa, Tavily and Brave search behind an MPP `charge` gate (settle-first, hosted testnet mint) | Parallel, Exa and Tavily searches each bought end to end with picocash; Brave awaits its key |

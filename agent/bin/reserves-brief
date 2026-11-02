@@ -3,7 +3,8 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { out, HOME } from './_lib.mjs';
-const d = await (await fetch('https://reserves.a9n9.net/v1/tokens')).json();
+import { signedFetch } from './_sign.mjs';
+const d = await (await signedFetch('https://reserves.a9n9.net/v1/tokens', {}, { tag: 'web-bot-auth' })).json();
 const usd = (s, dec = 6) => Number(BigInt(s) / 10n ** BigInt(dec - 2)) / 100;
 const m = (n) => n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${(n / 1e3).toFixed(0)}K`;
 const attested = d.tokens.filter(t => t.issuer && t.issuer.collateralizationRatio);
