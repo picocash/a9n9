@@ -16,10 +16,18 @@ const body = fs.readFileSync(file, 'utf8').trim();
 const receipt = inReplyTo ? inReplyTo.replace(/[^0-9a-zA-Z_:.-]/g, '') : `email:${Date.now()}`;
 const text = `${body}\n\n—\nagent 001, an autonomous software agent run by a9n9 (a Visybl Inc service), not a person.\nDid this help? One click, no login: https://agent001.a9n9.net/h/${encodeURIComponent(receipt)}\nMy public record: https://agent001.a9n9.net`;
 const e = env('/home/ubuntu/a9n9/secrets/email.env'); const url = fs.readFileSync('/home/ubuntu/a9n9/secrets/email-worker.url', 'utf8').trim();
-const res = await fetch(`${url}/v1/send`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.EMAIL_API_TOKEN}` }, body: JSON.stringify({ from: 'agent001@a9n9.net', to, subject, text, ...(inReplyTo ? { inReplyTo } : {}) }) });
-const j = await res.json().catch(() => ({}));
-if (!res.ok) { out({ ok: false, error: j.error ?? `send failed ${res.status}` }); process.exit(1); }
+let res = await fetch(`${url}/v1/send`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.EMAIL_API_TOKEN}` }, body: JSON.stringify({ from: 'agent001@a9n9.net', to, subject, text, ...(inReplyTo ? { inReplyTo } : {}) }) }).catch(() => null);
+let j = res ? await res.json().catch(() => ({})) : {}; let rail = 'cloudflare';
+if (!res || !res.ok) {
+  // second rail (plan: Resend), used only when the first fails and only once the a9n9.net domain is verified there
+  const rf = '/home/ubuntu/a9n9/secrets/resend.env'; const r = fs.existsSync(rf) ? env(rf) : {};
+  if (r.RESEND_API_KEY && r.RESEND_DOMAIN_VERIFIED === 'true') {
+    const r2 = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${r.RESEND_API_KEY}` }, body: JSON.stringify({ from: 'agent 001 <agent001@a9n9.net>', to: [to], subject, text, ...(inReplyTo ? { headers: { 'In-Reply-To': inReplyTo } } : {}) }) }).catch(() => null);
+    const j2 = r2 ? await r2.json().catch(() => ({})) : {};
+    if (r2 && r2.ok) { res = r2; j = j2; rail = 'resend'; } else { out({ ok: false, error: `both rails failed: cloudflare ${j.error ?? res?.status ?? 'unreachable'}; resend ${j2.message ?? r2?.status ?? 'unreachable'}` }); process.exit(1); }
+  } else { out({ ok: false, error: j.error ?? `send failed ${res?.status ?? 'unreachable'} (second rail not verified yet)` }); process.exit(1); }
+}
 c.emails = (c.emails ?? 0) + 1; fs.writeFileSync(counters, JSON.stringify(c));
-await ledger({ id: `email:sent:${Date.now()}`, type: 'email.sent', channel: 'email', to, subject, inReplyTo: inReplyTo ?? null, helpedLink: `https://agent001.a9n9.net/h/${receipt}`, at: new Date().toISOString() });
-out({ ok: true, to, subject, helpedLink: `https://agent001.a9n9.net/h/${receipt}`, emailsToday: c.emails, capPerDay: 20 });
+await ledger({ id: `email:sent:${Date.now()}`, type: 'email.sent', channel: 'email', to, subject, inReplyTo: inReplyTo ?? null, rail, helpedLink: `https://agent001.a9n9.net/h/${receipt}`, at: new Date().toISOString() });
+out({ ok: true, to, subject, rail, helpedLink: `https://agent001.a9n9.net/h/${receipt}`, emailsToday: c.emails, capPerDay: 20 });
 process.exit(0);
