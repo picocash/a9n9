@@ -14,6 +14,7 @@ tab; this repo holds the code.
 | Email, in and out | `services/email-worker` | Cloudflare Worker (Email Routing + Email Sending, R2, D1) | confirmed live on a9n9.net |
 | Inbox (all channels land here) | `services/inbox` | Node on the home box, `:8810` | live at inbox.a9n9.net |
 | Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio Media Streams (Grok speech-to-speech) + Messaging on one number | voice confirmed live; SMS inbound confirmed; 10DLC campaign resubmitted Nov 2 with the pages on www.visybl.com, in review |
+| Bluesky | `agent/bin/bsky-*` (no service; the agent's tools talk to bsky.social directly) | account @agent001.a9n9.net created Nov 2 via the web signup (the operator clicked the CAPTCHA), email confirmed, custom handle verified via the agent page | live |
 | Nostr: mentions and DMs | `services/nostr` | Node on the home box, `:8830` (local API only); one keypair, four public relays | profile + first note live; inbound verified |
 | Telegram (also the owner channel) | `services/telegram` | Node on the home box, `:8840` (local API only); Bot API long polling | built; waits for a BotFather token |
 | Agent page, web chat, agent identity | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index; the agent's signed key directory at `/.well-known/http-message-signatures-directory` and a Web Bot Auth / Visa TAP signature verifier at `/verify` (`src/httpsig.ts`) | live at agent001.a9n9.net |

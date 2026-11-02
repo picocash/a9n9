@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+// bsky-reply <post url or at:// uri> '<text>' — reply to a Bluesky post (caps: 10/day; one reply per post; logged as bsky.reply). The did-this-help link is appended.
+import fs from 'node:fs';
+import { enforce, ledger, out, textArg, suspicious, HOME } from './_lib.mjs';
+import { xrpc, createPost, postUrl } from './_bsky.mjs';
+const argv = process.argv.slice(2); const fileText = argv.includes('--file') ? textArg(argv) : null;
+const target = (fileText ? fileText.rest : argv)[0]; let text = fileText ? fileText.text : argv.slice(1).join(' ').trim();
+if (!target || !text) { out({ ok: false, error: "usage: bsky-reply <post url|at uri> '<text>'" }); process.exit(2); }
+const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
+// resolve the target to an at:// uri + cid
+let uri = target;
+if (/^https:\/\/bsky\.app\/profile\//.test(target)) { const m = target.match(/profile\/([^/]+)\/post\/([^/?#]+)/); let did = m[1]; if (!did.startsWith('did:')) { const h = await xrpc('GET', 'com.atproto.identity.resolveHandle', { query: { handle: did } }); did = h.body?.did; } uri = `at://${did}/app.bsky.feed.post/${m[2]}`; }
+const seenF = `${HOME}/state/bsky-replied.json`; const seen = fs.existsSync(seenF) ? JSON.parse(fs.readFileSync(seenF, 'utf8')) : {};
+if (seen[uri]) { out({ ok: false, error: `already replied to this post at ${seen[uri]}` }); process.exit(4); }
+const c = enforce('bskyReplies', 10, text);
+const th = await xrpc('GET', 'app.bsky.feed.getPostThread', { query: { uri, depth: 0 } });
+const post = th.body?.thread?.post; if (!post) { out({ ok: false, error: 'post not found' }); process.exit(1); }
+const root = post.record?.reply?.root ?? { uri: post.uri, cid: post.cid };
+const ref = `bsky:${post.uri.split('/').pop()}`; text = `${text}\n\nDid this help? https://agent001.a9n9.net/h/${encodeURIComponent(ref)}`;
+if (text.length > 300) { out({ ok: false, error: `reply is ${text.length} chars with the help link; keep the body under 230` }); process.exit(2); }
+const r = await createPost(text, { root, parent: { uri: post.uri, cid: post.cid } });
+if (r.status !== 200 || !r.body?.uri) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+c.bump(); seen[uri] = new Date().toISOString(); fs.writeFileSync(seenF, JSON.stringify(seen));
+await ledger({ id: `bsky:reply:${r.body.uri.split('/').pop()}`, type: 'bsky.reply', channel: 'bsky', inReplyTo: postUrl(post.uri), toAuthor: post.author?.handle, url: postUrl(r.body.uri), text, at: new Date().toISOString() });
+out({ ok: true, url: postUrl(r.body.uri), inReplyTo: postUrl(post.uri), toAuthor: post.author?.handle, repliesToday: c.get(), capPerDay: 10 });
+process.exit(0);

@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+// bsky-search '<query>' — search recent Bluesky posts (free) to find people asking things you can answer
+import { out, clean } from './_lib.mjs';
+import { xrpc, postUrl } from './_bsky.mjs';
+const q = process.argv.slice(2).join(' ').trim(); if (!q) { out({ ok: false, error: "usage: bsky-search '<query>'" }); process.exit(2); }
+const r = await xrpc('GET', 'app.bsky.feed.searchPosts', { query: { q, limit: 15, sort: 'latest' } });
+if (r.status !== 200) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+out({ ok: true, query: q, results: (r.body.posts ?? []).map(p => ({ url: postUrl(p.uri), author: p.author?.handle, when: p.indexedAt, text: clean(p.record?.text ?? '').slice(0, 280), replies: p.replyCount, likes: p.likeCount })) });
+process.exit(0);

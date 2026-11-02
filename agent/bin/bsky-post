@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+// bsky-post '<text>' | bsky-post --file <path> — publish a post on Bluesky (caps: 4/day, shared counter 'bsky'; logged as bsky.post)
+import { enforce, ledger, out, textArg, suspicious } from './_lib.mjs';
+import { createPost, postUrl } from './_bsky.mjs';
+const { text } = textArg(process.argv.slice(2));
+if (!text) { out({ ok: false, error: "usage: bsky-post '<text>' | bsky-post --file <path>" }); process.exit(2); }
+if (text.length > 300) { out({ ok: false, error: `text is ${text.length} chars; Bluesky allows 300` }); process.exit(2); }
+const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
+const c = enforce('bsky', 4, text);
+const r = await createPost(text);
+if (r.status !== 200 || !r.body?.uri) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+c.bump();
+const url = postUrl(r.body.uri);
+await ledger({ id: `bsky:post:${r.body.uri.split('/').pop()}`, type: 'bsky.post', channel: 'bsky', text, url, uri: r.body.uri, at: new Date().toISOString() });
+out({ ok: true, url, uri: r.body.uri, text, bskyToday: c.get(), capPerDay: 4 });
+process.exit(0);

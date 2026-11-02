@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+// bsky-mentions — new mentions, replies and quotes of the agent on Bluesky since the last run (notifications), stored in the ledger as bsky.mention
+import fs from 'node:fs';
+import { ledger, out, clean, HOME } from './_lib.mjs';
+import { xrpc, postUrl } from './_bsky.mjs';
+const stF = `${HOME}/state/bsky-seen.json`; const seen = new Set(fs.existsSync(stF) ? JSON.parse(fs.readFileSync(stF, 'utf8')) : []);
+const r = await xrpc('GET', 'app.bsky.notification.listNotifications', { query: { limit: 30 } });
+if (r.status !== 200) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+const items = (r.body.notifications ?? []).filter(n => ['mention', 'reply', 'quote'].includes(n.reason) && !seen.has(n.uri)).map(n => ({ uri: n.uri, cid: n.cid, url: postUrl(n.uri), reason: n.reason, author: n.author?.handle, authorDid: n.author?.did, text: clean(n.record?.text ?? ''), time: n.indexedAt, root: n.record?.reply?.root ?? null }));
+for (const m of items) { seen.add(m.uri); await ledger({ id: `bsky:mention:${m.uri.split('/').pop()}`, type: 'bsky.mention', channel: 'bsky', ...m }); }
+fs.writeFileSync(stF, JSON.stringify([...seen].slice(-500)));
+await xrpc('POST', 'app.bsky.notification.updateSeen', { body: { seenAt: new Date().toISOString() } }).catch(() => {});
+out({ ok: true, new: items });
+process.exit(0);

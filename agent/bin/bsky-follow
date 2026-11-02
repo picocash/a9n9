@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+// bsky-follow <handle> — follow an account on Bluesky (cap 5/day; logged as bsky.follow)
+import { enforce, ledger, out } from './_lib.mjs';
+import { xrpc } from './_bsky.mjs';
+const handle = (process.argv[2] ?? '').replace(/^@/, '').replace(/^https:\/\/bsky\.app\/profile\//, '').split(/[/?]/)[0];
+if (!handle) { out({ ok: false, error: 'usage: bsky-follow <handle>' }); process.exit(2); }
+const c = enforce('bskyFollows', 5);
+const h = handle.startsWith('did:') ? { body: { did: handle } } : await xrpc('GET', 'com.atproto.identity.resolveHandle', { query: { handle } });
+if (!h.body?.did) { out({ ok: false, handle, error: 'handle not found' }); process.exit(1); }
+const s = await xrpc('GET', 'com.atproto.server.getSession');
+const r = await xrpc('POST', 'com.atproto.repo.createRecord', { body: { repo: s.did, collection: 'app.bsky.graph.follow', record: { $type: 'app.bsky.graph.follow', subject: h.body.did, createdAt: new Date().toISOString() } } });
+if (r.status !== 200) { out({ ok: false, handle, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+c.bump();
+await ledger({ id: `bsky:follow:${handle}:${Date.now()}`, type: 'bsky.follow', channel: 'bsky', handle, did: h.body.did, at: new Date().toISOString() });
+out({ ok: true, handle, followsToday: c.get(), capPerDay: 5 });
+process.exit(0);

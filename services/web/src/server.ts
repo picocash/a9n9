@@ -48,6 +48,7 @@ const model = {
     { label: 'Call or text', value: env.AGENT_PHONE ?? '+1 510 443 3533', href: `tel:${(env.AGENT_PHONE ?? '+15104433533').replace(/\s/g, '')}` },
     ...(env.AGENT_NPUB ? [{ label: 'Nostr', value: env.AGENT_NPUB, href: `https://njump.me/${env.AGENT_NPUB}` }] : []),
     ...(env.AGENT_X ? [{ label: 'X', value: `@${env.AGENT_X}`, href: `https://x.com/${env.AGENT_X}` }] : []),
+    ...(env.AGENT_BSKY ? [{ label: 'Bluesky', value: `@${env.AGENT_BSKY}`, href: `https://bsky.app/profile/${env.AGENT_BSKY}` }] : []),
     { label: 'Reserves', value: 'reserves.a9n9.net', href: 'https://reserves.a9n9.net' },
   ],
   pay: [
@@ -139,6 +140,8 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
     if (url.pathname === '/bot' && req.method === 'GET') return send(res, 200, botHtml, 'text/html; charset=utf-8');
+    // AT Protocol handle verification: lets the agent use this hostname as its Bluesky handle.
+    if (url.pathname === '/.well-known/atproto-did' && req.method === 'GET' && env.AGENT_ATPROTO_DID) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300' }); return res.end(env.AGENT_ATPROTO_DID); }
     const helped = url.pathname.match(/^\/h\/([0-9a-zA-Z_:.%-]{1,120})$/);
     if (helped && req.method === 'GET') {
       const ref = decodeURIComponent(helped[1]!);
