@@ -49,7 +49,7 @@ export function suspicious(text) {
 }
 
 /** At most one reserves-themed post per UTC day across all networks: the monitor is one asset, not the agent's subject. Call before publishing; refuses with exit 4. */
-const RESERVES_TOPIC = /\b(reserves?|OUSD|USDS|pathUSD|USDB|DLUSD|attest(ed|ation)|collateral|issuer ratio)\b/i;
+export const RESERVES_TOPIC = /\b(reserves?|OUSD|USDS|pathUSD|USDB|DLUSD|attest(ed|ation)|collateral|issuer ratio)\b/i;
 export function topicGuard(text, network) {
   if (!RESERVES_TOPIC.test(text)) return () => {};
   const f = `${HOME}/state/topic-guard.json`; const d = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {}; const day = today();

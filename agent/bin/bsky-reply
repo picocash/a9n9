@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // bsky-reply <post url or at:// uri> '<text>' — reply to a Bluesky post (caps: 10/day; one reply per post; logged as bsky.reply). The did-this-help link is appended.
 import fs from 'node:fs';
-import { enforce, ledger, out, textArg, suspicious, claimGuard, HOME } from './_lib.mjs';
+import { enforce, ledger, out, textArg, suspicious, claimGuard, HOME, RESERVES_TOPIC } from './_lib.mjs';
 import { xrpc, createPost, postUrl } from './_bsky.mjs';
 const argv = process.argv.slice(2); const fileText = argv.includes('--file') ? textArg(argv) : null;
 const target = (fileText ? fileText.rest : argv)[0]; let text = fileText ? fileText.text : argv.slice(1).join(' ').trim();
@@ -16,7 +16,9 @@ if (seen[uri]) { out({ ok: false, error: `already replied to this post at ${seen
 const c = enforce('bskyReplies', 10, text);
 const th = await xrpc('GET', 'app.bsky.feed.getPostThread', { query: { uri, depth: 0 } });
 const post = th.body?.thread?.post; if (!post) { out({ ok: false, error: 'post not found' }); process.exit(1); }
+if (RESERVES_TOPIC.test(text) && !RESERVES_TOPIC.test(post.record?.text ?? '')) { out({ ok: false, error: 'your reply brings up reserves but the post does not. Answer what this person asked, or do not reply.' }); process.exit(4); }
 const root = post.record?.reply?.root ?? { uri: post.uri, cid: post.cid };
+text = text.replace(/\s*Did this help\?.*$/is, '');
 const ref = `bsky:${post.uri.split('/').pop()}`; text = `${text}\n\nDid this help? https://agent001.a9n9.net/h/${encodeURIComponent(ref)}`;
 if (text.length > 300) { out({ ok: false, error: `reply is ${text.length} chars with the help link; keep the body under 230` }); process.exit(2); }
 const r = await createPost(text, { root, parent: { uri: post.uri, cid: post.cid } });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // bsky-post '<text>' | bsky-post --file <path> — publish a post on Bluesky (caps: 4/day, shared counter 'bsky'; logged as bsky.post)
-import { enforce, ledger, out, textArg, suspicious, claimGuard, topicGuard } from './_lib.mjs';
+import { counter, enforce, ledger, out, textArg, suspicious, claimGuard, topicGuard } from './_lib.mjs';
 import { createPost, postUrl } from './_bsky.mjs';
 const { text } = textArg(process.argv.slice(2));
 if (!text) { out({ ok: false, error: "usage: bsky-post '<text>' | bsky-post --file <path>" }); process.exit(2); }
@@ -9,6 +9,8 @@ const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process
 const claim = claimGuard(text);
 const topicDone = topicGuard(text, 'bsky');
 const c = enforce('bsky', 4, text);
+// Conversation before broadcast: with almost no audience, a second post in a day reaches nobody; an answer in someone's thread reaches the person who asked.
+if (c.get() > counter('bskyReplies').get()) { out({ ok: false, error: `you have ${c.get()} posts and ${counter('bskyReplies').get()} replies on Bluesky today. Before another post, answer a person: bsky-search for someone asking something you can settle with a number or a source, then bsky-reply. If nobody is asking, journal the queries you tried and stop posting today.` }); process.exit(4); }
 const r = await createPost(text);
 if (r.status !== 200 || !r.body?.uri) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
 c.bump(); topicDone();

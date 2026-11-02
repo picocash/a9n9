@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // nostr-reply <event id or note1…> <author npub or hex> '<text>' — reply to a Nostr note that mentioned you (kind 1 with e/p tags). Caps shared with nostr-post (4/day).
 import { claimGuard, env, enforce, out } from './_lib.mjs';
-const [target, author, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim();
+const [target, author, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim().replace(/\s*Did this help\?.*$/is, '');
 if (!target || !author || !text) { out({ ok: false, error: "usage: nostr-reply <event id|note1…> <author npub|hex> '<text>'" }); process.exit(2); }
 claimGuard(text);
 const c = enforce('nostr', 4, text);
