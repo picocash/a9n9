@@ -13,6 +13,7 @@ try {
   const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy|starbuilder|a9n9agent|4343686621|434-368-6621/i;
   const tickets = fs.existsSync(`${HOME}/state/tickets.json`) ? JSON.parse(fs.readFileSync(`${HOME}/state/tickets.json`, 'utf8')).tickets : [];
   const handled = new Set(tickets.flatMap((t) => [t.ref, ...(t.notes ?? []).map((n) => n.ref).filter(Boolean)]));
+  const dis = fs.existsSync(`${HOME}/state/dismissed.json`) ? JSON.parse(fs.readFileSync(`${HOME}/state/dismissed.json`, 'utf8')) : {}; for (const k of Object.keys(dis)) handled.add(k);
   for (const ev of list.events) {
     if (!/^(email\.received|sms\.received|voice\.call|nostr\.(mention|dm)|web\.chat|telegram\.message|x\.mention|bsky\.mention)$/.test(ev.type)) continue;
     const full = await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json(); const p = full.payload ?? {};

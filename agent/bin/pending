@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+// pending — the human messages waiting for an answer (last 48 h, no ticket yet, not dismissed), with their text. This is exactly what wakes the respond job.
+//   pending                       list them
+//   pending dismiss <id> '<why>'  mark one as needing no reply (spam, the operator's own test, duplicate); the reason goes to the ledger
+import fs from 'node:fs';
+import { env, out, clean, HOME, ledger } from './_lib.mjs';
+const DIS = `${HOME}/state/dismissed.json`; const dismissed = fs.existsSync(DIS) ? JSON.parse(fs.readFileSync(DIS, 'utf8')) : {};
+const [cmd, id, ...rest] = process.argv.slice(2);
+if (cmd === 'dismiss') {
+  const why = rest.join(' ').trim(); if (!id || !why) { out({ ok: false, error: "usage: pending dismiss <id> '<why>'" }); process.exit(2); }
+  dismissed[id] = { at: new Date().toISOString(), why }; fs.writeFileSync(DIS, JSON.stringify(dismissed, null, 1));
+  await ledger({ id: `agent:dismiss:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'inbox.dismissed', ref: id, why, at: new Date().toISOString() });
+  out({ ok: true, dismissed: id, why }); process.exit(0);
+}
+const e = env('/home/ubuntu/a9n9/secrets/inbox.env'); const h = { authorization: `Bearer ${e.INBOX_API_TOKEN}` };
+const since = new Date(Date.now() - 48 * 3600_000).toISOString();
+const list = await (await fetch(`http://127.0.0.1:8810/v1/events?limit=120&since=${encodeURIComponent(since)}`, { headers: h })).json();
+const AUTOMATED = /noreply|no-reply|notifications?@|invoice|receipt|verification|statements|mailer|postmaster|daemon|alerts?@|security@|support@|welcome|do-not-reply|@e\.link\.com|@stripe\.com|@tempo\.xyz|@twilio\.com|@x\.com|@bsky\.app|@github\.com|vaultwarden|bitwarden|your code|verification code|is your .* code/i;
+const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy|starbuilder|a9n9agent|4343686621|434-368-6621/i;
+const tickets = fs.existsSync(`${HOME}/state/tickets.json`) ? JSON.parse(fs.readFileSync(`${HOME}/state/tickets.json`, 'utf8')).tickets : [];
+const handled = new Set(tickets.flatMap((t) => [t.ref, ...(t.notes ?? []).map((n) => n.ref).filter(Boolean)]));
+const items = [];
+for (const ev of list.events) {
+  if (!/^(email\.received|sms\.received|voice\.call|nostr\.(mention|dm)|web\.chat|telegram\.message|x\.mention|bsky\.mention)$/.test(ev.type)) continue;
+  if (handled.has(ev.id) || dismissed[ev.id]) continue;
+  const p = (await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json()).payload ?? {};
+  const from = String(p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? '');
+  if (AFFILIATE.test(from) || AUTOMATED.test(`${from} ${p.subject ?? ''} ${String(p.text ?? '').slice(0, 160)}`)) continue;
+  items.push({ id: ev.id, type: ev.type, at: ev.receivedAt, from: from || null, fromNpub: p.fromNpub ?? null, subject: p.subject ?? null, text: clean(String(p.text ?? p.body ?? p.transcript ?? '')).slice(0, 1200), url: p.url ?? null, eventId: p.eventId ?? null });
+}
+out({ ok: true, pending: items, howTo: 'answer each in its channel (x-reply / email-send --in-reply-to <id> / nostr-reply <eventId> <fromNpub> / nostr-dm <fromNpub> / bsky-reply), then tickets open <person> <channel> <want> --ref <id>; for spam or the operator’s own tests: pending dismiss <id> <why>' });
+process.exit(0);
