@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // x-post '<text>' | x-post --file <path> — publish a post via the X API (caps enforced, logged as x.post; a URL in the text costs $0.20 instead of $0.015)
-import { enforce, ledger, out, policy, textArg, suspicious } from './_lib.mjs';
+import { enforce, ledger, out, policy, textArg, suspicious, topicGuard } from './_lib.mjs';
 import { x, hasUrl, PRICE, apiError } from './_x.mjs';
 const { text } = textArg(process.argv.slice(2));
 if (!text) { out({ ok: false, error: "usage: x-post '<text>' | x-post --file <path>" }); process.exit(2); }
 const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
+const topicDone = topicGuard(text, 'x');
 const c = enforce('posts', policy.max_posts_per_day, text);
 const r = await x('POST', '/tweets', { body: { text }, price: hasUrl(text) ? PRICE.postWithUrl : PRICE.post, label: 'post' });
 if (r.status !== 201 || !r.body?.data?.id) { out({ ok: false, error: apiError(r), status: r.status }); process.exit(1); }
-c.bump();
+c.bump(); topicDone();
 const id = r.body.data.id; const url = `https://x.com/a9n9agent/status/${id}`;
 await ledger({ id: `x:post:${id}`, type: 'x.post', channel: 'x', text, url, at: new Date().toISOString(), via: 'api' });
 out({ ok: true, url, text, postsToday: c.get(), capPerDay: policy.max_posts_per_day, cost: hasUrl(text) ? PRICE.postWithUrl : PRICE.post });

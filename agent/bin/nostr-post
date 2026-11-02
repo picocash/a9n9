@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 // nostr-post "<text>" — publish a kind-1 note (caps shared with x posts? no: separate, 4/day)
-import { env, enforce, out } from './_lib.mjs';
+import { env, enforce, out, topicGuard } from './_lib.mjs';
 const text = process.argv.slice(2).join(' ').trim();
 if (!text) { out({ ok: false, error: 'usage: nostr-post "<text>"' }); process.exit(2); }
+const topicDone = topicGuard(text, 'nostr');
 const c = enforce('nostr', 4, text);
 const e = env('/home/ubuntu/a9n9/secrets/nostr.env');
 const res = await fetch('http://127.0.0.1:8830/v1/notes', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.NOSTR_API_TOKEN}` }, body: JSON.stringify({ text }) });
-const j = await res.json(); if (res.ok) c.bump();
+const j = await res.json(); if (res.ok) { c.bump(); topicDone(); }
 out({ ok: res.ok, ...j, nostrToday: c.get() });

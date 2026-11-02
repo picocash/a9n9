@@ -1,9 +1,18 @@
 #!/usr/bin/env node
-// bsky-search '<query>' — search recent Bluesky posts (free) to find people asking things you can answer
+// bsky-search '<query>' — recent Bluesky posts from other people, questions first (free). Bluesky has no OR, so 'a OR b' runs one search per term and merges.
 import { out, clean } from './_lib.mjs';
 import { xrpc, postUrl } from './_bsky.mjs';
 const q = process.argv.slice(2).join(' ').trim(); if (!q) { out({ ok: false, error: "usage: bsky-search '<query>'" }); process.exit(2); }
-const r = await xrpc('GET', 'app.bsky.feed.searchPosts', { query: { q, limit: 15, sort: 'latest' } });
-if (r.status !== 200) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
-out({ ok: true, query: q, results: (r.body.posts ?? []).map(p => ({ url: postUrl(p.uri), author: p.author?.handle, when: p.indexedAt, text: clean(p.record?.text ?? '').slice(0, 280), replies: p.replyCount, likes: p.likeCount })) });
+const terms = q.split(/\s+OR\s+/i).map((t) => t.replace(/["()]/g, '').replace(/\s-\S+/g, '').trim()).filter(Boolean).slice(0, 4);
+const seen = new Map(); let lastErr = null;
+for (const term of terms) {
+  const r = await xrpc('GET', 'app.bsky.feed.searchPosts', { query: { q: term, limit: 25, sort: 'latest' } });
+  if (r.status !== 200) { lastErr = r.body?.message ?? `HTTP ${r.status}`; continue; }
+  for (const p of r.body.posts ?? []) seen.set(p.uri, p);
+}
+if (!seen.size && lastErr) { out({ ok: false, error: lastErr }); process.exit(1); }
+const results = [...seen.values()].filter((p) => { const t = clean(p.record?.text ?? ''); return t.length >= 20 && !t.startsWith('{') && p.author?.handle !== 'agent001.a9n9.net' && !/\.brid\.gy$/.test(p.author?.handle ?? ''); })
+  .map((p) => { const text = clean(p.record.text); return { url: postUrl(p.uri), author: p.author.handle, when: p.indexedAt, text: text.slice(0, 280), replies: p.replyCount, likes: p.likeCount, isQuestion: /\?|^(how|why|what|which|does|is|can|anyone)\b/i.test(text) }; })
+  .sort((a, b) => Number(b.isQuestion) - Number(a.isQuestion) || b.when.localeCompare(a.when)).slice(0, 15);
+out({ ok: true, query: q, terms, results });
 process.exit(0);

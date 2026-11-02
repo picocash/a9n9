@@ -5,7 +5,9 @@
  */
 import { serve } from '@hono/node-server';
 import { hexToBytes } from '@picocash/crypto';
+import pg from 'pg';
 import { createToolsApp } from './app.js';
+import { PostgresAcceptorStore } from './pgstore.js';
 
 const env = process.env;
 const need = (k: string) => {
@@ -17,9 +19,20 @@ const PORT = Number(env.TOOLS_PORT ?? 8860);
 const HOST = env.TOOLS_HOST ?? '127.0.0.1';
 const log = (m: string) => console.log(`${new Date().toISOString()} [tools] ${m}`);
 
+const realm = env.TOOLS_REALM ?? `http://localhost:${PORT}`;
+let acceptorStore: PostgresAcceptorStore | undefined;
+if (env.DATABASE_URL) {
+  const pool = new pg.Pool({ connectionString: env.DATABASE_URL, max: 6, idleTimeoutMillis: 30_000 });
+  pool.on('error', (e) => log(`pg pool error: ${e.message}`));
+  await PostgresAcceptorStore.init(pool);
+  acceptorStore = new PostgresAcceptorStore(pool, realm);
+  log('acceptor replay state in Postgres');
+}
+
 const { lockPubkey, keyset, app } = await createToolsApp({
+  ...(acceptorStore ? { acceptorStore } : {}),
   mintUrl: (env.PICOCASH_MINT_URL ?? 'https://mint.picocash.dev').replace(/\/$/, ''),
-  realm: env.TOOLS_REALM ?? `http://localhost:${PORT}`,
+  realm,
   secretKey: need('MPP_SECRET_KEY'),
   lockKey: hexToBytes(need('TOOLS_LOCK_KEY')),
   vendorKeys: { ...(env.PARALLEL_API_KEY ? { PARALLEL_API_KEY: env.PARALLEL_API_KEY } : {}), ...(env.BRAVE_API_KEY ? { BRAVE_API_KEY: env.BRAVE_API_KEY } : {}), ...(env.EXA_API_KEY ? { EXA_API_KEY: env.EXA_API_KEY } : {}), ...(env.TAVILY_API_KEY ? { TAVILY_API_KEY: env.TAVILY_API_KEY } : {}), ...(env.XAI_API_KEY ? { XAI_API_KEY: env.XAI_API_KEY } : {}), RESERVES_URL: env.RESERVES_URL ?? 'https://reserves.a9n9.net' },

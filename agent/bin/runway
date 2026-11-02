@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+// runway — what the agent costs and how long the budget lasts, from receipts, not estimates.
+// Fixed costs: state/costs.json (operator-maintained, monthly USD, amortised per day). Variable: X API usage log, picocash tool buys (money.spend), Grok pool share.
+import fs from 'node:fs';
+import { out, HOME, env } from './_lib.mjs';
+const costsF = `${HOME}/state/costs.json`;
+const fixed = fs.existsSync(costsF) ? JSON.parse(fs.readFileSync(costsF, 'utf8')) : { monthly: { 'X Premium (includes the Grok pool)': 30, 'Twilio number + 10DLC': 3.15, 'Cloudflare Workers Paid (email)': 5, 'xAI API (voice + images, usage-based, est.)': 5 }, prepaid: { 'X API credits': { bought: 10, at: '2026-11-02' } }, budget: { start: 100, floorHibernate: 20 } };
+const day = (iso) => iso.slice(0, 10); const today = new Date().toISOString().slice(0, 10);
+const days = Math.max(1, Math.round((Date.now() - Date.parse('2026-11-01T00:00:00Z')) / 86_400_000));
+const fixedMonthly = Object.values(fixed.monthly).reduce((a, b) => a + b, 0); const fixedPerDay = fixedMonthly / 30;
+// variable: X API list prices logged by the tools
+let xApi = 0, xApiToday = 0; try { for (const l of fs.readFileSync(`${HOME}/state/x-api-usage.jsonl`, 'utf8').trim().split('\n')) { const j = JSON.parse(l); const p = Number(j.price ?? 0); xApi += p; if (day(j.at) === today) xApiToday += p; } } catch {}
+// variable: picocash buys (money.spend in the ledger)
+const e = env('/home/ubuntu/a9n9/secrets/inbox.env'); const h = { authorization: `Bearer ${e.INBOX_API_TOKEN}` };
+let tools = 0, toolsToday = 0, income = 0;
+try { const idx = (await (await fetch('http://127.0.0.1:8810/v1/events?limit=500&type=money.&since=2026-11-01T00:00:00Z', { headers: h })).json()).events; for (const ev of idx) { const p = (await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json()).payload ?? {}; const a = Number(p.amount_usd ?? 0); if (ev.type === 'money.spend' && /tools/.test(String(p.what ?? ''))) { tools += a; if (day(ev.receivedAt) === today) toolsToday += a; } if (ev.type === 'money.income') income += a; } } catch {}
+// grok pool: share of the weekly included budget used so far (not cash, but the pacing signal)
+let grok = null; try { const lines = fs.readFileSync(`${HOME}/state/grok-usage.jsonl`, 'utf8').trim().split('\n'); const last = JSON.parse(lines.at(-1)); grok = { usedPct: last.usedPct, pacePct: last.pacePct, verdict: last.verdict }; } catch {}
+const variableToDate = xApi + tools; const spentToDate = fixedPerDay * days + variableToDate;
+const perDay = spentToDate / days; const left = fixed.budget.start - spentToDate + income;
+out({ ok: true, day: days, fixedMonthlyUsd: +fixedMonthly.toFixed(2), fixedPerDayUsd: +fixedPerDay.toFixed(3), variable: { xApiUsd: +xApi.toFixed(3), xApiTodayUsd: +xApiToday.toFixed(3), toolBuysUsd: +tools.toFixed(3), toolBuysTodayUsd: +toolsToday.toFixed(3) }, incomeUsd: +income.toFixed(2), spentToDateUsd: +spentToDate.toFixed(2), avgPerDayUsd: +perDay.toFixed(2), budgetLeftUsd: +left.toFixed(2), runwayDays: perDay > 0 ? Math.floor(Math.max(0, left - fixed.budget.floorHibernate) / perDay) : null, hibernateBelowUsd: fixed.budget.floorHibernate, prepaid: fixed.prepaid, grokPool: grok, note: 'fixed costs are the operator’s figures in state/costs.json; variable costs are receipts; tool buys are testnet eCash today (real once the mainnet mint lands)' });
+process.exit(0);

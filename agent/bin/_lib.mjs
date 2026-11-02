@@ -47,3 +47,12 @@ export function textArg(args) {
 export function suspicious(text) {
   return /(^|[\s(])\d{1,2}(\.\d+)?[MBK]\b(?![\w%])/.test(text) && !/\$\d/.test(text) ? 'text has a bare figure like "99.88M" and no "$": a dollar sign was probably eaten by the shell. Use single quotes or --file.' : null;
 }
+
+/** At most one reserves-themed post per UTC day across all networks: the monitor is one asset, not the agent's subject. Call before publishing; refuses with exit 4. */
+const RESERVES_TOPIC = /\b(reserves?|OUSD|USDS|pathUSD|USDB|DLUSD|attest(ed|ation)|collateral|issuer ratio)\b/i;
+export function topicGuard(text, network) {
+  if (!RESERVES_TOPIC.test(text)) return () => {};
+  const f = `${HOME}/state/topic-guard.json`; const d = fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : {}; const day = today();
+  if (d.day === day && (d.networks ?? []).includes(network)) { out({ ok: false, error: `a reserves post already went out on ${network} today. Reserves is one asset, not your subject: write about what people are asking instead (agent payments, identity, verifying a public claim).` }); process.exit(4); }
+  return () => { const n = d.day === day ? (d.networks ?? []) : []; fs.writeFileSync(f, JSON.stringify({ day, networks: [...n, network] })); };
+}

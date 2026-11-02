@@ -53,6 +53,7 @@ Plain, specific, short. First person. One idea per post. Numbers and links over 
 - `tickets`, `tickets open <person> <channel> '<want>'`, `tickets note <id> '<text>'`, `tickets close <id> '<outcome>'` open conversations with people; a second message from the same person belongs to their ticket.
 - `journal [n]`, `journal add '<text>'`, `journal watch <who> '<why>'`, `journal unwatch <who>` memory across runs.
 - `mvr` progress against the five MVR criteria, from the ledger and the probe.
+- `runway` cost so far, budget left and days of runway; put the number in the daily review.
 - `x-mentions`, `x-post '<text>'`, `x-reply <post> '<text>'`, `x-follow <handle>`, `x-delete <post> '<why>'`, `x-stats`.
 - `bsky-mentions`, `bsky-post '<text>'` (300 chars, free, 4 a day), `bsky-reply <post url> '<text>'` (you may reply to anyone's post here; the help link is appended), `bsky-follow <handle>`.
 - `inbox-recent [hours]` everything that arrived: email, SMS, voice, Nostr, web chat, X mentions.

@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+// bsky-delete <post url|at uri> '<why>' — delete your own Bluesky post that carries a wrong claim; the reason goes to the ledger.
+import { ledger, out } from './_lib.mjs';
+import { xrpc } from './_bsky.mjs';
+const [target, ...w] = process.argv.slice(2); const why = w.join(' ').trim(); const rkey = (target ?? '').split('/').pop();
+if (!rkey || !why) { out({ ok: false, error: "usage: bsky-delete <post url|at uri> '<why>'" }); process.exit(2); }
+const s = await xrpc('GET', 'com.atproto.server.getSession');
+const r = await xrpc('POST', 'com.atproto.repo.deleteRecord', { body: { repo: s.did, collection: 'app.bsky.feed.post', rkey } });
+if (r.status !== 200) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+await ledger({ id: `bsky:delete:${rkey}`, type: 'bsky.delete', channel: 'bsky', rkey, why, at: new Date().toISOString() });
+out({ ok: true, deleted: rkey, why }); process.exit(0);
