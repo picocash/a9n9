@@ -10,7 +10,10 @@ const art = page.locator(`article[data-testid="tweet"]:has(a[href$="/status/${id
 const author = await art.locator('[data-testid="User-Name"] a[href^="/"]').first().getAttribute('href').catch(() => null);
 if (author !== '/a9n9agent') { out({ ok: false, error: `not our post (author ${author})` }); process.exit(1); }
 const text = await art.locator('[data-testid="tweetText"]').first().innerText().catch(() => '');
-await art.locator('[data-testid="caret"]').first().click(); await page.waitForTimeout(1200);
+await page.keyboard.press('Escape'); await page.waitForTimeout(500); // clear any leftover overlay
+const caret = art.locator('[data-testid="caret"]').first();
+try { await caret.click({ timeout: 8000 }); } catch { await page.keyboard.press('Escape'); await page.waitForTimeout(800); await caret.click({ force: true, timeout: 8000 }); }
+await page.waitForTimeout(1200);
 await page.locator('[data-testid="Dropdown"] [role="menuitem"]').filter({ hasText: /^Delete/ }).first().click(); await page.waitForTimeout(1200);
 await page.locator('[data-testid="confirmationSheetConfirm"]').click(); await page.waitForTimeout(3000);
 const gone = await page.goto(`https://x.com/a9n9agent/status/${id}`, { waitUntil: 'domcontentloaded' }).then(() => page.waitForTimeout(3000)).then(() => page.evaluate(() => !document.querySelector('article[data-testid="tweet"] [data-testid="tweetText"]') || /doesn’t exist|doesn't exist/i.test(document.body.innerText)));
