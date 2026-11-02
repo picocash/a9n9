@@ -36,3 +36,14 @@ export async function chrome() {
   return { ctx, page };
 }
 export const clean = (s) => s.replace(/\s+/g, ' ').trim();
+
+/** Text argument for posting tools: `--file <path>` reads the text from a file (safest: no shell quoting), otherwise the remaining args joined. */
+export function textArg(args) {
+  const i = args.indexOf('--file');
+  if (i >= 0) { const p = args[i + 1]; if (!p) return { text: '', rest: args }; return { text: fs.readFileSync(p, 'utf8').trim(), rest: [...args.slice(0, i), ...args.slice(i + 2)] }; }
+  return { text: args.join(' ').trim(), rest: [] };
+}
+/** A `$` lost to the shell leaves a number like " 99.88M" or " 94.9M" where "$599.88M" was meant; refuse rather than publish a wrong figure. */
+export function suspicious(text) {
+  return /(^|[\s(])\d{1,2}(\.\d+)?[MBK]\b(?![\w%])/.test(text) && !/\$\d/.test(text) ? 'text has a bare figure like "99.88M" and no "$": a dollar sign was probably eaten by the shell. Use single quotes or --file.' : null;
+}

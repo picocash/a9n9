@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // x-post "<text>" — publish a post as @a9n9agent (caps enforced, logged as x.post)
-import { chrome, enforce, ledger, out, policy } from './_lib.mjs';
-const text = process.argv.slice(2).join(' ').trim();
-if (!text) { out({ ok: false, error: 'usage: x-post "<text>"' }); process.exit(2); }
+import { chrome, enforce, ledger, out, policy, textArg, suspicious } from './_lib.mjs';
+const { text } = textArg(process.argv.slice(2));
+if (!text) { out({ ok: false, error: 'usage: x-post \'<text>\' | x-post --file <path>' }); process.exit(2); }
+const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
 const c = enforce('posts', policy.max_posts_per_day, text);
 const { page } = await chrome();
 await page.goto('https://x.com/compose/post', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(3000);
@@ -13,7 +14,9 @@ await page.keyboard.press('Control+Enter'); await page.waitForTimeout(5000);
 await page.goto('https://x.com/a9n9agent', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(4000);
 const first = await page.locator('article[data-testid="tweet"]').filter({ hasNot: page.locator('text=/^Pinned/') }).first();
 const link = await page.evaluate(() => { const a = [...document.querySelectorAll('article[data-testid="tweet"] a[href*="/status/"]')].map(a => a.getAttribute('href')).filter(h => /\/status\/\d+$/.test(h)); return a[1] ?? a[0] ?? null; });
-const posted = (await page.evaluate(() => [...document.querySelectorAll('[data-testid="tweetText"]')].map(e => e.innerText))).some(t => t.startsWith(text.slice(0, 40)));
+const seen = async () => (await page.evaluate(() => [...document.querySelectorAll('[data-testid="tweetText"]')].map(e => e.innerText.replace(/\s+/g, ' ')))).some(t => t.startsWith(text.replace(/\s+/g, ' ').slice(0, 40)));
+let posted = await seen();
+if (!posted) { await page.waitForTimeout(6000); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(5000); posted = await seen(); }
 if (!posted) { out({ ok: false, error: 'post not found on profile after submit' }); process.exit(1); }
 c.bump();
 const url = link ? `https://x.com${link}` : null;

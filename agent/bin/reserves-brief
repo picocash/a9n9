@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // reserves-brief — a ready-to-post snapshot (≤280 chars) built from live reserves.a9n9.net data, so no number is ever typed by hand.
-import { out } from './_lib.mjs';
+import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { out, HOME } from './_lib.mjs';
 const d = await (await fetch('https://reserves.a9n9.net/v1/tokens')).json();
 const usd = (s, dec = 6) => Number(BigInt(s) / 10n ** BigInt(dec - 2)) / 100;
 const m = (n) => n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n / 1e6).toFixed(1)}M` : `$${(n / 1e3).toFixed(0)}K`;
@@ -14,4 +16,7 @@ const when = new Date(d.refreshedAt).toISOString().slice(0, 16).replace('T', ' '
 const parts = top.map(t => `${t.symbol} ${m(usd(t.tempoSupply, t.decimals))} on Tempo, issuer ratio ${t.issuer.collateralizationRatio.toFixed(4)}`);
 let text = `Tempo stablecoin reserves, ${when}: ${parts.join('; ')}. ${okCount}/${applicable.length} checks pass${failing.length ? ` (failing: ${failing.join(', ')})` : ''}. Total tracked on Tempo ${m(totalTempo)}. reserves.a9n9.net`;
 if (text.length > 280) text = `Tempo stablecoin reserves, ${when}: ${parts.slice(0, 2).join('; ')}. ${okCount}/${applicable.length} checks pass${failing.length ? ` (failing: ${failing.join(', ')})` : ''}. reserves.a9n9.net`;
-out({ ok: true, text, chars: text.length, refreshedAt: d.refreshedAt, failing, attested: attested.map(t => t.symbol) });
+if (process.argv.includes('--post')) {
+  const f = `${HOME}/state/brief.txt`; fs.writeFileSync(f, text);
+  try { process.stdout.write(execFileSync(`${HOME}/bin/x-post`, ['--file', f], { encoding: 'utf8' })); } catch (e) { process.stdout.write(e.stdout || ''); process.exit(e.status ?? 1); }
+} else out({ ok: true, text, chars: text.length, refreshedAt: d.refreshedAt, failing, attested: attested.map(t => t.symbol), hint: 'reserves-brief --post publishes this text directly (no shell quoting)' });
