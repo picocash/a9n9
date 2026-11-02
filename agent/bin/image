@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import { out, HOME } from './_lib.mjs';
 import { buy } from './_buy.mjs';
 const argv = process.argv.slice(2); const ri = argv.indexOf('--ref'); const ref = ri >= 0 ? argv[ri + 1] : undefined;
-const prompt = argv.filter((a, i) => a !== '--ref' && i !== ri + 1).join(' ').trim();
+const prompt = argv.filter((a, i) => ri < 0 || (i !== ri && i !== ri + 1)).join(' ').trim();
 if (!prompt) { out({ ok: false, error: "usage: image '<prompt>' [--ref <https url>]" }); process.exit(2); }
 const r = await buy('/v1/image', { prompt, ...(ref ? { image_url: ref } : {}) }, '0.0300');
 if (r.status !== 200 || !r.result?.url) { out({ ok: false, error: 'image call failed', status: r.status, detail: r.result, log: r.log }); process.exit(1); }
