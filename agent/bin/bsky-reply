@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // bsky-reply <post url or at:// uri> '<text>' — reply to a Bluesky post (caps: 10/day; one reply per post; logged as bsky.reply). The did-this-help link is appended.
 import fs from 'node:fs';
-import { enforce, ledger, out, textArg, suspicious, HOME } from './_lib.mjs';
+import { enforce, ledger, out, textArg, suspicious, claimGuard, HOME } from './_lib.mjs';
 import { xrpc, createPost, postUrl } from './_bsky.mjs';
 const argv = process.argv.slice(2); const fileText = argv.includes('--file') ? textArg(argv) : null;
 const target = (fileText ? fileText.rest : argv)[0]; let text = fileText ? fileText.text : argv.slice(1).join(' ').trim();
 if (!target || !text) { out({ ok: false, error: "usage: bsky-reply <post url|at uri> '<text>'" }); process.exit(2); }
 const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
+const claim = claimGuard(text);
 // resolve the target to an at:// uri + cid
 let uri = target;
 if (/^https:\/\/bsky\.app\/profile\//.test(target)) { const m = target.match(/profile\/([^/]+)\/post\/([^/?#]+)/); let did = m[1]; if (!did.startsWith('did:')) { const h = await xrpc('GET', 'com.atproto.identity.resolveHandle', { query: { handle: did } }); did = h.body?.did; } uri = `at://${did}/app.bsky.feed.post/${m[2]}`; }
@@ -21,6 +22,6 @@ if (text.length > 300) { out({ ok: false, error: `reply is ${text.length} chars 
 const r = await createPost(text, { root, parent: { uri: post.uri, cid: post.cid } });
 if (r.status !== 200 || !r.body?.uri) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
 c.bump(); seen[uri] = new Date().toISOString(); fs.writeFileSync(seenF, JSON.stringify(seen));
-await ledger({ id: `bsky:reply:${r.body.uri.split('/').pop()}`, type: 'bsky.reply', channel: 'bsky', inReplyTo: postUrl(post.uri), toAuthor: post.author?.handle, url: postUrl(r.body.uri), text, at: new Date().toISOString() });
+await ledger({ id: `bsky:reply:${r.body.uri.split('/').pop()}`, type: 'bsky.reply', channel: 'bsky', inReplyTo: postUrl(post.uri), toAuthor: post.author?.handle, url: postUrl(r.body.uri), text, ...claim, at: new Date().toISOString() });
 out({ ok: true, url: postUrl(r.body.uri), inReplyTo: postUrl(post.uri), toAuthor: post.author?.handle, repliesToday: c.get(), capPerDay: 10 });
 process.exit(0);

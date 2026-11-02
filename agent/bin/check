@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// check <url> [--find '<text>']... — observe a public URL and record what was seen: status, type, body hash, and whether each exact text appears. Use this before saying you verified anything; quote its result, nothing more.
+// check <url> [--find '<text>']... — observe a public URL and record what was seen: status, type, body hash, and whether each exact text appears. Posts that say verified/confirmed/tested are refused without --check <id> from this tool's output; quote its result, nothing more.
+import fs from 'node:fs';
 import { createHash } from 'node:crypto';
-import { out, ledger } from './_lib.mjs';
+import { out, ledger, HOME } from './_lib.mjs';
 import { signedFetch } from './_sign.mjs';
 const argv = process.argv.slice(2); const finds = []; let url;
 for (let i = 0; i < argv.length; i++) { if (argv[i] === '--find') finds.push(argv[++i]); else url = argv[i]; }
@@ -12,6 +13,7 @@ try {
   const found = Object.fromEntries(finds.map((f) => [f, body.includes(f)]));
   const id = `agent:check:${Date.now()}`;
   await ledger({ id, type: 'agent.note', channel: 'agent', kind: 'check', url, status: r.status, sha256, found, at });
+  fs.appendFileSync(`${HOME}/state/checks.jsonl`, JSON.stringify({ id, url, status: r.status, sha256, found, at }) + '\n');
   out({ ok: true, id, url, status: r.status, contentType: r.headers.get('content-type'), bytes: body.length, sha256, found, at, excerpt: body.slice(0, 400), rule: 'You observed only this. A header name in access-control-expose-headers is not that header being sent. A price in a page is what the page says, not what is charged.' });
 } catch (e) { out({ ok: false, url, error: e.message }); process.exit(1); }
 process.exit(0);

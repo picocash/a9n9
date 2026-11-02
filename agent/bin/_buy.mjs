@@ -3,7 +3,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { ledger } from './_lib.mjs';
-const PAYER = Object.fromEntries(fs.readFileSync('/home/ubuntu/source/picocash/packages/mint/.env', 'utf8').split('\n').filter(l => /^PICOCASH_E2E_PAYER_KEY=/.test(l)).map(l => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
+const PAYER = Object.fromEntries(fs.readFileSync('/home/ubuntu/a9n9/secrets/agent-payer.env', 'utf8').split('\n').filter(l => /^PICOCASH_E2E_PAYER_KEY=/.test(l)).map(l => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
 const TOOLS = process.env.TOOLS_URL ?? 'http://127.0.0.1:8860';
 
 /** @param {string} path e.g. /v1/image  @param {object} body  @param {string} priceDollars e.g. '0.0300' */

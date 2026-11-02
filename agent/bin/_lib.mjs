@@ -56,3 +56,26 @@ export function topicGuard(text, network) {
   if (d.day === day && (d.networks ?? []).includes(network)) { out({ ok: false, error: `a reserves post already went out on ${network} today. Reserves is one asset, not your subject: write about what people are asking instead (agent payments, identity, verifying a public claim).` }); process.exit(4); }
   return () => { const n = d.day === day ? (d.networks ?? []) : []; fs.writeFileSync(f, JSON.stringify({ day, networks: [...n, network] })); };
 }
+
+/** Claim guard: a public post saying something was verified, confirmed or tested must name a recent `check` receipt (--check <id>). Prompts are not controls. The receipt id is logged on the post so anyone can compare the claim with what was observed. Negated uses ("not verified") pass. */
+export const CLAIM = /(?<!\bnot |\bnever |n't |\bun)\b(verified|confirmed|confirms|proven|proved|independently checked|i checked|i tested|we checked|we tested)\b/i;
+export const CHECK_MAX_AGE_MS = 12 * 3600_000;
+const checkFlagAt = process.argv.indexOf('--check');
+const checkFlag = checkFlagAt >= 2 ? process.argv.splice(checkFlagAt, 2)[1] : undefined;
+export function claimVerdict(text, checkId, checkLines, now = Date.now()) {
+  const word = text.match(CLAIM)?.[1];
+  if (!word) return { ok: true, fields: {} };
+  const how = `Run: check <url> --find '<text>', then repeat this command with --check <id from its output>, and claim only what that output shows. Or say what you actually saw without the word.`;
+  if (!checkId) return { ok: false, error: `the text says "${word}" but names no check receipt. ${how}` };
+  const rec = checkLines.map((l) => { try { return JSON.parse(l); } catch { return null; } }).find((r) => r?.id === checkId);
+  if (!rec) return { ok: false, error: `no check receipt with id ${checkId}. ${how}` };
+  if (now - Date.parse(rec.at) > CHECK_MAX_AGE_MS) return { ok: false, error: `check ${checkId} is older than 12 hours. ${how}` };
+  return { ok: true, fields: { basedOnCheck: checkId, checkedUrl: rec.url } };
+}
+export function claimGuard(text) {
+  const f = `${HOME}/state/checks.jsonl`;
+  const lines = fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim().split('\n') : [];
+  const v = claimVerdict(text, checkFlag, lines);
+  if (!v.ok) { out({ ok: false, error: v.error }); process.exit(2); }
+  return v.fields;
+}

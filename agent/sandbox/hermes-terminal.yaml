@@ -1,0 +1,28 @@
+# The terminal section of ~/.hermes/config.yaml for agent 001. After changing it, restart hermes-gateway: the scheduler keeps the backend it started with.
+# Not mounted on purpose: creditcard, cloudflare, postgres, twilio, vaultwarden, anchor wallet, other repos, ~/.ssh.
+terminal:
+  backend: docker
+  docker_image: a9n9-agent-sandbox:local
+  docker_run_as_host_user: true
+  docker_extra_args:
+  - --network
+  - host
+  docker_volumes:
+  - /home/ubuntu/a9n9/agent001:/home/ubuntu/a9n9/agent001:ro
+  - /home/ubuntu/a9n9/agent001:/agent:ro
+  - /home/ubuntu/a9n9/agent001/state:/agent/state
+  - /home/ubuntu/a9n9/agent001/state:/home/ubuntu/a9n9/agent001/state
+  - /home/ubuntu/source/a9n9/node_modules:/home/ubuntu/source/a9n9/node_modules:ro
+  - /home/ubuntu/source/a9n9/services/tools/scripts:/home/ubuntu/source/a9n9/services/tools/scripts:ro
+  - /home/ubuntu/.hermes/auth.json:/home/ubuntu/.hermes/auth.json:ro
+  - /home/ubuntu/.hermes/cron:/home/ubuntu/.hermes/cron:ro
+  - /home/ubuntu/a9n9/secrets/x-api.env:/home/ubuntu/a9n9/secrets/x-api.env
+  - /home/ubuntu/a9n9/secrets/agent001-signing.env:/home/ubuntu/a9n9/secrets/agent001-signing.env:ro
+  - /home/ubuntu/a9n9/secrets/bluesky.env:/home/ubuntu/a9n9/secrets/bluesky.env:ro
+  - /home/ubuntu/a9n9/secrets/email.env:/home/ubuntu/a9n9/secrets/email.env:ro
+  - /home/ubuntu/a9n9/secrets/email-worker.url:/home/ubuntu/a9n9/secrets/email-worker.url:ro
+  - /home/ubuntu/a9n9/secrets/inbox.env:/home/ubuntu/a9n9/secrets/inbox.env:ro
+  - /home/ubuntu/a9n9/secrets/nostr.env:/home/ubuntu/a9n9/secrets/nostr.env:ro
+  - /home/ubuntu/a9n9/secrets/resend.env:/home/ubuntu/a9n9/secrets/resend.env:ro
+  - /home/ubuntu/a9n9/secrets/agent-payer.env:/home/ubuntu/a9n9/secrets/agent-payer.env:ro
+  cwd: /agent

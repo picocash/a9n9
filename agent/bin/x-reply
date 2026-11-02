@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // x-reply <post_url_or_id> '<text>' | x-reply <post_url_or_id> --file <path> — reply via the X API (caps enforced, logged as x.reply)
-import { enforce, ledger, out, policy, textArg, suspicious } from './_lib.mjs';
+import { enforce, ledger, out, policy, textArg, suspicious, claimGuard } from './_lib.mjs';
 import { x, hasUrl, PRICE, apiError } from './_x.mjs';
 const argv = process.argv.slice(2); const fileText = argv.includes('--file') ? textArg(argv) : null;
 const target = (fileText ? fileText.rest : argv)[0]; const text = fileText ? fileText.text : argv.slice(1).join(' ').trim();
@@ -8,6 +8,7 @@ if (!target || !text) { out({ ok: false, error: "usage: x-reply <post_url_or_id>
 const id = target.match(/(\d{15,})/)?.[1];
 if (!id) { out({ ok: false, error: 'could not find a post id in the target' }); process.exit(2); }
 const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
+const claim = claimGuard(text);
 const c = enforce('replies', policy.max_replies_per_day, text);
 // one reply per thread per day: refuse a second reply to the same post
 import fs from 'node:fs'; import { HOME } from './_lib.mjs';
@@ -17,6 +18,6 @@ const r = await x('POST', '/tweets', { body: { text, reply: { in_reply_to_tweet_
 if (r.status !== 201 || !r.body?.data?.id) { out({ ok: false, error: apiError(r), status: r.status }); process.exit(1); }
 c.bump(); seen[id] = new Date().toISOString(); fs.writeFileSync(seenF, JSON.stringify(seen));
 const rid = r.body.data.id;
-await ledger({ id: `x:reply:${id}:${rid}`, type: 'x.reply', channel: 'x', inReplyTo: `https://x.com/i/status/${id}`, url: `https://x.com/a9n9agent/status/${rid}`, text, at: new Date().toISOString(), via: 'api' });
+await ledger({ id: `x:reply:${id}:${rid}`, type: 'x.reply', channel: 'x', inReplyTo: `https://x.com/i/status/${id}`, url: `https://x.com/a9n9agent/status/${rid}`, text, ...claim, at: new Date().toISOString(), via: 'api' });
 out({ ok: true, url: `https://x.com/a9n9agent/status/${rid}`, inReplyTo: `https://x.com/i/status/${id}`, text, repliesToday: c.get(), capPerDay: policy.max_replies_per_day, cost: hasUrl(text) ? PRICE.postWithUrl : PRICE.post });
 process.exit(0);
