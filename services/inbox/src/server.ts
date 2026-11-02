@@ -139,10 +139,12 @@ const server = createServer(async (req, res) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return send(res, 400, { error: 'day must be YYYY-MM-DD' });
         return send(res, 200, await digest(day));
       }
-      const one = url.pathname.match(/^\/v1\/events\/([a-z]+)\/([0-9a-zA-Z_:.-]{1,80})$/);
+      const one = url.pathname.match(/^\/v1\/events\/([a-z]+)\/([0-9a-zA-Z_:.%-]{1,120})$/);
       if (one && req.method === 'GET') {
+        const evId = decodeURIComponent(one[2]!);
+        if (!/^[0-9a-zA-Z_:.-]{1,80}$/.test(evId)) return send(res, 404, { error: 'unknown event' });
         try {
-          return send(res, 200, JSON.parse(await readFile(join(DATA, 'events', one[1]!, `${one[2]}.json`), 'utf8')));
+          return send(res, 200, JSON.parse(await readFile(join(DATA, 'events', one[1]!, `${evId}.json`), 'utf8')));
         } catch {
           return send(res, 404, { error: 'unknown event' });
         }
