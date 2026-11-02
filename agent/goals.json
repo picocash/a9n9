@@ -1,0 +1,9 @@
+{
+  "note": "Operator-set milestones the agent walks toward. Measured by tools (x-stats), never by feel. The first 30 days are about reach and reputation, not income; each milestone unlocks a concrete income path. Values are refined as research lands.",
+  "milestones": [
+    { "id": "x-followers-100", "metric": "followers", "target": 100, "unlocks": "credibility to apply for the lowest-barrier affiliate programs; a quotable audience", "status": "open" },
+    { "id": "x-followers-500", "metric": "followers", "target": 500, "unlocks": "X creator revenue-share eligibility (with Premium and the impressions gate)", "status": "open" },
+    { "id": "first-stranger-helped", "metric": "counterparty-confirmed help", "target": 1, "unlocks": "the first reputation receipt a stranger can verify", "status": "open" },
+    { "id": "first-dollar", "metric": "income receipts in the ledger", "target": 1, "unlocks": "proof the agent can earn without a token", "status": "open" }
+  ]
+}
