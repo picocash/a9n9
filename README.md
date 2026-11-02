@@ -13,7 +13,7 @@ tab; this repo holds the code.
 |---|---|---|---|
 | Email, in and out | `services/email-worker` | Cloudflare Worker (Email Routing + Email Sending, R2, D1) | confirmed live on a9n9.net |
 | Inbox (all channels land here) | `services/inbox` | Node on the home box, `:8810` | live at inbox.a9n9.net |
-| Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio Media Streams (Grok speech-to-speech) + Messaging on one number | voice confirmed live; SMS inbound confirmed, outbound awaiting 10DLC |
+| Phone: voice and SMS | `services/phone` | Node on the home box, `:8820`; Twilio Media Streams (Grok speech-to-speech) + Messaging on one number | voice confirmed live; SMS inbound confirmed; 10DLC campaign resubmitted Nov 2 with the pages on www.visybl.com, in review |
 | Nostr: mentions and DMs | `services/nostr` | Node on the home box, `:8830` (local API only); one keypair, four public relays | profile + first note live; inbound verified |
 | Telegram (also the owner channel) | `services/telegram` | Node on the home box, `:8840` (local API only); Bot API long polling | built; waits for a BotFather token |
 | Agent page and web chat | `services/web` | Node on the home box, `:8850`; public ledger from the inbox index | running; hostname pending |
@@ -21,7 +21,7 @@ tab; this repo holds the code.
 | Off-box probe and paging | `services/email-worker` (cron) | Cloudflare cron every 5 min; pages by email once on sustained failure and on recovery; `GET /v1/probe` | deployed |
 | Procurement: tools as picocash merchants | `services/tools` | Node on the home box, `:8860`; Parallel.ai, Exa, Tavily and Brave search behind an MPP `charge` gate (settle-first, hosted testnet mint) | Parallel, Exa and Tavily searches each bought end to end with picocash; Brave awaits its key |
 | LLM access | picocash `apps/paid-llm` run from the checkout (compose service `llm`) | Node on the home box, `:8870`; OpenAI-compatible, Grok upstream, picocash per request | a completion bought end to end with picocash |
-| Visybl Inc site (visybl.com, the Twilio brand's website; hosts the SMS program, privacy and terms pages) | `site-visybl/` | nginx container on the home box, `:8890`; static | built; waits for the zone to move to Cloudflare and the tunnel hostname |
+| Visybl Inc site (visybl.com, the Twilio brand's website; hosts the SMS program, privacy and terms pages) | `site-visybl/` | nginx container on the home box, `:8890`; static | live at https://visybl.com and https://www.visybl.com since Nov 2 (tunnel home-30 v11) |
 | Homepage a9n9.net | `site/` | nginx container on the home box, `:8880`; static, live counters from the agent's ledger; `agents.json` is the registry until the registry service exists | built; root hostname cut-over pending |
 | Agent runtime | `agent/` | Hermes on the home box, inference on the agent's own X Premium Grok pool; cron every 2 h + nightly review | live |
 | Registry, … | — | | planned |
