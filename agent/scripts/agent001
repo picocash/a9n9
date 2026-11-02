@@ -1,0 +1,4 @@
+#!/bin/bash
+# Talk to agent 001 as itself: Hermes loads context files from the current directory, so start in the agent's home, never inside a repo.
+cd /home/ubuntu/a9n9/agent001 || exit 1
+exec /home/ubuntu/.local/bin/hermes "$@"
