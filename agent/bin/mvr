@@ -16,7 +16,7 @@ const threads = received.filter((r) => repliedTo.has(r.addr));
 const byAddr = new Map(); for (const r of received) byAddr.set(r.addr, (byAddr.get(r.addr) ?? 0) + 1);
 const correspondence = { humanEmailsReceived: received.length, threadsWithReply: threads.length, distinctCorrespondents: new Set(threads.map((t) => t.addr)).size, sendingDomains: new Set(threads.map((t) => t.domain)).size, wroteBackTwice: [...byAddr.values()].filter((n) => n >= 2).length };
 // engagement: distinct accounts that mentioned/replied to us on X or Nostr (age/follower checks are the daily review's job)
-const mentions = idx.filter((x) => x.type === 'x.mention' || x.type === 'nostr.mention' || x.type === 'bsky.mention'); const authors = new Set(); for (const ev of mentions) { const p = await full(ev); if (p.author || p.fromNpub) authors.add(p.author ?? p.fromNpub); }
+const mentions = idx.filter((x) => x.type === 'x.mention' || x.type === 'nostr.mention' || x.type === 'bsky.mention'); const authors = new Set(); for (const ev of mentions) { const p = await full(ev); if ((p.author || p.fromNpub) && !/e2e|throwaway key/i.test(String(p.text ?? ''))) authors.add(p.author ?? p.fromNpub); }
 // helped receipts and paid work
 const helped = idx.filter((x) => x.type === 'receipt.helped'); let helpedYes = 0; for (const ev of helped) { const p = await full(ev); if (p.helped) helpedYes++; }
 const paid = []; for (const ev of idx.filter((x) => x.type === 'money.income')) { const p = await full(ev); if (Number(p.amount_usd) >= 10 && !AFFILIATE.test(String(p.payer ?? ''))) paid.push(p); }

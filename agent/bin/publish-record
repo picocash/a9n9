@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+// publish-record — writes the public scoreboard for a9n9.net (counts only, no addresses) from the mvr tool and the declared focus. Run by cron.
+import { execFileSync } from 'node:child_process';
+import fs from 'node:fs';
+const HOME = '/home/ubuntu/a9n9/agent001';
+const m = JSON.parse(execFileSync(`${HOME}/bin/mvr`, { encoding: 'utf8', timeout: 120000 }));
+const focus = fs.existsSync(`${HOME}/state/focus.json`) ? JSON.parse(fs.readFileSync(`${HOME}/state/focus.json`, 'utf8')).focus : null;
+const rec = { at: new Date().toISOString(), day: m.day, focus, correspondents: m.correspondence.distinctCorrespondents, threads: m.correspondence.threadsWithReply, followers: Math.max(m.reach.followersX ?? 0, m.reach.followersBluesky ?? 0), engaged: m.engagement.distinctAccountsEngaged, helped: m.helpedReceipts.yes, paid: m.paidWork.count, entries: m.ledgerEntries };
+const f = '/home/ubuntu/source/a9n9/site/record.json'; fs.writeFileSync(f + '.tmp', JSON.stringify(rec)); fs.renameSync(f + '.tmp', f); console.log(JSON.stringify(rec));

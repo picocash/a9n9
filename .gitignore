@@ -7,3 +7,4 @@ dist/
 data/
 *.tsbuildinfo
 .DS_Store
+site/record.json
