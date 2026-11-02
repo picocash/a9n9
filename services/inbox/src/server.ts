@@ -8,11 +8,13 @@
  *   INBOX_PORT (8810)  INBOX_HOST (127.0.0.1)  INBOX_DATA (./data)
  *   INBOX_WEBHOOK_SECRET   HMAC key shared with the adapters (required)
  *   INBOX_API_TOKEN        bearer token for GET /v1/events (required)
+ *   DATABASE_URL           optional Postgres (a9n9.events): every stored event is also inserted there; the file store stays authoritative
  */
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import pg from 'pg';
 
 const env = process.env;
 const PORT = Number(env.INBOX_PORT ?? 8810);
@@ -26,6 +28,15 @@ if (!SECRET || !TOKEN) {
 }
 
 const log = (m: string) => console.log(`${new Date().toISOString()} [inbox] ${m}`);
+const AGENT = env.INBOX_AGENT ?? 'agent001';
+/** Optional durable copy of every event in Postgres (schema a9n9, table events). Failures are logged, never fatal: the files are the source of truth. */
+const pool = env.DATABASE_URL ? new pg.Pool({ connectionString: env.DATABASE_URL, max: 4, idleTimeoutMillis: 30_000 }) : null;
+if (pool) pool.on('error', (e) => log(`pg pool error: ${e.message}`));
+async function mirror(ev: StoredEvent): Promise<void> {
+  if (!pool) return;
+  try { await pool.query('INSERT INTO a9n9.events (id, agent, channel, type, received_at, payload) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (id) DO NOTHING', [ev.id, AGENT, ev.channel, ev.type, ev.receivedAt, JSON.stringify(ev.payload)]); }
+  catch (e) { log(`pg mirror failed for ${ev.id}: ${e instanceof Error ? e.message : String(e)}`); }
+}
 
 export interface StoredEvent {
   id: string;
@@ -99,7 +110,7 @@ export async function digest(day: string): Promise<{ day: string; count: number;
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   try {
-    if (url.pathname === '/livez') return send(res, 200, { ok: true });
+    if (url.pathname === '/livez') return send(res, 200, { ok: true, pg: !!pool });
 
     const hook = url.pathname.match(/^\/hooks\/([a-z]+)$/);
     if (hook && req.method === 'POST') {
@@ -112,6 +123,7 @@ const server = createServer(async (req, res) => {
       const payload = JSON.parse(body) as { id?: string; type?: string };
       const ev: StoredEvent = { id: payload.id ?? crypto.randomUUID(), type: payload.type ?? `${channel}.event`, channel, receivedAt: new Date().toISOString(), payload };
       const fresh = await store(ev);
+      if (fresh) void mirror(ev);
       log(`${fresh ? 'stored' : 'duplicate'} ${ev.type} ${ev.id}`);
       return send(res, fresh ? 201 : 200, { id: ev.id, stored: fresh });
     }

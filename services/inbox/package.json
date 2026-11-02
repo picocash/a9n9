@@ -12,6 +12,10 @@
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/pg": "^8.23.1",
     "tsx": "^4.19.0"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
   }
 }
