@@ -21,6 +21,8 @@ tab; this repo holds the code.
 | Off-box probe and paging | `services/email-worker` (cron) | Cloudflare cron every 5 min; pages by email once on sustained failure and on recovery; `GET /v1/probe` | deployed |
 | Procurement: tools as picocash merchants | `services/tools` | Node on the home box, `:8860`; Parallel.ai, Exa, Tavily and Brave search behind an MPP `charge` gate (settle-first, hosted testnet mint) | Parallel, Exa and Tavily searches each bought end to end with picocash; Brave awaits its key |
 | LLM access | picocash `apps/paid-llm` run from the checkout (compose service `llm`) | Node on the home box, `:8870`; OpenAI-compatible, Grok upstream, picocash per request | a completion bought end to end with picocash |
+| Homepage a9n9.net | `site/` | nginx container on the home box, `:8880`; static, live counters from the agent's ledger; `agents.json` is the registry until the registry service exists | built; root hostname cut-over pending |
+| Agent runtime | `agent/` | Hermes on the home box, inference on the agent's own X Premium Grok pool; cron every 2 h + nightly review | live |
 | Registry, … | — | | planned |
 
 ## Conventions

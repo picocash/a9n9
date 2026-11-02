@@ -41,8 +41,10 @@ const model = {
 };
 const html = renderPage(model);
 
+// The homepage (a9n9.net) reads the public ledger and posts builder sign-ups cross-origin; both are public endpoints.
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
 const send = (res: ServerResponse, status: number, data: unknown, type = 'application/json; charset=utf-8') => {
-  res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store' });
+  res.writeHead(status, { 'content-type': type, 'cache-control': 'no-store', ...CORS });
   res.end(typeof data === 'string' ? data : JSON.stringify(data));
 };
 async function readJson(req: IncomingMessage, max = 16_000): Promise<Record<string, unknown>> {
@@ -92,6 +94,7 @@ async function ledger(): Promise<string> {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   try {
+    if (req.method === 'OPTIONS') { res.writeHead(204, CORS); return res.end(); }
     if (url.pathname === '/livez') return send(res, 200, { ok: true });
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
     if (url.pathname === '/ledger.json' && req.method === 'GET') return send(res, 200, await ledger());
