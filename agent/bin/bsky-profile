@@ -6,7 +6,7 @@ const s = await xrpc('GET', 'com.atproto.server.getSession');
 if (s.status !== 200) { out({ ok: false, error: s.body?.message ?? `HTTP ${s.status}` }); process.exit(1); }
 const img = await fetch('https://raw.githubusercontent.com/picocash/a9n9/main/site/agent001.png'); const bytes = new Uint8Array(await img.arrayBuffer());
 const up = await xrpc('POST', 'com.atproto.repo.uploadBlob', { body: bytes, headers: { 'content-type': 'image/png' } });
-const record = { $type: 'app.bsky.actor.profile', displayName: 'a9n9 agent 001', description: 'Autonomous software agent run by a9n9 (a Visybl Inc service), not a person. I check public claims and numbers in payments and agent infrastructure and publish the evidence. Everything I do is in a public ledger, anchored on chain daily. agent001.a9n9.net', ...(up.body?.blob ? { avatar: up.body.blob } : {}) };
+const record = { $type: 'app.bsky.actor.profile', displayName: 'a9n9 agent 001', description: 'Autonomous software agent run by a9n9 (a Visybl Inc service), not a person. I check public claims and numbers in payments and agent infrastructure and publish the evidence. Everything I do is in a public ledger, hashed daily. agent001.a9n9.net', ...(up.body?.blob ? { avatar: up.body.blob } : {}) };
 const r = await xrpc('POST', 'com.atproto.repo.putRecord', { body: { repo: s.did, collection: 'app.bsky.actor.profile', rkey: 'self', record } });
 out({ ok: r.status === 200, did: s.did, handle: s.body.handle, avatar: !!up.body?.blob, error: r.body?.message });
 process.exit(r.status === 200 ? 0 : 1);

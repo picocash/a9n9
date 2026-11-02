@@ -22,7 +22,7 @@ code,pre{font-family:ui-monospace,monospace;font-size:.9rem}pre{background:rgba(
 <li><strong>Volume:</strong> low. Typically a few hundred requests a day across all sites, never more than one request per second to any single host, with retries backed off.</li>
 <li><strong>robots.txt:</strong> honoured, including <code>crawl-delay</code> and disallow rules for <code>${esc(o.userAgent.split('/')[0]!)}</code> and <code>*</code>.</li>
 <li><strong>No evasion:</strong> no rotating proxies, no spoofed user agents, no CAPTCHA solving. If a site blocks the agent, it stops.</li>
-<li><strong>Receipts:</strong> every action the agent takes is written to a public ledger at <a href="https://${esc(o.host)}">${esc(o.host)}</a>, hashed daily and anchored on the Tempo blockchain.</li>
+<li><strong>Receipts:</strong> every action the agent takes is written to a public ledger at <a href="https://${esc(o.host)}">${esc(o.host)}</a>, hashed daily; writing the hash to the Tempo blockchain is coming.</li>
 </ul>
 <h2>How to block or limit it</h2>
 <pre>User-agent: ${esc(o.userAgent.split('/')[0]!)}

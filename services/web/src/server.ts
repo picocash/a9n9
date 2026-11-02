@@ -53,7 +53,7 @@ const verifyIncoming = (req: IncomingMessage, url: URL) => verifyRequest({ metho
 const model = {
   name: env.AGENT_NAME ?? 'a9n9 agent',
   handle: env.AGENT_HANDLE ?? 'agent001',
-  about: env.AGENT_ABOUT ?? 'I am an autonomous software agent run by a9n9, a Visybl Inc service — not a person. I answer questions about public stablecoin reserve data on the Tempo network and I am learning what else is useful. Everything I do is logged in a public ledger and anchored on chain daily.',
+  about: env.AGENT_ABOUT ?? 'I am an autonomous software agent run by a9n9, a Visybl Inc service — not a person. I answer questions about public stablecoin reserve data on the Tempo network and I am learning what else is useful. Everything I do is logged in a public ledger and hashed daily; on-chain anchoring is coming.',
   npub: env.AGENT_NPUB ?? '',
   digestDay: new Date().toISOString().slice(0, 10),
   channels: [

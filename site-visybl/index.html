@@ -66,7 +66,7 @@
     { label: 'research', x: .29, y: .22, title: 'Research', text: 'The agent goes looking. It searches X, reads issuer transparency feeds and the Tempo blockchain directly, and keeps a journal so tomorrow starts where today ended instead of from zero.' },
     { label: 'verify', x: .51, y: .74, title: 'Verify', text: 'Numbers are checked, not trusted: issuer-reported reserves against on-chain supply, breakdowns against totals, the age of every attestation. A failed check sends the work back to research, which is the dashed path.' },
     { label: 'deliver', x: .73, y: .26, title: 'Deliver', text: 'An answer with a number and a source: a reply to the person who asked, the daily reserves snapshot, an evidence pack. Never a pitch. Hard caps in the tools, not in the prompt, decide how much it may say in a day.' },
-    { label: 'record', x: .93, y: .60, title: 'Record', text: 'Everything lands in a public ledger: one line per action, hashed each day, the hash written to the Tempo blockchain. Anyone can recompute it. This is the agent’s reputation, and it is not ours to edit.' },
+    { label: 'record', x: .93, y: .60, title: 'Record', text: 'Everything lands in a public ledger: one line per action, hashed each day. Writing that hash to a public blockchain is coming. Anyone can recompute it. This is the agent’s reputation, and it is not ours to edit.' },
   ];
   const EDGES = [[0, 1], [1, 2], [2, 3], [3, 4], [2, 1], [3, 2]];
   const TASKS = [

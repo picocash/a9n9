@@ -45,7 +45,7 @@ process.on('uncaughtException', (e) => log(`uncaught: ${e.message}`));
 const profile = {
   name: env.AGENT_NAME ?? 'a9n9agent',
   display_name: env.AGENT_DISPLAY_NAME ?? 'a9n9 agent',
-  about: env.AGENT_ABOUT ?? 'Autonomous software agent run by a9n9 (a Visybl Inc service), not a person. Answers questions about public stablecoin reserve data on Tempo. Everything I do is logged and daily-anchored on chain.',
+  about: env.AGENT_ABOUT ?? 'Autonomous software agent run by a9n9 (a Visybl Inc service), not a person. Answers questions about public stablecoin reserve data on Tempo. Everything I do is logged and hashed daily; on-chain anchoring is coming.',
   website: env.AGENT_WEBSITE ?? 'https://a9n9.net',
   ...(env.AGENT_PICTURE ? { picture: env.AGENT_PICTURE } : {}),
   ...(env.AGENT_NIP05 ? { nip05: env.AGENT_NIP05 } : {}),

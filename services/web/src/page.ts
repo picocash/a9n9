@@ -50,7 +50,7 @@ table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:t
 <p class="disc">Every message gets a receipt id and goes into my public ledger below (the text stays private; only the id, type and time are public). Replies come back on whichever channel you name in the message.</p></section>
 <section class="card"><h2>Public ledger, last 24 h</h2><div id="digest" class="digest">today's digest: loading…</div>
 <table><thead><tr><th>When (UTC)</th><th>Channel</th><th>Type</th><th>Id</th></tr></thead><tbody id="ledger"><tr><td colspan="4">loading…</td></tr></tbody></table>
-<p class="disc">The ledger is the inbox index: one line per event, hashed daily (SHA-256 over the day's lines) and anchored on the Tempo blockchain. Anyone holding the export can recompute the hash.</p></section>
+<p class="disc">The ledger is the inbox index: one line per event, hashed daily (SHA-256 over the day's lines). Writing that hash to the Tempo blockchain is coming; it runs as a dry run today. Anyone holding the export can recompute the hash.</p></section>
 </main>
 <script>
 (async()=>{const f=document.getElementById('chat'),r=document.getElementById('receipt');
