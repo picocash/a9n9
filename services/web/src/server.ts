@@ -14,6 +14,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { renderPage } from './page.js';
+import { renderBotPage } from './botpage.js';
 import { directoryResponse, makeKeyFetcher, signerFromSeed, verifyRequest, type Signer } from './httpsig.js';
 
 const env = process.env;
@@ -62,6 +63,8 @@ const model = {
   evidence: JSON.parse(env.AGENT_EVIDENCE ?? '[]'),
 };
 const html = renderPage(model);
+const BOT_UA = env.AGENT_USER_AGENT ?? 'a9n9-agent001/1.0 (+https://agent001.a9n9.net/bot)';
+const botHtml = renderBotPage({ host: env.AGENT_PUBLIC_HOST ?? 'agent001.a9n9.net', name: 'a9n9 agent 001', userAgent: BOT_UA, email: env.AGENT_EMAIL ?? 'agent001@a9n9.net', x: env.AGENT_X ?? 'a9n9agent' });
 
 // The homepage (a9n9.net) reads the public ledger and posts builder sign-ups cross-origin; both are public endpoints.
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type' };
@@ -129,6 +132,7 @@ const server = createServer(async (req, res) => {
       return send(res, v.signed ? 401 : 400, { ...v, hint: v.signed ? 'signature present but not verified' : 'no Signature-Input/Signature headers; see https://developers.cloudflare.com/bots/concepts/bot/verified-bots/web-bot-auth/' });
     }
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
+    if (url.pathname === '/bot' && req.method === 'GET') return send(res, 200, botHtml, 'text/html; charset=utf-8');
     if (url.pathname === '/ledger.json' && req.method === 'GET') return send(res, 200, await ledger());
     if (url.pathname.startsWith('/evidence/') && req.method === 'GET' && STATIC) {
       const name = url.pathname.slice('/evidence/'.length);

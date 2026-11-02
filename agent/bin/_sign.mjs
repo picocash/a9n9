@@ -7,6 +7,7 @@ const kv = Object.fromEntries(fs.readFileSync('/home/ubuntu/a9n9/secrets/agent00
 const jwk = { kty: 'OKP', crv: 'Ed25519', x: kv.AGENT_SIGNING_X };
 export const KID = createHash('sha256').update(JSON.stringify({ crv: jwk.crv, kty: jwk.kty, x: jwk.x })).digest('base64url');
 export const SIGNATURE_AGENT = kv.SIGNATURE_AGENT || 'https://agent001.a9n9.net';
+export const USER_AGENT = 'a9n9-agent001/1.0 (+https://agent001.a9n9.net/bot)';
 const key = createPrivateKey({ key: { ...jwk, d: Buffer.from(kv.AGENT_SIGNING_SEED, 'hex').toString('base64url') }, format: 'jwk' });
 const sf = (s) => `"${s.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
@@ -22,5 +23,5 @@ export function signHeaders(url, { tag = 'web-bot-auth', ttl = 60, withPath = fa
 
 /** fetch() that signs every request as agent 001. */
 export function signedFetch(url, init = {}, opts = {}) {
-  return fetch(url, { ...init, headers: { ...(init.headers ?? {}), ...signHeaders(url, opts) } });
+  return fetch(url, { ...init, headers: { 'user-agent': USER_AGENT, ...(init.headers ?? {}), ...signHeaders(url, opts) } });
 }
