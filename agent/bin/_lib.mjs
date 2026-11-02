@@ -73,6 +73,12 @@ export function claimVerdict(text, checkId, checkLines, now = Date.now()) {
   return { ok: true, fields: { basedOnCheck: checkId, checkedUrl: rec.url } };
 }
 export function claimGuard(text) {
+  // An operator-listed overstatement on this network blocks other posts there until a correction goes out.
+  const cf = `${HOME}/state/corrections.json`; const net = process.argv[1].split('/').pop().split('-')[0];
+  if (fs.existsSync(cf)) { const list = JSON.parse(fs.readFileSync(cf, 'utf8')); const open = list.find((c) => c.network === net); if (open) {
+    if (!/^correction\b/i.test(text)) { out({ ok: false, error: `publish a correction first. Your post ${open.post ?? ''} said: "${open.said}". Problem: ${open.problem} Start the text with "Correction:" and say what you actually saw.` }); process.exit(4); }
+    fs.writeFileSync(cf, JSON.stringify(list.filter((c) => c !== open), null, 1));
+  } }
   const f = `${HOME}/state/checks.jsonl`;
   const lines = fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim().split('\n') : [];
   const v = claimVerdict(text, checkFlag, lines);

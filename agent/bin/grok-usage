@@ -5,6 +5,8 @@
 // both under-spending and over-spending are failures. Plan: ~12% a day, ~16% held in reserve for the last day.
 import fs from 'node:fs';
 import { chrome, out, HOME } from './_lib.mjs';
+// The sandbox has no route to Chrome: a host cron runs --snapshot, everyone else reads the latest one.
+if (!process.argv.includes('--snapshot')) { try { const l = JSON.parse(fs.readFileSync(`${HOME}/state/grok-latest.json`, 'utf8')); const ageMin = Math.round((Date.now() - Date.parse(l.at)) / 60000); out({ ...l, snapshotAgeMin: ageMin }); process.exit(0); } catch { out({ ok: false, error: 'no usage snapshot yet' }); process.exit(1); } }
 const DAILY = 12, RESERVE = 100 - 7 * DAILY; // 12%/day → 84% by the reset, 16% reserve
 const { ctx } = await chrome();
 let page = ctx.pages().find(p => p.url().startsWith('https://grok.com/'));
@@ -29,6 +31,8 @@ else { verdict = 'on'; advice = 'On pace. Run the normal cycle.'; }
 let runsToday = 0, tokensToday = 0; try { for (const l of fs.readFileSync('/home/ubuntu/.hermes/cron/usage_audit.jsonl', 'utf8').trim().split('\n')) { const j = JSON.parse(l); if (j.ts.slice(0, 10) === new Date().toISOString().slice(0, 10)) { runsToday++; tokensToday += j.total_tokens ?? 0; } } } catch {}
 const snap = { at: new Date(now).toISOString(), usedPct, usedCents: w.usedCents, budgetCents: w.budgetCents, pacePct, dayOfWeek, todayCapPct, hoursToReset, verdict, runsToday, tokensToday };
 fs.appendFileSync(`${HOME}/state/grok-usage.jsonl`, JSON.stringify(snap) + '\n');
-out({ ok: true, ...snap, resetsAt: w.resetsAt, plan: `${DAILY}%/day, ${RESERVE}% reserve`, advice });
+const full = { ok: true, ...snap, resetsAt: w.resetsAt, plan: `${DAILY}%/day, ${RESERVE}% reserve`, advice };
+fs.writeFileSync(`${HOME}/state/grok-latest.json`, JSON.stringify(full));
+out(full);
 
 process.exit(0);

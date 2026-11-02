@@ -1,12 +1,13 @@
 # The terminal section of ~/.hermes/config.yaml for agent 001. After changing it, restart hermes-gateway: the scheduler keeps the backend it started with.
 # Not mounted on purpose: creditcard, cloudflare, postgres, twilio, vaultwarden, anchor wallet, other repos, ~/.ssh.
+# Network a9n9-sandbox holds only inbox, nostr and tools; firewall.sh (systemd a9n9-sandbox-firewall) blocks the host and LAN.
 terminal:
   backend: docker
   docker_image: a9n9-agent-sandbox:local
   docker_run_as_host_user: true
   docker_extra_args:
   - --network
-  - host
+  - a9n9-sandbox
   docker_volumes:
   - /home/ubuntu/a9n9/agent001:/home/ubuntu/a9n9/agent001:ro
   - /home/ubuntu/a9n9/agent001:/agent:ro
