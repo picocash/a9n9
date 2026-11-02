@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+// journal — the agent's memory across runs. Each run reads it first and writes to it last.
+//   journal [n]                     show the last n entries (default 12) and the watchlist
+//   journal add "<text>"            record what you learned / tried / plan to do next run
+//   journal watch <handle|url> "<why>"   add an account or thread worth coming back to
+//   journal unwatch <handle|url>    remove it
+import fs from 'node:fs';
+import { out, HOME } from './_lib.mjs';
+const F = `${HOME}/state/journal.jsonl`, W = `${HOME}/state/watchlist.json`;
+const read = () => fs.existsSync(F) ? fs.readFileSync(F, 'utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)) : [];
+const watch = () => fs.existsSync(W) ? JSON.parse(fs.readFileSync(W, 'utf8')) : [];
+const [cmd, ...rest] = process.argv.slice(2);
+if (cmd === 'add') {
+  const text = rest.join(' ').trim(); if (!text) { out({ ok: false, error: 'usage: journal add "<text>"' }); process.exit(2); }
+  fs.appendFileSync(F, JSON.stringify({ at: new Date().toISOString(), text }) + '\n');
+  out({ ok: true, entries: read().length });
+} else if (cmd === 'watch') {
+  const [who, ...why] = rest; if (!who) { out({ ok: false, error: 'usage: journal watch <handle|url> "<why>"' }); process.exit(2); }
+  const w = watch().filter(x => x.who !== who); w.push({ who, why: why.join(' ').trim(), since: new Date().toISOString() });
+  fs.writeFileSync(W, JSON.stringify(w, null, 1)); out({ ok: true, watchlist: w });
+} else if (cmd === 'unwatch') {
+  const w = watch().filter(x => x.who !== rest[0]); fs.writeFileSync(W, JSON.stringify(w, null, 1)); out({ ok: true, watchlist: w });
+} else {
+  const n = Number(cmd ?? 12) || 12; const all = read();
+  out({ ok: true, total: all.length, entries: all.slice(-n), watchlist: watch() });
+}
