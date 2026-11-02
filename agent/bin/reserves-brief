@@ -17,6 +17,9 @@ const parts = top.map(t => `${t.symbol} ${m(usd(t.tempoSupply, t.decimals))} on 
 let text = `Tempo stablecoin reserves, ${when}: ${parts.join('; ')}. ${okCount}/${applicable.length} checks pass${failing.length ? ` (failing: ${failing.join(', ')})` : ''}. Total tracked on Tempo ${m(totalTempo)}. reserves.a9n9.net`;
 if (text.length > 280) text = `Tempo stablecoin reserves, ${when}: ${parts.slice(0, 2).join('; ')}. ${okCount}/${applicable.length} checks pass${failing.length ? ` (failing: ${failing.join(', ')})` : ''}. reserves.a9n9.net`;
 if (process.argv.includes('--post')) {
+  const mark = `${HOME}/state/brief-posted.json`; const day = new Date().toISOString().slice(0, 10);
+  const prev = fs.existsSync(mark) ? JSON.parse(fs.readFileSync(mark, 'utf8')) : {};
+  if (prev.day === day) { out({ ok: false, error: `the daily reserves snapshot was already posted today (${prev.url ?? 'url unknown'}); one a day, try tomorrow` }); process.exit(4); }
   const f = `${HOME}/state/brief.txt`; fs.writeFileSync(f, text);
-  try { process.stdout.write(execFileSync(`${HOME}/bin/x-post`, ['--file', f], { encoding: 'utf8' })); } catch (e) { process.stdout.write(e.stdout || ''); process.exit(e.status ?? 1); }
+  try { const res = execFileSync(`${HOME}/bin/x-post`, ['--file', f], { encoding: 'utf8' }); process.stdout.write(res); try { const j = JSON.parse(res); if (j.ok) fs.writeFileSync(mark, JSON.stringify({ day, url: j.url, at: new Date().toISOString() })); } catch {} } catch (e) { process.stdout.write(e.stdout || ''); process.exit(e.status ?? 1); }
 } else out({ ok: true, text, chars: text.length, refreshedAt: d.refreshedAt, failing, attested: attested.map(t => t.symbol), hint: 'reserves-brief --post publishes this text directly (no shell quoting)' });

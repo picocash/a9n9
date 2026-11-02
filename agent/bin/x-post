@@ -13,7 +13,7 @@ await page.keyboard.type(text, { delay: 5 }); await page.waitForTimeout(500);
 await page.keyboard.press('Control+Enter'); await page.waitForTimeout(5000);
 await page.goto('https://x.com/a9n9agent', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(4000);
 const first = await page.locator('article[data-testid="tweet"]').filter({ hasNot: page.locator('text=/^Pinned/') }).first();
-const link = await page.evaluate(() => { const a = [...document.querySelectorAll('article[data-testid="tweet"] a[href*="/status/"]')].map(a => a.getAttribute('href')).filter(h => /\/status\/\d+$/.test(h)); return a[1] ?? a[0] ?? null; });
+const link = await page.evaluate((head) => { for (const art of document.querySelectorAll('article[data-testid="tweet"]')) { const t = art.querySelector('[data-testid="tweetText"]')?.innerText?.replace(/\s+/g, ' ') ?? ''; if (t.startsWith(head)) { const h = [...art.querySelectorAll('a[href*="/status/"]')].map(a => a.getAttribute('href')).find(h => /\/status\/\d+$/.test(h)); if (h) return h; } } return null; }, text.replace(/\s+/g, ' ').slice(0, 40));
 const seen = async () => (await page.evaluate(() => [...document.querySelectorAll('[data-testid="tweetText"]')].map(e => e.innerText.replace(/\s+/g, ' ')))).some(t => t.startsWith(text.replace(/\s+/g, ' ').slice(0, 40)));
 let posted = await seen();
 if (!posted) { await page.waitForTimeout(6000); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(5000); posted = await seen(); }
