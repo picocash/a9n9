@@ -1,0 +1,29 @@
+#!/usr/bin/env node
+// mvr — progress against Minimum Viable Reputation, computed from the ledger (inbox events), x-stats history and the probe. Numbers only; no opinions.
+import fs from 'node:fs';
+import { env, out, HOME } from './_lib.mjs';
+const e = env('/home/ubuntu/a9n9/secrets/inbox.env'); const h = { authorization: `Bearer ${e.INBOX_API_TOKEN}` };
+const since = '2026-11-01T00:00:00.000Z';
+const idx = (await (await fetch(`http://127.0.0.1:8810/v1/events?limit=500&since=${since}`, { headers: h })).json()).events;
+const full = async (ev) => (await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json()).payload ?? {};
+const AUTOMATED = /noreply|no-reply|notifications?@|invoice|receipt|verification|statements|mailer|postmaster|daemon|alerts?@|security@|support@|welcome|do-not-reply|@e\.link\.com|@stripe\.com|@tempo\.xyz|@twilio\.com|@x\.com|@vaultwarden|bitwarden/i;
+const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy/i;
+// correspondence: human emails received (not automated, not affiliates) and whether we replied
+const received = []; for (const ev of idx.filter((x) => x.type === 'email.received')) { const p = await full(ev); const addr = String(p.from?.address ?? p.from ?? '').toLowerCase(); if (!addr || AUTOMATED.test(addr + ' ' + (p.subject ?? '')) || AFFILIATE.test(addr)) continue; received.push({ addr, domain: addr.split('@')[1], at: ev.receivedAt, id: ev.id }); }
+const sent = []; for (const ev of idx.filter((x) => x.type === 'email.sent')) { const p = await full(ev); sent.push({ to: String(p.to ?? '').toLowerCase(), inReplyTo: p.inReplyTo ?? null }); }
+const repliedTo = new Set(sent.map((s) => s.to));
+const threads = received.filter((r) => repliedTo.has(r.addr));
+const byAddr = new Map(); for (const r of received) byAddr.set(r.addr, (byAddr.get(r.addr) ?? 0) + 1);
+const correspondence = { humanEmailsReceived: received.length, threadsWithReply: threads.length, distinctCorrespondents: new Set(threads.map((t) => t.addr)).size, sendingDomains: new Set(threads.map((t) => t.domain)).size, wroteBackTwice: [...byAddr.values()].filter((n) => n >= 2).length };
+// engagement: distinct accounts that mentioned/replied to us on X or Nostr (age/follower checks are the daily review's job)
+const mentions = idx.filter((x) => x.type === 'x.mention' || x.type === 'nostr.mention'); const authors = new Set(); for (const ev of mentions) { const p = await full(ev); if (p.author || p.fromNpub) authors.add(p.author ?? p.fromNpub); }
+// helped receipts and paid work
+const helped = idx.filter((x) => x.type === 'receipt.helped'); let helpedYes = 0; for (const ev of helped) { const p = await full(ev); if (p.helped) helpedYes++; }
+const paid = []; for (const ev of idx.filter((x) => x.type === 'money.income')) { const p = await full(ev); if (Number(p.amount_usd) >= 10 && !AFFILIATE.test(String(p.payer ?? ''))) paid.push(p); }
+// reach
+const statsF = `${HOME}/state/x-stats.jsonl`; const stats = fs.existsSync(statsF) ? fs.readFileSync(statsF, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : []; const followers = stats.at(-1)?.followers ?? null;
+// tenure: probe verdicts if reachable
+let probe = null; try { probe = await (await fetch('https://a9n9-email.arun-fad.workers.dev/v1/probe', { signal: AbortSignal.timeout(8000) })).json(); } catch {}
+const day = Math.floor((Date.now() - Date.parse(since)) / 86_400_000) + 1;
+out({ ok: true, day, correspondence, reach: { followersX: followers, target: 100 }, engagement: { distinctAccountsEngaged: authors.size, target: 20, day30Target: 10, note: 'age and follower checks pending' }, helpedReceipts: { yes: helpedYes, total: helped.length, weeklyTarget: 10 }, paidWork: { count: paid.length, target: 1 }, tenure: probe ? { probe } : { probe: 'unavailable' }, ledgerEntries: idx.length, targets: { threads: 100, distinctCorrespondents: 50, sendingDomains: 25, wroteBackTwice: 20, day30Correspondents: 50 } });
+process.exit(0);

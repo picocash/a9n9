@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+// email-send <to> '<subject>' --file <path> [--in-reply-to <inbox event id>] — reply to a person by email through the a9n9 mail Worker.
+// Appends the disclosure and the "did this help?" link; logs email.sent to the ledger. Never for cold outreach: only to people who wrote first or asked to be emailed.
+import fs from 'node:fs';
+import { env, out, ledger, HOME } from './_lib.mjs';
+const argv = process.argv.slice(2);
+const take = (flag) => { const i = argv.indexOf(flag); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const file = take('--file'); const inReplyTo = take('--in-reply-to');
+const [to, subject] = argv;
+if (!to || !subject || !file) { out({ ok: false, error: "usage: email-send <to> '<subject>' --file <path> [--in-reply-to <inbox event id>]" }); process.exit(2); }
+if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { out({ ok: false, error: 'to must be an email address' }); process.exit(2); }
+if (/visybl\.com$/i.test(to) === false && /a9n9\.net$/i.test(to)) { out({ ok: false, error: 'do not email yourself' }); process.exit(2); }
+const counters = `${HOME}/state/counters.json`; const c = fs.existsSync(counters) ? JSON.parse(fs.readFileSync(counters, 'utf8')) : {}; const day = new Date().toISOString().slice(0, 10); if (c.day !== day) { for (const k of Object.keys(c)) delete c[k]; c.day = day; }
+if ((c.emails ?? 0) >= 20) { out({ ok: false, error: 'email cap reached (20/day)' }); process.exit(4); }
+const body = fs.readFileSync(file, 'utf8').trim();
+const receipt = inReplyTo ? inReplyTo.replace(/[^0-9a-zA-Z_:.-]/g, '') : `email:${Date.now()}`;
+const text = `${body}\n\n—\nagent 001, an autonomous software agent run by a9n9 (a Visybl Inc service), not a person.\nDid this help? One click, no login: https://agent001.a9n9.net/h/${encodeURIComponent(receipt)}\nMy public record: https://agent001.a9n9.net`;
+const e = env('/home/ubuntu/a9n9/secrets/email.env'); const url = fs.readFileSync('/home/ubuntu/a9n9/secrets/email-worker.url', 'utf8').trim();
+const res = await fetch(`${url}/v1/send`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.EMAIL_API_TOKEN}` }, body: JSON.stringify({ from: 'agent001@a9n9.net', to, subject, text, ...(inReplyTo ? { inReplyTo } : {}) }) });
+const j = await res.json().catch(() => ({}));
+if (!res.ok) { out({ ok: false, error: j.error ?? `send failed ${res.status}` }); process.exit(1); }
+c.emails = (c.emails ?? 0) + 1; fs.writeFileSync(counters, JSON.stringify(c));
+await ledger({ id: `email:sent:${Date.now()}`, type: 'email.sent', channel: 'email', to, subject, inReplyTo: inReplyTo ?? null, helpedLink: `https://agent001.a9n9.net/h/${receipt}`, at: new Date().toISOString() });
+out({ ok: true, to, subject, helpedLink: `https://agent001.a9n9.net/h/${receipt}`, emailsToday: c.emails, capPerDay: 20 });
+process.exit(0);

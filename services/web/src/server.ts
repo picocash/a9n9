@@ -63,6 +63,12 @@ const model = {
   evidence: JSON.parse(env.AGENT_EVIDENCE ?? '[]'),
 };
 const html = renderPage(model);
+const helpedPage = (ref: string, done: string | null) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Did this help?</title>
+<style>body{margin:0;background:#f6f5f1;color:#1d1f23;font:17px/1.5 ui-sans-serif,system-ui,sans-serif;padding:40px 16px}main{max-width:520px;margin:0 auto}h1{font-size:1.4rem;margin:0 0 8px}p{color:#6b6f76}button{font:inherit;padding:12px 20px;border-radius:8px;border:1px solid #dcdad3;background:#fff;cursor:pointer;margin:6px 8px 6px 0}button.yes{background:#3b4cca;color:#fff;border-color:#3b4cca}textarea{width:100%;font:inherit;padding:10px;border:1px solid #dcdad3;border-radius:8px;margin:10px 0}code{font-family:ui-monospace,monospace;font-size:.85rem;color:#6b6f76;word-break:break-all}@media(prefers-color-scheme:dark){body{background:#15171b;color:#e8e6df}button{background:#1c1f25;color:#e8e6df;border-color:#2c3037}textarea{background:#1c1f25;color:#e8e6df;border-color:#2c3037}}</style></head><body><main>
+<h1>Did agent 001 help?</h1><p>One click, no login. Your answer becomes a line in the agent's public record; your identity does not.</p>
+<div id="f"><button class="yes" onclick="go(true)">Yes, it helped</button><button onclick="go(false)">No</button><textarea id="n" placeholder="Optional: what was good or missing (public)"></textarea></div>
+<p id="d" ${done ? '' : 'hidden'}>Recorded. Thank you.</p><p><code>ref ${ref.replace(/[<>&]/g, '')}</code></p>
+<script>async function go(h){const r=await fetch(location.pathname,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({helped:h,note:document.getElementById('n').value})});document.getElementById('f').hidden=true;document.getElementById('d').hidden=false;document.getElementById('d').textContent=r.ok?'Recorded. Thank you.':'Could not record; please try again later.'}</script></main></body></html>`;
 const BOT_UA = env.AGENT_USER_AGENT ?? 'a9n9-agent001/1.0 (+https://agent001.a9n9.net/bot)';
 const botHtml = renderBotPage({ host: env.AGENT_PUBLIC_HOST ?? 'agent001.a9n9.net', name: 'a9n9 agent 001', userAgent: BOT_UA, email: env.AGENT_EMAIL ?? 'agent001@a9n9.net', x: env.AGENT_X ?? 'a9n9agent' });
 
@@ -133,6 +139,22 @@ const server = createServer(async (req, res) => {
     }
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
     if (url.pathname === '/bot' && req.method === 'GET') return send(res, 200, botHtml, 'text/html; charset=utf-8');
+    const helped = url.pathname.match(/^\/h\/([0-9a-zA-Z_:.%-]{1,120})$/);
+    if (helped && req.method === 'GET') {
+      const ref = decodeURIComponent(helped[1]!);
+      return send(res, 200, helpedPage(ref, url.searchParams.get('done')), 'text/html; charset=utf-8');
+    }
+    if (helped && req.method === 'POST') {
+      const ref = decodeURIComponent(helped[1]!); const key = clientKey(req);
+      if (!allow(key)) return send(res, 429, { error: 'too many submissions' });
+      const body = await readJson(req).catch(() => ({} as Record<string, unknown>));
+      const yes = body.helped === true || body.helped === 'yes'; const note = String(body.note ?? '').trim().slice(0, 500);
+      const id = `receipt:${randomUUID()}`;
+      const r = await postToInbox({ id, type: 'receipt.helped', channel: 'receipt', ref, helped: yes, note, source: key, at: new Date().toISOString() });
+      if (r.status !== 201) return send(res, 502, { error: 'could not record' });
+      ledgerCache = null; log(`receipt.helped ${yes ? 'yes' : 'no'} for ${ref}`);
+      return send(res, 201, { id, helped: yes });
+    }
     if (url.pathname === '/ledger.json' && req.method === 'GET') return send(res, 200, await ledger());
     if (url.pathname.startsWith('/evidence/') && req.method === 'GET' && STATIC) {
       const name = url.pathname.slice('/evidence/'.length);

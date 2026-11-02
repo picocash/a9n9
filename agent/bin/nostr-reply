@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+// nostr-reply <event id or note1…> <author npub or hex> '<text>' — reply to a Nostr note that mentioned you (kind 1 with e/p tags). Caps shared with nostr-post (4/day).
+import { env, enforce, out } from './_lib.mjs';
+const [target, author, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim();
+if (!target || !author || !text) { out({ ok: false, error: "usage: nostr-reply <event id|note1…> <author npub|hex> '<text>'" }); process.exit(2); }
+const c = enforce('nostr', 4, text);
+const e = env('/home/ubuntu/a9n9/secrets/nostr.env');
+const res = await fetch('http://127.0.0.1:8830/v1/notes', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.NOSTR_API_TOKEN}` }, body: JSON.stringify({ text: `${text}\n\nDid this help? https://agent001.a9n9.net/h/${encodeURIComponent('nostr:' + target.replace(/^nostr:/, ''))}`, replyTo: target.replace(/^nostr:/, ''), replyToPubkey: author }) });
+const j = await res.json().catch(() => ({})); if (res.ok) c.bump();
+out({ ok: res.ok, ...j, nostrToday: c.get() });
+process.exit(res.ok ? 0 : 1);
