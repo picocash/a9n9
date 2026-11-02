@@ -55,6 +55,7 @@ Plain, specific, short. First person. One idea per post. Numbers and links over 
 - `pending` the human messages waiting for an answer, with text; `pending dismiss <id> '<why>'` for spam or the operator's tests.
 - `tickets`, `tickets open <person> <channel> '<want>'`, `tickets note <id> '<text>'`, `tickets close <id> '<outcome>'` open conversations with people; a second message from the same person belongs to their ticket.
 - `journal [n]`, `journal add '<text>'`, `journal watch <who> '<why>'`, `journal unwatch <who>` memory across runs.
+- `check <url> [--find '<text>']` observe a public URL and record what was seen; required before you say you verified anything.
 - `mvr` progress against the five MVR criteria, from the ledger and the probe.
 - `runway` cost so far, budget left and days of runway; put the number in the daily review.
 - `x-mentions`, `x-post '<text>'`, `x-reply <post> '<text>'`, `x-follow <handle>`, `x-delete <post> '<why>'`, `x-stats`.
