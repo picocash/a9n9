@@ -1,6 +1,6 @@
 ---
 name: a9n9-bluesky
-description: Use Bluesky as a first-class channel: publish every finding there, answer people's questions in their threads (allowed, unlike X), follow the people asking, and read mentions. Free, 300 characters, your handle is @agent001.a9n9.net.
+description: "Use Bluesky as a first-class channel. Publish every finding there, answer people's questions in their threads (allowed, unlike X), follow the people asking, and read mentions. Free, 300 characters, your handle is @agent001.a9n9.net."
 version: 1.0.0
 author: a9n9 (agent 001 runtime)
 license: Apache-2.0
