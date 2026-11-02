@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+// x-mentions — new mentions/replies to @a9n9agent since the last run (also stored in the ledger as x.mention)
+import fs from 'node:fs';
+import { chrome, ledger, out, clean, HOME } from './_lib.mjs';
+const seenF = `${HOME}/state/mentions-seen.json`;
+const seen = new Set(fs.existsSync(seenF) ? JSON.parse(fs.readFileSync(seenF, 'utf8')) : []);
+const { page } = await chrome();
+await page.goto('https://x.com/notifications/mentions', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(5000);
+const items = await page.evaluate(() => [...document.querySelectorAll('article[data-testid="tweet"]')].slice(0, 20).map(a => {
+  const link = [...a.querySelectorAll('a[href*="/status/"]')].map(x => x.getAttribute('href')).find(h => /\/status\/\d+$/.test(h));
+  return { id: link?.split('/').pop(), url: link ? 'https://x.com' + link : null, author: a.querySelector('[data-testid="User-Name"] a[href^="/"]')?.getAttribute('href')?.slice(1) ?? null, text: a.querySelector('[data-testid="tweetText"]')?.innerText ?? '', time: a.querySelector('time')?.getAttribute('datetime') ?? null };
+}).filter(m => m.id));
+const fresh = items.filter(m => !seen.has(m.id) && m.author !== 'a9n9agent');
+for (const m of fresh) { seen.add(m.id); await ledger({ id: `x:mention:${m.id}`, type: 'x.mention', channel: 'x', ...m, text: clean(m.text) }); }
+fs.writeFileSync(seenF, JSON.stringify([...seen].slice(-500)));
+out({ ok: true, new: fresh.map(m => ({ ...m, text: clean(m.text) })), seenTotal: seen.size });
+process.exit(0);

@@ -1,17 +1,15 @@
 #!/usr/bin/env node
-// x-mentions — new mentions/replies to @a9n9agent since the last run (also stored in the ledger as x.mention)
+// x-mentions — new mentions of @a9n9agent since the last run via the X API ($0.001 per item), stored in the ledger as x.mention
 import fs from 'node:fs';
-import { chrome, ledger, out, clean, HOME } from './_lib.mjs';
-const seenF = `${HOME}/state/mentions-seen.json`;
-const seen = new Set(fs.existsSync(seenF) ? JSON.parse(fs.readFileSync(seenF, 'utf8')) : []);
-const { page } = await chrome();
-await page.goto('https://x.com/notifications/mentions', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(5000);
-const items = await page.evaluate(() => [...document.querySelectorAll('article[data-testid="tweet"]')].slice(0, 20).map(a => {
-  const link = [...a.querySelectorAll('a[href*="/status/"]')].map(x => x.getAttribute('href')).find(h => /\/status\/\d+$/.test(h));
-  return { id: link?.split('/').pop(), url: link ? 'https://x.com' + link : null, author: a.querySelector('[data-testid="User-Name"] a[href^="/"]')?.getAttribute('href')?.slice(1) ?? null, text: a.querySelector('[data-testid="tweetText"]')?.innerText ?? '', time: a.querySelector('time')?.getAttribute('datetime') ?? null };
-}).filter(m => m.id));
-const fresh = items.filter(m => !seen.has(m.id) && m.author !== 'a9n9agent');
-for (const m of fresh) { seen.add(m.id); await ledger({ id: `x:mention:${m.id}`, type: 'x.mention', channel: 'x', ...m, text: clean(m.text) }); }
-fs.writeFileSync(seenF, JSON.stringify([...seen].slice(-500)));
-out({ ok: true, new: fresh.map(m => ({ ...m, text: clean(m.text) })), seenTotal: seen.size });
+import { ledger, out, clean, HOME } from './_lib.mjs';
+import { x, ME_ID, PRICE, apiError } from './_x.mjs';
+const stF = `${HOME}/state/mentions-since.json`; const st = fs.existsSync(stF) ? JSON.parse(fs.readFileSync(stF, 'utf8')) : {};
+const r = await x('GET', `/users/${ME_ID}/mentions`, { query: { max_results: 20, since_id: st.sinceId, 'tweet.fields': 'author_id,created_at,conversation_id,in_reply_to_user_id', expansions: 'author_id', 'user.fields': 'username' }, price: 0, label: 'mentions' });
+if (r.status !== 200) { out({ ok: false, error: apiError(r), status: r.status }); process.exit(1); }
+const users = Object.fromEntries((r.body.includes?.users ?? []).map(u => [u.id, u.username]));
+const items = (r.body.data ?? []).map(t => ({ id: t.id, url: `https://x.com/${users[t.author_id] ?? 'i'}/status/${t.id}`, author: users[t.author_id] ?? t.author_id, text: clean(t.text), time: t.created_at, conversationId: t.conversation_id }));
+fs.appendFileSync(`${HOME}/state/x-api-usage.jsonl`, JSON.stringify({ at: new Date().toISOString(), label: 'mentions-items', count: items.length, price: items.length * PRICE.mentionsItem }) + '\n');
+for (const m of items) await ledger({ id: `x:mention:${m.id}`, type: 'x.mention', channel: 'x', ...m });
+if (r.body.meta?.newest_id) fs.writeFileSync(stF, JSON.stringify({ sinceId: r.body.meta.newest_id, at: new Date().toISOString() }));
+out({ ok: true, new: items, sinceId: r.body.meta?.newest_id ?? st.sinceId ?? null });
 process.exit(0);

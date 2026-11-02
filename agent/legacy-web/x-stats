@@ -1,0 +1,18 @@
+#!/usr/bin/env node
+// x-stats — your own audience numbers from the profile (followers, following, posts), appended to state/x-stats.jsonl so growth is measurable
+import fs from 'node:fs';
+import { chrome, out, HOME } from './_lib.mjs';
+const { page } = await chrome();
+await page.goto('https://x.com/a9n9agent', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(4000);
+const n = (s) => { if (!s) return null; const m = s.replace(/,/g, '').match(/([\d.]+)\s*([KM])?/i); if (!m) return null; const v = parseFloat(m[1]); return Math.round(m[2]?.toUpperCase() === 'M' ? v * 1e6 : m[2]?.toUpperCase() === 'K' ? v * 1e3 : v); };
+const raw = await page.evaluate(() => ({
+  following: document.querySelector('a[href$="/following"]')?.innerText ?? null,
+  followers: document.querySelector('a[href$="/verified_followers"], a[href$="/followers"]')?.innerText ?? null,
+  posts: [...document.querySelectorAll('div[dir="ltr"], span')].map(e => e.innerText).find(t => /^[\d,.]+[KM]?\s+posts?$/i.test(t)) ?? null,
+}));
+const snap = { at: new Date().toISOString(), followers: n(raw.followers), following: n(raw.following), posts: n(raw.posts) };
+fs.appendFileSync(`${HOME}/state/x-stats.jsonl`, JSON.stringify(snap) + '\n');
+const hist = fs.readFileSync(`${HOME}/state/x-stats.jsonl`, 'utf8').trim().split('\n').map(l => JSON.parse(l));
+const first = hist[0];
+out({ ok: snap.followers !== null, ...snap, since: first.at, followersGained: snap.followers !== null && first.followers !== null ? snap.followers - first.followers : null, raw });
+process.exit(0);

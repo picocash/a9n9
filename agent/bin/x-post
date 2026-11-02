@@ -1,25 +1,15 @@
 #!/usr/bin/env node
-// x-post "<text>" — publish a post as @a9n9agent (caps enforced, logged as x.post)
-import { chrome, enforce, ledger, out, policy, textArg, suspicious } from './_lib.mjs';
+// x-post '<text>' | x-post --file <path> — publish a post via the X API (caps enforced, logged as x.post; a URL in the text costs $0.20 instead of $0.015)
+import { enforce, ledger, out, policy, textArg, suspicious } from './_lib.mjs';
+import { x, hasUrl, PRICE, apiError } from './_x.mjs';
 const { text } = textArg(process.argv.slice(2));
-if (!text) { out({ ok: false, error: 'usage: x-post \'<text>\' | x-post --file <path>' }); process.exit(2); }
+if (!text) { out({ ok: false, error: "usage: x-post '<text>' | x-post --file <path>" }); process.exit(2); }
 const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
 const c = enforce('posts', policy.max_posts_per_day, text);
-const { page } = await chrome();
-await page.goto('https://x.com/compose/post', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(3000);
-const ta = page.locator('[data-testid="tweetTextarea_0"]').first();
-await ta.click(); await page.keyboard.press('Control+A'); await page.keyboard.press('Backspace');
-await page.keyboard.type(text, { delay: 5 }); await page.waitForTimeout(500);
-await page.keyboard.press('Control+Enter'); await page.waitForTimeout(5000);
-await page.goto('https://x.com/a9n9agent', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(4000);
-const first = await page.locator('article[data-testid="tweet"]').filter({ hasNot: page.locator('text=/^Pinned/') }).first();
-const link = await page.evaluate((head) => { for (const art of document.querySelectorAll('article[data-testid="tweet"]')) { const t = art.querySelector('[data-testid="tweetText"]')?.innerText?.replace(/\s+/g, ' ') ?? ''; if (t.startsWith(head)) { const h = [...art.querySelectorAll('a[href*="/status/"]')].map(a => a.getAttribute('href')).find(h => /\/status\/\d+$/.test(h)); if (h) return h; } } return null; }, text.replace(/\s+/g, ' ').slice(0, 40));
-const seen = async () => (await page.evaluate(() => [...document.querySelectorAll('[data-testid="tweetText"]')].map(e => e.innerText.replace(/\s+/g, ' ')))).some(t => t.startsWith(text.replace(/\s+/g, ' ').slice(0, 40)));
-let posted = await seen();
-if (!posted) { await page.waitForTimeout(6000); await page.reload({ waitUntil: 'domcontentloaded' }); await page.waitForTimeout(5000); posted = await seen(); }
-if (!posted) { out({ ok: false, error: 'post not found on profile after submit' }); process.exit(1); }
+const r = await x('POST', '/tweets', { body: { text }, price: hasUrl(text) ? PRICE.postWithUrl : PRICE.post, label: 'post' });
+if (r.status !== 201 || !r.body?.data?.id) { out({ ok: false, error: apiError(r), status: r.status }); process.exit(1); }
 c.bump();
-const url = link ? `https://x.com${link}` : null;
-await ledger({ id: `x:post:${link?.split('/').pop() ?? Date.now()}`, type: 'x.post', channel: 'x', text, url, at: new Date().toISOString() });
-out({ ok: true, url, text, postsToday: c.get(), capPerDay: policy.max_posts_per_day });
+const id = r.body.data.id; const url = `https://x.com/a9n9agent/status/${id}`;
+await ledger({ id: `x:post:${id}`, type: 'x.post', channel: 'x', text, url, at: new Date().toISOString(), via: 'api' });
+out({ ok: true, url, text, postsToday: c.get(), capPerDay: policy.max_posts_per_day, cost: hasUrl(text) ? PRICE.postWithUrl : PRICE.post });
 process.exit(0);

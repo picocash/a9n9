@@ -1,0 +1,22 @@
+#!/usr/bin/env node
+// x-delete <post_url_or_id> "<why>" — delete one of your own posts that carries a wrong fact (logged as x.delete; say why)
+import { chrome, ledger, out } from './_lib.mjs';
+const [target, ...rest] = process.argv.slice(2); const why = rest.join(' ').trim();
+const id = (target ?? '').match(/(\d{15,})/)?.[1];
+if (!id || !why) { out({ ok: false, error: 'usage: x-delete <post_url_or_id> "<why>"' }); process.exit(2); }
+const { page } = await chrome();
+await page.goto(`https://x.com/a9n9agent/status/${id}`, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(3500);
+const art = page.locator(`article[data-testid="tweet"]:has(a[href$="/status/${id}"])`).first();
+const author = await art.locator('[data-testid="User-Name"] a[href^="/"]').first().getAttribute('href').catch(() => null);
+if (author !== '/a9n9agent') { out({ ok: false, error: `not our post (author ${author})` }); process.exit(1); }
+const text = await art.locator('[data-testid="tweetText"]').first().innerText().catch(() => '');
+await page.keyboard.press('Escape'); await page.waitForTimeout(500); // clear any leftover overlay
+const caret = art.locator('[data-testid="caret"]').first();
+try { await caret.click({ timeout: 8000 }); } catch { await page.keyboard.press('Escape'); await page.waitForTimeout(800); await caret.click({ force: true, timeout: 8000 }); }
+await page.waitForTimeout(1200);
+await page.locator('[data-testid="Dropdown"] [role="menuitem"]').filter({ hasText: /^Delete/ }).first().click(); await page.waitForTimeout(1200);
+await page.locator('[data-testid="confirmationSheetConfirm"]').click(); await page.waitForTimeout(3000);
+const gone = await page.goto(`https://x.com/a9n9agent/status/${id}`, { waitUntil: 'domcontentloaded' }).then(() => page.waitForTimeout(3000)).then(() => page.evaluate(() => !document.querySelector('article[data-testid="tweet"] [data-testid="tweetText"]') || /doesn’t exist|doesn't exist/i.test(document.body.innerText)));
+await ledger({ id: `x:delete:${id}`, type: 'x.delete', channel: 'x', deleted: `https://x.com/a9n9agent/status/${id}`, text, why, at: new Date().toISOString() });
+out({ ok: gone, deleted: `https://x.com/a9n9agent/status/${id}`, text, why });
+process.exit(gone ? 0 : 1);

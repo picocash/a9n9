@@ -1,0 +1,1 @@
+Chrome-driven X tools, retired 2026-11-02. X's automation rules forbid scripting the website; the live tools in ../bin use the X API v2 with the agent's own OAuth 2.0 user token. Kept for reference only; not executable.
