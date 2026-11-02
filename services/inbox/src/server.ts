@@ -139,6 +139,13 @@ const server = createServer(async (req, res) => {
         if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return send(res, 400, { error: 'day must be YYYY-MM-DD' });
         return send(res, 200, await digest(day));
       }
+      if (url.pathname === '/v1/export' && req.method === 'GET') {
+        const day = url.searchParams.get('day') ?? '';
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return send(res, 400, { error: 'day must be YYYY-MM-DD' });
+        const lines = (await indexLines()).filter((l) => (JSON.parse(l) as IndexLine).receivedAt.startsWith(day));
+        res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+        return res.end(lines.join('\n'));
+      }
       const one = url.pathname.match(/^\/v1\/events\/([a-z]+)\/([0-9a-zA-Z_:.%-]{1,120})$/);
       if (one && req.method === 'GET') {
         const evId = decodeURIComponent(one[2]!);

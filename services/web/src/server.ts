@@ -15,6 +15,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { renderPage } from './page.js';
 import { renderBotPage } from './botpage.js';
+import { renderRules } from './rules.js';
 import { directoryResponse, makeKeyFetcher, signerFromSeed, verifyRequest, type Signer } from './httpsig.js';
 
 const env = process.env;
@@ -160,6 +161,15 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/bot' && req.method === 'GET') return send(res, 200, botHtml, 'text/html; charset=utf-8');
     // AT Protocol handle verification: lets the agent use this hostname as its Bluesky handle.
     if (url.pathname === '/.well-known/atproto-did' && req.method === 'GET' && env.AGENT_ATPROTO_DID) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300' }); return res.end(env.AGENT_ATPROTO_DID); }
+    if (url.pathname === '/rules' && req.method === 'GET') return send(res, 200, renderRules(env.AGENT_PUBLIC_HOST ?? 'agent001.a9n9.net'), 'text/html; charset=utf-8');
+    const dayFile = url.pathname.match(/^\/ledger\/(\d{4}-\d{2}-\d{2})\.(jsonl|digest)$/);
+    if (dayFile && req.method === 'GET') {
+      const h = { authorization: `Bearer ${INBOX_TOKEN}` };
+      const r = await fetch(`${INBOX_URL}/v1/${dayFile[2] === 'jsonl' ? 'export' : 'digest'}?day=${dayFile[1]}`, { headers: h, signal: AbortSignal.timeout(5000) });
+      if (!r.ok) return send(res, 502, { error: 'ledger unavailable' });
+      res.writeHead(200, { ...CORS, 'content-type': dayFile[2] === 'jsonl' ? 'application/x-ndjson' : 'application/json', 'cache-control': 'public, max-age=60' });
+      return res.end(await r.text());
+    }
     const helped = url.pathname.match(/^\/h\/([0-9a-zA-Z_:.%-]{1,120})$/);
     if (helped && req.method === 'GET') {
       const ref = decodeURIComponent(helped[1]!);
