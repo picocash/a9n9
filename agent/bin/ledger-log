@@ -1,7 +1,9 @@
 #!/usr/bin/env node
-// ledger-log <type> '<json>' — write a decision/review/opportunity/note to the public ledger (types agent.*)
+// ledger-log <type> '<json>' | ledger-log <type> --file <path.json> — write a decision/review/opportunity/note to the public ledger (types agent.*)
+import fs from 'node:fs';
 import { ledger, out } from './_lib.mjs';
-const [type, json] = process.argv.slice(2);
+const argv = process.argv.slice(2); const fi = argv.indexOf('--file');
+const type = argv[0]; const json = fi >= 0 ? fs.readFileSync(argv[fi + 1], 'utf8') : argv[1];
 if (!/^agent\.(review|focus|opportunity|note)$/.test(type ?? '')) { out({ ok: false, error: 'type must be agent.review | agent.focus | agent.opportunity | agent.note' }); process.exit(2); }
 let data; try { data = JSON.parse(json ?? '{}'); } catch { out({ ok: false, error: 'second argument must be JSON' }); process.exit(2); }
 const id = `agent:${type.split('.')[1]}:${Date.now()}`;
