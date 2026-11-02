@@ -1,0 +1,1 @@
+{ "max_posts_per_day": 2, "max_replies_per_day": 10, "reply_only_to_mentions": true, "max_chars": 500, "quiet_hours_utc": [] }

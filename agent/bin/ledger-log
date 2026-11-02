@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+// ledger-log <type> '<json>' — write a decision/review/opportunity/note to the public ledger (types agent.*)
+import { ledger, out } from './_lib.mjs';
+const [type, json] = process.argv.slice(2);
+if (!/^agent\.(review|focus|opportunity|note)$/.test(type ?? '')) { out({ ok: false, error: 'type must be agent.review | agent.focus | agent.opportunity | agent.note' }); process.exit(2); }
+let data; try { data = JSON.parse(json ?? '{}'); } catch { out({ ok: false, error: 'second argument must be JSON' }); process.exit(2); }
+const id = `agent:${type.split('.')[1]}:${Date.now()}`;
+const status = await ledger({ id, type, channel: 'agent', ...data, at: new Date().toISOString() });
+out({ ok: status === 201, id, status });

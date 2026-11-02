@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+// grok-xsearch "<query>" — search recent X posts through the agent's own Grok subscription
+import fs from 'node:fs';
+import { out } from './_lib.mjs';
+const q = process.argv.slice(2).join(' ').trim();
+if (!q) { out({ ok: false, error: 'usage: grok-xsearch "<query>"' }); process.exit(2); }
+const auth = JSON.parse(fs.readFileSync('/home/ubuntu/.hermes/auth.json', 'utf8'));
+const find = (o) => { if (o && typeof o === 'object') { for (const [k, v] of Object.entries(o)) { if (k === 'access_token' && typeof v === 'string') return v; const r = find(v); if (r) return r; } } return null; };
+const tok = find(auth);
+const res = await fetch('https://api.x.ai/v1/responses', { method: 'POST', headers: { authorization: `Bearer ${tok}`, 'content-type': 'application/json' }, body: JSON.stringify({ model: 'grok-4.20-0309-non-reasoning', tools: [{ type: 'x_search' }], input: `Search X for: ${q}. Return up to 8 results as a JSON array of {handle, url, when, summary}. Only real posts from the last 7 days. JSON only.`, max_output_tokens: 900 }) });
+const d = await res.json();
+const txt = (d.output ?? []).flatMap(o => o.content ?? []).filter(c => c.type === 'output_text').map(c => c.text).join('');
+let results = null; try { results = JSON.parse(txt.replace(/^```json|```$/gm, '').trim()); } catch { results = txt; }
+out({ ok: res.ok, query: q, results });

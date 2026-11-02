@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+// inbox-recent [hours] — recent events across channels (email, sms, voice, nostr, web, x), with text where available
+import { env, out } from './_lib.mjs';
+const hours = Number(process.argv[2] ?? 6);
+const e = env('/home/ubuntu/a9n9/secrets/inbox.env');
+const since = new Date(Date.now() - hours * 3600_000).toISOString();
+const h = { authorization: `Bearer ${e.INBOX_API_TOKEN}` };
+const list = await (await fetch(`http://127.0.0.1:8810/v1/events?limit=60&since=${encodeURIComponent(since)}`, { headers: h })).json();
+const events = [];
+for (const ev of list.events) {
+  if (!/^(email\.received|sms\.received|voice\.call|nostr\.(mention|dm)|web\.chat|telegram\.message|x\.mention)$/.test(ev.type)) continue;
+  const full = await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json();
+  const p = full.payload ?? {};
+  events.push({ id: ev.id, type: ev.type, at: ev.receivedAt, from: p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? null, subject: p.subject ?? null, text: String(p.text ?? p.body ?? p.transcript ?? '').slice(0, 600) });
+}
+out({ ok: true, hours, events });

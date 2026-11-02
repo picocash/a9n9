@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+// x-reply <post_url_or_id> "<text>" — reply to a post (caps enforced, logged as x.reply)
+import { chrome, enforce, ledger, out, policy } from './_lib.mjs';
+const [target, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim();
+if (!target || !text) { out({ ok: false, error: 'usage: x-reply <post_url_or_id> "<text>"' }); process.exit(2); }
+const id = target.match(/(\d{15,})/)?.[1];
+if (!id) { out({ ok: false, error: 'could not find a post id in the target' }); process.exit(2); }
+const c = enforce('replies', policy.max_replies_per_day, text);
+const { page } = await chrome();
+await page.goto(`https://x.com/i/status/${id}`, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(3500);
+const author = await page.evaluate(() => document.querySelector('article[data-testid="tweet"] [data-testid="User-Name"] a[href^="/"]')?.getAttribute('href')?.slice(1) ?? null);
+const ta = page.locator('[data-testid="tweetTextarea_0"]').first();
+await ta.click(); await page.keyboard.type(text, { delay: 5 }); await page.waitForTimeout(500);
+await page.keyboard.press('Control+Enter'); await page.waitForTimeout(5000);
+const shown = (await page.evaluate(() => [...document.querySelectorAll('[data-testid="tweetText"]')].map(e => e.innerText))).some(t => t.startsWith(text.slice(0, 40)));
+if (!shown) { out({ ok: false, error: 'reply not visible after submit' }); process.exit(1); }
+c.bump();
+await ledger({ id: `x:reply:${id}:${Date.now()}`, type: 'x.reply', channel: 'x', inReplyTo: `https://x.com/i/status/${id}`, toAuthor: author, text, at: new Date().toISOString() });
+out({ ok: true, inReplyTo: `https://x.com/i/status/${id}`, toAuthor: author, text, repliesToday: c.get(), capPerDay: policy.max_replies_per_day });
+process.exit(0);
