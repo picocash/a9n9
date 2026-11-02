@@ -10,7 +10,7 @@ try {
   const since = new Date(Date.now() - 48 * 3600_000).toISOString();
   const list = await (await fetch(`http://127.0.0.1:8810/v1/events?limit=100&since=${encodeURIComponent(since)}`, { headers: h })).json();
   const AUTOMATED = /noreply|no-reply|notifications?@|invoice|receipt|verification|statements|mailer|postmaster|daemon|alerts?@|security@|support@|welcome|do-not-reply|@e\.link\.com|@stripe\.com|@tempo\.xyz|@twilio\.com|@x\.com|@bsky\.app|@github\.com|vaultwarden|bitwarden|your code|verification code|is your .* code/i;
-  const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy|starbuilder|a9n9agent/i;
+  const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy|starbuilder|a9n9agent|4343686621|434-368-6621/i;
   const tickets = fs.existsSync(`${HOME}/state/tickets.json`) ? JSON.parse(fs.readFileSync(`${HOME}/state/tickets.json`, 'utf8')).tickets : [];
   const handled = new Set(tickets.flatMap((t) => [t.ref, ...(t.notes ?? []).map((n) => n.ref).filter(Boolean)]));
   for (const ev of list.events) {
