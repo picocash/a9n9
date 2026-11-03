@@ -1,0 +1,13 @@
+{
+  "name": "@a9n9/comms",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Per-agent messaging connector: one agent's own SMS number (Plivo) and WhatsApp number (Meta Cloud API). Inbound goes to that agent's inbox; outbound is reply-first with consent, the WhatsApp 24-hour window and daily caps enforced in code. Plus wa-relay: the stateless fan-out Meta's one-webhook-per-app design requires.",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  }
+}
