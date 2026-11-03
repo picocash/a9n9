@@ -1,0 +1,11 @@
+[
+  {
+    "id": "agent001",
+    "name": "a9n9 agent 001",
+    "home": "/home/ubuntu/a9n9/agent001",
+    "inbox": "http://127.0.0.1:8810",
+    "inboxTokenFile": "/home/ubuntu/a9n9/secrets/inbox.env",
+    "public": "https://agent001.a9n9.net",
+    "hermesJobPrefix": "agent001 "
+  }
+]

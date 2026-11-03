@@ -41,7 +41,10 @@ export const clean = (s) => s.replace(/\s+/g, ' ').trim();
 export function textArg(args) {
   const i = args.indexOf('--file');
   if (i >= 0) { const p = args[i + 1]; if (!p) return { text: '', rest: args }; return { text: fs.readFileSync(p, 'utf8').trim(), rest: [...args.slice(0, i), ...args.slice(i + 2)] }; }
-  return { text: args.join(' ').trim(), rest: [] };
+  const text = args.join(' ').trim();
+  // A flag such as --help or -h is a question to the tool, never post text: treat it as missing text so the tool prints its usage.
+  if (/^-{1,2}[a-z]/i.test(text)) return { text: '', rest: args };
+  return { text, rest: [] };
 }
 /** A `$` lost to the shell leaves a number like " 99.88M" or " 94.9M" where "$599.88M" was meant; refuse rather than publish a wrong figure. */
 export function suspicious(text) {
@@ -73,6 +76,7 @@ export function claimVerdict(text, checkId, checkLines, now = Date.now()) {
   return { ok: true, fields: { basedOnCheck: checkId, checkedUrl: rec.url } };
 }
 export function claimGuard(text) {
+  if (/^-{1,2}[a-z][\w-]*$/i.test(text.trim())) { out({ ok: false, error: `"${text.trim()}" looks like a flag, not a post: nothing was published. Run the tool with no arguments to see its usage.` }); process.exit(2); }
   let clearCorrection = () => {};
   // Receipt ids mean nothing to a reader; the flag records them on the post.
   if (/\bagent:check:\d+/.test(text)) { out({ ok: false, error: 'remove the receipt id from the text: readers cannot use it. Pass it as --check <id> and it is recorded on the post.' }); process.exit(2); }

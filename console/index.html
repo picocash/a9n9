@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>a9n9 Console</title>
+<style>
+:root{--bg:#f4f5f7;--panel:#fff;--ink:#16202c;--muted:#5d6b7a;--line:#dde2e8;--accent:#2457c5;--ok:#1d7a46;--warn:#a86200;--bad:#b42318;--okbg:#e5f4ec;--warnbg:#fdf1de;--badbg:#fde8e6;--chip:#eef1f5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f141a;--panel:#161d25;--ink:#e3e9f0;--muted:#93a1b0;--line:#26313d;--accent:#7aa2ff;--ok:#5fd18f;--warn:#f0b25a;--bad:#ff8a7e;--okbg:#14301f;--warnbg:#36280f;--badbg:#3a1714;--chip:#1e2731}}
+:root[data-theme="dark"]{--bg:#0f141a;--panel:#161d25;--ink:#e3e9f0;--muted:#93a1b0;--line:#26313d;--accent:#7aa2ff;--ok:#5fd18f;--warn:#f0b25a;--bad:#ff8a7e;--okbg:#14301f;--warnbg:#36280f;--badbg:#3a1714;--chip:#1e2731}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+h1{font-size:18px;margin:0;letter-spacing:.01em}
+h1 span{color:var(--muted);font-weight:500}
+.meta{color:var(--muted);font-size:12px}
+button{font:inherit;font-size:12px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.agent{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:18px}
+.top{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.top h2{margin:0;font-size:17px}
+.top a{color:var(--accent);font-size:12px;text-decoration:none}
+.pill{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:3px 9px;border-radius:999px}
+.ok{background:var(--okbg);color:var(--ok)}.attention{background:var(--warnbg);color:var(--warn)}.down{background:var(--badbg);color:var(--bad)}
+.problems{margin:0;padding-left:18px;color:var(--warn);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi .v{font:600 22px/1.2 ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--muted)}
+.cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:18px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+h3{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:0 0 8px}
+section{min-width:0}
+.feed{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.feed li{display:grid;grid-template-columns:62px 92px minmax(0,1fr);gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}
+.feed li:first-child{border-top:0}
+.t{color:var(--muted);font:12px ui-monospace,Menlo,monospace}
+.ch{font-size:11px;background:var(--chip);border-radius:4px;padding:1px 6px;justify-self:start;height:fit-content;white-space:nowrap}
+.txt{overflow-wrap:anywhere}
+.txt a{color:var(--accent)}
+.empty{color:var(--muted);font-size:13px}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+td,th{text-align:left;padding:5px 8px 5px 0;border-top:1px solid var(--line);white-space:nowrap}
+th{font-weight:500;color:var(--muted);font-size:12px;border-top:0}
+.num{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+.bar{display:grid;grid-template-columns:120px minmax(0,1fr) 64px;gap:8px;align-items:center;font-size:13px;padding:4px 0}
+.track{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
+.fill{height:100%;background:var(--accent)}
+.stack{display:grid;gap:18px}
+details summary{cursor:pointer;color:var(--muted);font-size:12px}
+.types{display:flex;flex-wrap:wrap;gap:6px}
+.types span{font-size:11px;background:var(--chip);border-radius:4px;padding:2px 7px}
+.err{color:var(--bad)}
+@media (prefers-reduced-motion:no-preference){.fill{transition:width .4s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header><h1>a9n9 Console <span>· agents, last 24 hours</span></h1><div class="meta"><span id="gen">loading…</span> <button id="refresh" type="button">Refresh</button></div></header>
+<main id="agents" class="wrap"></main>
+</div>
+<script>
+const $ = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstChild; };
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const usd = (n) => n == null ? '—' : '$' + Number(n).toFixed(2);
+const hm = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+const ago = (iso) => { if (!iso) return 'never'; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`; };
+const label = { 'x.post': 'X post', 'x.reply': 'X reply', 'bsky.post': 'Bluesky post', 'bsky.reply': 'Bluesky reply', 'nostr.post': 'Nostr post', 'nostr.reply': 'Nostr reply', 'email.sent': 'Email sent', 'email.received': 'Email in', 'nostr.mention': 'Nostr mention', 'nostr.dm': 'Nostr DM', 'bsky.mention': 'Bluesky mention', 'x.mention': 'X mention', 'sms.sent': 'SMS sent', 'sms.received': 'SMS in', 'whatsapp.sent': 'WhatsApp sent', 'whatsapp.received': 'WhatsApp in', 'telegram.message': 'Telegram in', 'telegram.sent': 'Telegram sent' };
+const feed = (items, empty) => items.length ? `<ul class="feed">${items.map((i) => `<li><span class="t">${hm(i.at)}</span><span class="ch">${esc(label[i.type] ?? i.type)}</span><span class="txt">${i.who && !/sent|post|reply/.test(i.type) ? `<b>${esc(i.who)}</b> · ` : ''}${esc(i.text) || '<span class="empty">(no text)</span>'}${i.url ? ` <a href="${esc(i.url)}" target="_blank" rel="noopener">open</a>` : ''}</span></li>`).join('')}</ul>` : `<p class="empty">${empty}</p>`;
+const bar = (name, v, target) => { const pct = target ? Math.min(100, Math.round(100 * (v ?? 0) / target)) : 0; return `<div class="bar"><span>${name}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="num">${v ?? '—'} / ${target ?? '—'}</span></div>`; };
+
+function render(a) {
+  if (!a.money) return $(`<article class="agent"><div class="top"><h2>${esc(a.name)}</h2><span class="pill down">down</span></div><ul class="problems">${(a.problems || []).map((p) => `<li>${esc(p)}</li>`).join('')}</ul></article>`);
+  const m = a.money, s = a.scoreboard, d = a.last24h;
+  return $(`<article class="agent" aria-label="${esc(a.name)}">
+  <div class="top"><h2>${esc(a.name)}</h2><span class="pill ${a.state}">${a.state === 'ok' ? 'running' : a.state}</span><a href="${esc(a.public)}" target="_blank" rel="noopener">${esc(a.public.replace('https://', ''))}</a><span class="meta">last public action ${ago(d.actions[0]?.at)}</span></div>
+  ${a.problems.length ? `<ul class="problems">${a.problems.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}
+  <div class="kpis">
+    <div class="kpi"><div class="l">Spent, 24 h</div><div class="v">${usd(m.spent24hUsd)}</div><div class="s">fixed ${usd(m.spent24h.fixedShareUsd)} · X API ${usd(m.spent24h.xApiUsd)} · tools ${usd(m.spent24h.toolBuysUsd)}</div></div>
+    <div class="kpi"><div class="l">Earned, 24 h</div><div class="v">${usd(m.earned24hUsd)}</div><div class="s">to date ${usd(m.toDate.incomeUsd)} · credit held ${usd(m.toDate.earned?.creditHeldUsd)}</div></div>
+    <div class="kpi"><div class="l">Budget left</div><div class="v">${usd(m.toDate.budgetLeftUsd)}</div><div class="s">of ${usd(m.toDate.startUsd)} · spent ${usd(m.toDate.spentUsd)} to date</div></div>
+    <div class="kpi"><div class="l">Runway</div><div class="v">${m.toDate.runwayDays ?? '—'} d</div><div class="s">before hibernation</div></div>
+    <div class="kpi"><div class="l">Public actions, 24 h</div><div class="v">${d.actions.length}</div><div class="s">${d.inbound.length} inbound · ${d.total} ledger entries</div></div>
+  </div>
+  <div class="cols">
+    <section class="stack">
+      <div><h3>What it published, last 24 hours</h3>${feed(d.actions, 'Nothing published in the last 24 hours.')}</div>
+      <div><h3>What came in</h3>${feed(d.inbound, 'No messages from people in the last 24 hours.')}</div>
+      <div><h3>Its own notes</h3>${d.journal.length ? `<ul class="feed">${d.journal.map((j) => `<li><span class="t">${hm(j.at)}</span><span class="ch">journal</span><span class="txt">${esc(j.text)}</span></li>`).join('')}</ul>` : '<p class="empty">No journal entries.</p>'}</div>
+    </section>
+    <section class="stack">
+      <div><h3>Scoreboard</h3>${s.error ? `<p class="err">${esc(s.error)}</p>` : bar('Engaged', s.engaged, s.engagedTarget) + bar('Helped (week)', s.helped, s.helpedWeeklyTarget) + bar('Paid jobs', s.paid, s.paidTarget) + `<div class="bar"><span>Followers</span><span class="meta">X ${s.followersX ?? '—'} · Bluesky ${s.followersBluesky ?? '—'}</span><span></span></div><div class="bar"><span>Email</span><span class="meta">${s.emailsIn ?? 0} in · ${s.threadsReplied ?? 0} replied</span><span></span></div>`}</div>
+      <div><h3>Runs</h3><div class="tbl"><table><thead><tr><th>Job</th><th>Every</th><th>Last</th><th>Status</th></tr></thead><tbody>${a.jobs.map((j) => `<tr><td>${esc(j.name)}</td><td>${esc(j.every)}</td><td>${j.lastRun ? ago(j.lastRun) : 'not yet'}</td><td>${j.enabled ? esc(j.lastStatus ?? '—') : 'paused'}</td></tr>`).join('')}</tbody></table></div></div>
+      <div><h3>Uptime (off-box probe)</h3>${a.probe ? `<div class="tbl"><table><tbody>${a.probe.map((t) => `<tr><td>${esc(t.target.replace(/^https?:\/\//, ''))}</td><td><span class="pill ${t.ok ? 'ok' : 'down'}">${t.ok ? 'up' : 'down'}</span></td><td class="meta">since ${ago(t.since)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Probe unavailable.</p>'}</div>
+      <div><h3>Today's posting allowance</h3><div class="types">${Object.entries(a.counters).filter(([k]) => k !== 'day').map(([k, v]) => `<span>${esc(k)} ${esc(v)}</span>`).join('')}</div></div>
+      <div><h3>Open items</h3>${a.corrections.length ? a.corrections.map((c) => `<p class="txt"><b>Correction pending</b> (${esc(c.network)}): ${esc(c.problem)}</p>`).join('') : ''}${a.tickets.length ? a.tickets.map((t) => `<p class="txt"><b>${esc(t.id)}</b> ${esc(t.channel)} · ${esc(t.want)}</p>`).join('') : ''}${!a.corrections.length && !a.tickets.length ? '<p class="empty">None.</p>' : ''}</div>
+      <details><summary>All ledger entries by type (24 h)</summary><div class="types" style="margin-top:8px">${Object.entries(d.byType).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<span>${esc(k)} ${v}</span>`).join('')}</div></details>
+    </section>
+  </div>
+  </article>`);
+}
+
+async function load() {
+  const btn = document.getElementById('refresh'); btn.disabled = true;
+  try {
+    const r = await (await fetch('/api/status', { cache: 'no-store' })).json();
+    const box = document.getElementById('agents'); box.replaceChildren(...r.agents.map(render));
+    document.getElementById('gen').textContent = `updated ${hm(r.generatedAt)}`;
+  } catch (e) { document.getElementById('gen').textContent = 'could not load: ' + e.message; }
+  btn.disabled = false;
+}
+document.getElementById('refresh').addEventListener('click', load);
+load(); setInterval(load, 120000);
+</script>
+</body>
+</html>

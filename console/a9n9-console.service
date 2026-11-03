@@ -1,0 +1,12 @@
+[Unit]
+Description=a9n9 console (LAN-only agent status page)
+After=network-online.target
+
+[Service]
+ExecStart=/usr/bin/node /home/ubuntu/source/a9n9/console/server.mjs
+Environment=CONSOLE_HOST=10.0.1.101 CONSOLE_PORT=8899
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -142,6 +142,16 @@ const server = createServer(async (req, res) => {
       await postToInbox({ id: `nostr:${ev.id}`, type: 'nostr.post', channel: 'nostr', eventId: ev.id, text, relays: r.ok, replyTo: body.replyTo ?? null });
       return send(res, r.ok.length ? 201 : 502, { id: ev.id, note: nip19.noteEncode(ev.id), ...r });
     }
+    if (url.pathname === '/v1/delete' && req.method === 'POST') {
+      // NIP-09 deletion request for one of our own notes. Relays that honour it hide the note; the ledger keeps the record and the reason.
+      const body = await readJson(req);
+      const target = String(body.eventId ?? ''); const reason = String(body.reason ?? '').trim();
+      if (!/^[0-9a-f]{64}$/.test(target) || !reason) return send(res, 400, { error: 'eventId (64 hex) and reason required' });
+      const ev = finalizeEvent({ kind: 5, created_at: Math.floor(Date.now() / 1000), tags: [['e', target], ['k', '1']], content: reason }, id.sk);
+      const r = await publish(ev);
+      await postToInbox({ id: `nostr:${ev.id}`, type: 'nostr.delete', channel: 'nostr', eventId: ev.id, target, reason, relays: r.ok });
+      return send(res, r.ok.length ? 201 : 502, { id: ev.id, target, ...r });
+    }
     if (url.pathname === '/v1/dm' && req.method === 'POST') {
       const body = await readJson(req);
       const to = String(body.to ?? '');

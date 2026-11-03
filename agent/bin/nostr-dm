@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // nostr-dm <npub or hex> '<text>' — answer a Nostr DM (NIP-17 gift wrap). Only to people who wrote to you first.
 import { env, enforce, out } from './_lib.mjs';
-const [to, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim();
+const [to, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim(); if (/^-{1,2}[a-z]/i.test(text) || /^-/.test(to ?? '')) { console.log(JSON.stringify({ ok: false, error: 'usage: nostr-dm <npub|hex> \'<text>\' (flags are not messages; nothing was sent)' }, null, 1)); process.exit(2); }
 if (!to || !text) { out({ ok: false, error: "usage: nostr-dm <npub|hex> '<text>'" }); process.exit(2); }
 const c = enforce('nostrDm', 10, text);
 const e = env('/home/ubuntu/a9n9/secrets/nostr.env');

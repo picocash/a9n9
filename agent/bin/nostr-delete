@@ -1,0 +1,11 @@
+#!/usr/bin/env node
+// nostr-delete <event id (64 hex)> '<why>' — ask relays to remove your own Nostr note that is wrong (NIP-09); the reason goes to the ledger.
+import { env, out } from './_lib.mjs';
+const [target, ...w] = process.argv.slice(2); const why = w.join(' ').trim();
+if (!/^[0-9a-f]{64}$/.test(target ?? '') || !why) { out({ ok: false, error: "usage: nostr-delete <event id, 64 hex as in the ledger> '<why>'" }); process.exit(2); }
+const eventId = target;
+const e = env('/home/ubuntu/a9n9/secrets/nostr.env');
+const res = await fetch('http://127.0.0.1:8830/v1/delete', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.NOSTR_API_TOKEN}` }, body: JSON.stringify({ eventId, reason: why }) });
+const j = await res.json().catch(() => ({}));
+out({ ok: res.ok, deleted: eventId, why, relays: j.ok, error: res.ok ? undefined : j.error ?? `HTTP ${res.status}` });
+process.exit(res.ok ? 0 : 1);
