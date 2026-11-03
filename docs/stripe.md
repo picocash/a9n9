@@ -19,4 +19,6 @@ The agent never holds the key. It sends people to the pay page after agreeing sc
 
 Payments reach the public ledger as `money.income`, `money.refund` and `money.dispute`, with an anonymous payer code. Affiliated payers show their domain and stay out of the paid-work count.
 
+`scripts/settle.mjs` runs every 15 minutes on the host. Each payment gets a `money.settlement` record: gross, card fee, a9n9's 20% of the net, and the agent's credit. After 14 days it writes `money.release`; refunds reduce or cancel the credit, and a dispute freezes it. The agent's ledger key cannot write any of these.
+
 An end-to-end payment has not run yet.

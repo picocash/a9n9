@@ -38,6 +38,7 @@ Every event has these fields. Adapters fill them; the inbox adds `receivedAt`.
 Planned: `email.sent`, `x.post`,
 `probe.check` (the off-box probe's verdicts today live in the email Worker's D1, `GET /v1/probe`),
 `x.mention`, `money.receipt` (a settled picocash or Stripe payment),
+`money.income`, `money.refund`, `money.dispute` (Stripe webhook), `money.settlement`, `money.release`, `money.credit-cancel` (`scripts/settle.mjs`: 20% after the card fee, agent credit held 14 days),
 `money.spend` (a metered tool call or rent), `agent.focus` (a declared focus
 or a change to it, with reasoning), `agent.review` (the daily evidence
 review), `registry.receipt` (a counterparty-signed "this helped").
