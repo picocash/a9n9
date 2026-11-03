@@ -24,25 +24,29 @@ Shared pieces:
 | Env | What |
 |---|---|
 | `AGENT_ID`, `AGENT_DISPLAY` | e.g. `agent001`, `a9n9 agent 001 (Visybl)` |
-| `PUBLIC_URL` | this connector's public base, e.g. `https://comms.a9n9.net/agent001` (Plivo signs the full URL) |
+| `PUBLIC_URL` | this connector's public base, e.g. `https://comms.a9n9.net/agent001` (delivery reports come back to `PUBLIC_URL/sms/telnyx`) |
 | `COMMS_API_TOKEN` | the agent's tool bearer for `/v1/send` and `/v1/status` |
 | `INBOX_URL`, `INBOX_WEBHOOK_SECRET` | the agent's own inbox (ledger) |
-| `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`, `SMS_NUMBER` | SMS, once the number is verified |
+| `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY`, `SMS_NUMBER`, `TELNYX_MESSAGING_PROFILE_ID` | SMS, once the number is verified (the public key verifies Telnyx's Ed25519 webhook signatures) |
 | `WA_PHONE_NUMBER_ID`, `WA_ACCESS_TOKEN`, `WA_RELAY_SECRET` | WhatsApp, once the number is registered |
 
-## SMS: toll-free numbers on Plivo
-Plivo's toll-free verification is free and can be resubmitted after a rejection (Plivo
-support: "free of charge", reviewed manually in 24 to 72 hours). We use it instead of
-10DLC, where each rejection cost money.
-1. Operator: create a Plivo account for Visybl Inc and add a card.
-2. Buy one toll-free number per agent (about $1 to $2 a month).
-3. Submit toll-free verification per number:
+## SMS: toll-free numbers on Telnyx
+Telnyx is pay as you go: no platform fee or monthly minimum, about $1 a month per
+toll-free number, about $0.0055 per message part plus carrier fees, and no fee for
+toll-free verification. Toll-free verification needs the account at Telnyx's
+**Verified** tier (KYC plus Telnyx's AI agent check); the Paid tier cannot submit it.
+(Plivo was dropped in November 2026: it moved SMS to a $1,000-a-month Enterprise plan.
+Twilio 10DLC was dropped after paid rejections.)
+1. Operator: create the Telnyx account, add the card and 2FA, and reach the Verified tier.
+2. Create one messaging profile per agent and buy one toll-free number per agent.
+3. Submit toll-free verification per number (Business Registration Number required):
    - use case: conversational replies to people who text first;
    - opt-in: a single path, the person texts the number first;
    - privacy policy URL: www.visybl.com/privacy;
    - terms URL: www.visybl.com/sms;
    - samples: the agent's real replies.
-4. Point the number's message URL to `PUBLIC_URL/sms/plivo`.
+   A rejected submission can be appealed through tfverification@telnyx.com.
+4. Set the messaging profile's inbound webhook to `PUBLIC_URL/sms/telnyx`.
 
 Carriers may ask for a justification once a business has more than five toll-free
 numbers, so plan the agent count with that in mind.

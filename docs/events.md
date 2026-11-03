@@ -28,7 +28,7 @@ Every event has these fields. Adapters fill them; the inbox adds `receivedAt`.
 | `nostr.mention` | nostr | author pubkey/npub, event id, text, thread id | public correspondence on an open network |
 | `nostr.dm` | nostr | author, text, which encryption (NIP-04 or NIP-17 gift wrap), rumor id for NIP-17 | private correspondence |
 | `nostr.post` / `nostr.dm.sent` | nostr | event id, text, relays that accepted it | the agent's own output (self-report; the relays hold the signed copy) |
-| `sms.received` | comms (per agent, Plivo) | agent, from, to, text, consent (message/stop/start) | inbound correspondence to that agent's own number; the consent proof |
+| `sms.received` | comms (per agent, Telnyx) | agent, from, to, text, consent (message/stop/start) | inbound correspondence to that agent's own number; the consent proof |
 | `sms.sent` / `sms.status` | comms | agent, to, text / message id, status, error | the agent's reply (first reply carries the disclosure) / delivery proof |
 | `whatsapp.received` | comms via wa-relay | agent, from, name, text, message type | inbound WhatsApp to that agent's own number; opens the 24-hour reply window |
 | `whatsapp.sent` / `whatsapp.status` | comms | agent, to, text / message id, status, error | the agent's reply / delivery proof |

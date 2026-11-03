@@ -2,21 +2,20 @@
  * a9n9 comms — ONE agent's own messaging connector. Each agent runs its own copy with its own
  * numbers and credentials; nothing here knows about other agents.
  *
- *   POST /sms/plivo       inbound SMS to this agent's number (Plivo V3 signature)  → sms.received
- *   POST /sms/status      delivery reports                                         → sms.status
+ *   POST /sms/telnyx      this agent's SMS number: inbound (→ sms.received) and delivery reports (→ sms.status), Ed25519-signed
  *   POST /whatsapp        this agent's WhatsApp traffic, forwarded by wa-relay (per-agent HMAC)
  *   POST /v1/send         {channel:'sms'|'whatsapp', to, text}  bearer COMMS_API_TOKEN; reply-first rules in policy.ts
  *   GET  /v1/status       bearer; which channels are live and what is left today
  *
  * Env: AGENT_ID, AGENT_DISPLAY (e.g. "a9n9 agent 001 (Visybl)"), PUBLIC_URL (this connector's public base URL,
- * used for Plivo signatures), COMMS_API_TOKEN, INBOX_URL, INBOX_WEBHOOK_SECRET, COMMS_STATE (consent file),
+ * used for delivery-report URLs), COMMS_API_TOKEN, INBOX_URL, INBOX_WEBHOOK_SECRET, COMMS_STATE (consent file),
  * SMS_DAILY_CAP (40), WA_DAILY_CAP (100), COMMS_HOST (127.0.0.1), COMMS_PORT (8870);
- * SMS: PLIVO_AUTH_ID, PLIVO_AUTH_TOKEN, SMS_NUMBER (+E.164);  WhatsApp: WA_PHONE_NUMBER_ID, WA_ACCESS_TOKEN, WA_RELAY_SECRET.
+ * SMS: TELNYX_API_KEY, TELNYX_PUBLIC_KEY, SMS_NUMBER (+E.164), TELNYX_MESSAGING_PROFILE_ID (optional);  WhatsApp: WA_PHONE_NUMBER_ID, WA_ACCESS_TOKEN, WA_RELAY_SECRET.
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { Policy, type Channel, type SmsTexts } from './policy.js';
-import { sendPlivoSms, verifyPlivoV3, type PlivoAccount } from './plivo.js';
+import { sendTelnyxSms, verifyTelnyx, type TelnyxAccount, type TelnyxEvent } from './telnyx.js';
 import { parseWebhook, sendWhatsAppText, verifyHub, type WaAccount, type WaWebhook } from './whatsapp.js';
 
 export interface CommsConfig {
@@ -28,7 +27,7 @@ export interface CommsConfig {
   inbox?: { url: string; secret: string } | undefined;
   stateFile?: string | undefined;
   caps: Record<Channel, number>;
-  sms?: PlivoAccount | undefined;
+  sms?: TelnyxAccount | undefined;
   wa?: (WaAccount & { relaySecret: string }) | undefined;
   host: string;
   port: number;
@@ -48,7 +47,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): CommsConfig
     inbox: env.INBOX_URL && env.INBOX_WEBHOOK_SECRET ? { url: env.INBOX_URL, secret: env.INBOX_WEBHOOK_SECRET } : undefined,
     stateFile: env.COMMS_STATE ?? './data/comms-state.json',
     caps: { sms: Number(env.SMS_DAILY_CAP ?? 40), whatsapp: Number(env.WA_DAILY_CAP ?? 100) },
-    sms: env.PLIVO_AUTH_ID && env.PLIVO_AUTH_TOKEN && env.SMS_NUMBER ? { authId: env.PLIVO_AUTH_ID, authToken: env.PLIVO_AUTH_TOKEN, number: env.SMS_NUMBER } : undefined,
+    sms: env.TELNYX_API_KEY && env.TELNYX_PUBLIC_KEY && env.SMS_NUMBER ? { apiKey: env.TELNYX_API_KEY, publicKey: env.TELNYX_PUBLIC_KEY, number: env.SMS_NUMBER, messagingProfileId: env.TELNYX_MESSAGING_PROFILE_ID } : undefined,
     wa: env.WA_PHONE_NUMBER_ID && env.WA_ACCESS_TOKEN && env.WA_RELAY_SECRET ? { phoneNumberId: env.WA_PHONE_NUMBER_ID, accessToken: env.WA_ACCESS_TOKEN, relaySecret: env.WA_RELAY_SECRET } : undefined,
     host: env.COMMS_HOST ?? '127.0.0.1',
     port: Number(env.COMMS_PORT ?? 8870),
@@ -98,27 +97,31 @@ export function createCommsServer(cfg: CommsConfig) {
       const url = new URL(req.url ?? '/', 'http://local');
       if (url.pathname === '/livez') return send(res, 200, { ok: true, agent: cfg.agentId });
 
-      if (req.method === 'POST' && (url.pathname === '/sms/plivo' || url.pathname === '/sms/status')) {
+      if (req.method === 'POST' && url.pathname === '/sms/telnyx') {
         if (!cfg.sms) return send(res, 404, { error: 'sms not configured' });
-        const params = Object.fromEntries(new URLSearchParams(await readBody(req)));
-        const ok = verifyPlivoV3(cfg.sms.authToken, `${cfg.publicUrl}${url.pathname}`, params, req.headers['x-plivo-signature-v3-nonce'] as string | undefined, req.headers['x-plivo-signature-v3'] as string | undefined);
+        const raw = await readBody(req);
+        const ok = verifyTelnyx(cfg.sms.publicKey, raw, req.headers['telnyx-signature-ed25519'] as string | undefined, req.headers['telnyx-timestamp'] as string | undefined, (cfg.now ?? Date.now)());
         if (!ok) { log(`rejected unsigned ${url.pathname} from ${req.socket.remoteAddress}`); return send(res, 401, { error: 'bad signature' }); }
-        if (url.pathname === '/sms/status') {
-          await ledger('sms', { id: `sms:status:${params.MessageUUID}:${params.Status}`, type: 'sms.status', messageId: params.MessageUUID, status: params.Status, to: `+${params.To ?? ''}`, error: params.ErrorCode || undefined, at: new Date().toISOString() });
-          return send(res, 200, '', 'text/plain');
+        const ev = (JSON.parse(raw) as TelnyxEvent).data; const p = ev?.payload;
+        if (!ev || !p) return send(res, 200, { ok: true });
+        if (ev.event_type === 'message.sent' || ev.event_type === 'message.finalized') {
+          const status = p.to?.[0]?.status ?? ev.event_type;
+          await ledger('sms', { id: `sms:status:${p.id}:${status}`, type: 'sms.status', messageId: p.id, status, to: p.to?.[0]?.phone_number, error: p.errors?.[0]?.detail ?? p.errors?.[0]?.code, at: ev.occurred_at ?? new Date().toISOString() });
+          return send(res, 200, { ok: true });
         }
-        const to = `+${(params.To ?? '').replace(/^\+/, '')}`; const from = `+${(params.From ?? '').replace(/^\+/, '')}`;
-        if (to !== cfg.sms.number) return send(res, 200, '', 'text/plain'); // not this agent's number: ignore, never re-route
-        const id = params.MessageUUID ?? `sms-${Date.now()}`;
-        const kind = policy.inbound('sms', from, params.Text ?? '', id);
-        await ledger('sms', { id: `sms:in:${id}`, type: 'sms.received', from, to, text: params.Text ?? '', consent: kind, at: new Date().toISOString() });
+        if (ev.event_type !== 'message.received') return send(res, 200, { ok: true });
+        const from = p.from?.phone_number ?? '';
+        if (!(p.to ?? []).some((t) => t.phone_number === cfg.sms!.number)) return send(res, 200, { ok: true }); // not this agent's number: ignore, never re-route
+        const id = p.id ?? `sms-${Date.now()}`; const text = p.text ?? '';
+        const kind = policy.inbound('sms', from, text, id);
+        await ledger('sms', { id: `sms:in:${id}`, type: 'sms.received', from, to: cfg.sms.number, text, consent: kind, at: ev.occurred_at ?? new Date().toISOString() });
         const auto = policy.autoReply('sms', from, kind, cfg.smsTexts);
         if (auto) {
           // Program replies are not the agent's speech and do not count against its daily cap; a STOP confirmation may be refused by the carrier, which is fine.
-          try { const mid = await sendPlivoSms(cfg.sms, from, auto, `${cfg.publicUrl}/sms/status`, fetchImpl); if (kind !== 'stop') policy.markDisclosed('sms', from); await ledger('sms', { id: `sms:out:${mid}`, type: 'sms.sent', to: from, text: auto, auto: kind, at: new Date().toISOString() }); }
+          try { const mid = await sendTelnyxSms(cfg.sms, from, auto, `${cfg.publicUrl}/sms/telnyx`, fetchImpl); if (kind !== 'stop') policy.markDisclosed('sms', from); await ledger('sms', { id: `sms:out:${mid}`, type: 'sms.sent', to: from, text: auto, auto: kind, at: new Date().toISOString() }); }
           catch (e) { log(`auto-reply (${kind}) to ${from} failed: ${e instanceof Error ? e.message : String(e)}`); }
         }
-        return send(res, 200, '', 'text/plain');
+        return send(res, 200, { ok: true });
       }
 
       if (req.method === 'POST' && url.pathname === '/whatsapp') {
@@ -156,7 +159,7 @@ export function createCommsServer(cfg: CommsConfig) {
           if (ch === 'sms' && !text.startsWith(cfg.smsTexts.prefix)) text = cfg.smsTexts.prefix + text;
           if (ch === 'sms' && text.length > 1500) return send(res, 400, { error: 'text must be 1–1500 characters' });
           try {
-            const id = ch === 'sms' ? await sendPlivoSms(cfg.sms!, b.to, text, `${cfg.publicUrl}/sms/status`, fetchImpl) : await sendWhatsAppText(cfg.wa!, b.to, text, fetchImpl);
+            const id = ch === 'sms' ? await sendTelnyxSms(cfg.sms!, b.to, text, `${cfg.publicUrl}/sms/telnyx`, fetchImpl) : await sendWhatsAppText(cfg.wa!, b.to, text, fetchImpl);
             policy.sent(ch, b.to);
             await ledger(ch, { id: `${ch}:out:${id}`, type: `${ch}.sent`, to: b.to, text, at: new Date().toISOString() });
             return send(res, 202, { ok: true, id, channel: ch, remainingToday: policy.remaining(ch) });

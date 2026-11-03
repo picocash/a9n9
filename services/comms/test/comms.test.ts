@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { describe, expect, it } from 'vitest';
-import { plivoV3Signature, verifyPlivoV3 } from '../src/plivo.js';
+import { generateKeyPairSync, sign } from 'node:crypto';
+import { verifyTelnyx } from '../src/telnyx.js';
 import { Policy } from '../src/policy.js';
 import { createRelay } from '../src/relay.js';
 import { createCommsServer, smsTexts } from '../src/server.js';
@@ -11,12 +12,22 @@ import { hubSignature, parseWebhook, splitByNumber } from '../src/whatsapp.js';
 
 const listen = async (s: { listen: Function; address: () => AddressInfo | string | null }) => { await new Promise<void>((r) => s.listen(0, '127.0.0.1', r)); return `http://127.0.0.1:${(s.address() as AddressInfo).port}`; };
 
-describe('plivo V3 signature', () => {
-  it('matches a vector produced by the official plivo SDK (validateV3Signature)', () => {
-    const params = { From: '14155550100', To: '18885550123', Text: 'Hi there', Type: 'sms', MessageUUID: 'abc-123' };
-    expect(plivoV3Signature('MAtesttoken0123456789', 'https://comms.a9n9.net/agent001/sms/plivo', params, '12345678901234567890')).toBe('vs5KQKB/4/xA83DP0o9UtM2Vwoy8POkdYKscfLOeiqU=');
-    expect(verifyPlivoV3('MAtesttoken0123456789', 'https://comms.a9n9.net/agent001/sms/plivo', params, '12345678901234567890', 'old,vs5KQKB/4/xA83DP0o9UtM2Vwoy8POkdYKscfLOeiqU=')).toBe(true);
-    expect(verifyPlivoV3('MAtesttoken0123456789', 'https://comms.a9n9.net/agent001/sms/plivo', { ...params, Text: 'tampered' }, '12345678901234567890', 'vs5KQKB/4/xA83DP0o9UtM2Vwoy8POkdYKscfLOeiqU=')).toBe(false);
+// A Telnyx-style key pair: the portal shows the public key as base64 of the raw 32 bytes.
+const tx = generateKeyPairSync('ed25519');
+const txPub = (tx.publicKey.export({ format: 'der', type: 'spki' }) as Buffer).subarray(12).toString('base64');
+const txSign = (body: string, ts: string) => sign(null, Buffer.from(`${ts}|${body}`), tx.privateKey).toString('base64');
+
+describe('telnyx Ed25519 webhook signature', () => {
+  it('accepts a good signature (raw or SPKI key), rejects tampering, wrong keys and stale timestamps', () => {
+    const now = Date.parse('2026-11-03T12:00:00Z'); const ts = String(now / 1000); const body = '{"data":{"event_type":"message.received"}}';
+    const spki = (tx.publicKey.export({ format: 'der', type: 'spki' }) as Buffer).toString('base64');
+    expect(verifyTelnyx(txPub, body, txSign(body, ts), ts, now)).toBe(true);
+    expect(verifyTelnyx(spki, body, txSign(body, ts), ts, now)).toBe(true);
+    expect(verifyTelnyx(txPub, body.replace('received', 'sent'), txSign(body, ts), ts, now)).toBe(false);
+    const other = (generateKeyPairSync('ed25519').publicKey.export({ format: 'der', type: 'spki' }) as Buffer).subarray(12).toString('base64');
+    expect(verifyTelnyx(other, body, txSign(body, ts), ts, now)).toBe(false);
+    expect(verifyTelnyx(txPub, body, txSign(body, ts), ts, now + 301_000)).toBe(false);
+    expect(verifyTelnyx(txPub, body, undefined, ts, now)).toBe(false);
   });
 });
 
@@ -63,20 +74,20 @@ describe('whatsapp parsing and splitting', () => {
   });
 });
 
-describe('agent connector + relay, end to end (fake Meta, Plivo and inbox)', () => {
+describe('agent connector + relay, end to end (fake Meta, Telnyx and inbox)', () => {
   it('routes each number to its own agent, enforces consent, adds the disclosure once', async () => {
     const ledger: any[] = []; const sentApi: any[] = [];
     const fakeFetch = (async (input: any, init?: any) => {
       const u = String(input);
       if (u.includes('/hooks/')) { ledger.push(JSON.parse(init.body)); return new Response('{}', { status: 201 }); }
       if (u.startsWith('https://graph.facebook.com/')) { sentApi.push({ u, body: JSON.parse(init.body) }); return Response.json({ messages: [{ id: `wamid.${sentApi.length}` }] }); }
-      if (u.startsWith('https://api.plivo.com/')) { sentApi.push({ u, body: JSON.parse(init.body) }); return Response.json({ message_uuid: [`uuid-${sentApi.length}`] }, { status: 202 }); }
+      if (u.startsWith('https://api.telnyx.com/')) { sentApi.push({ u, auth: init.headers.authorization, body: JSON.parse(init.body) }); return Response.json({ data: { id: `msg-${sentApi.length}` } }); }
       return globalThis.fetch(input, init);
     }) as typeof fetch;
     const mk = (agentId: string, pid: string, number: string) => createCommsServer({
       agentId, display: `${agentId} (Visybl)`, smsTexts: smsTexts(), publicUrl: 'https://comms.test/' + agentId, apiToken: 'tok-' + agentId, inbox: { url: 'http://inbox', secret: 's' },
       stateFile: join(mkdtempSync(join(tmpdir(), 'comms-')), 'state.json'), caps: { sms: 10, whatsapp: 10 },
-      sms: { authId: 'MA1', authToken: 'plivo-token', number }, wa: { phoneNumberId: pid, accessToken: 'EAA', relaySecret: 'relay-' + agentId },
+      sms: { apiKey: 'KEYtelnyx', publicKey: txPub, number }, wa: { phoneNumberId: pid, accessToken: 'EAA', relaySecret: 'relay-' + agentId },
       host: '127.0.0.1', port: 0, fetchImpl: fakeFetch, log: () => {},
     });
     const a1 = mk('agent001', '111', '+18885550001'); const a2 = mk('agent002', '222', '+18885550002');
@@ -101,20 +112,26 @@ describe('agent connector + relay, end to end (fake Meta, Plivo and inbox)', () 
     // agent001 cannot be fed by forging relay traffic without its own secret
     expect((await fetch(`${u1}/whatsapp`, { method: 'POST', headers: { 'x-a9n9-relay-signature': hubSignature('relay-agent002', body) }, body })).status).toBe(401);
 
-    // inbound SMS to agent001's own number, signed like Plivo does
-    const params = { From: '14155550111', To: '18885550001', Text: 'hello', Type: 'sms', MessageUUID: 'sms-1' };
-    const nonce = 'n0nce';
-    const sig = plivoV3Signature('plivo-token', 'https://comms.test/agent001/sms/plivo', params, nonce);
-    expect((await fetch(`${u1}/sms/plivo`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-plivo-signature-v3': sig, 'x-plivo-signature-v3-nonce': nonce }, body: new URLSearchParams(params) })).status).toBe(200);
+    // inbound SMS to agent001's own number, signed like Telnyx does
+    const ts = String(Math.floor(Date.now() / 1000));
+    const inbound = JSON.stringify({ data: { event_type: 'message.received', id: 'ev-1', payload: { id: 'sms-1', text: 'hello', from: { phone_number: '+14155550111' }, to: [{ phone_number: '+18885550001', status: 'webhook_delivered' }] } } });
+    const post = (b: string, sig: string) => fetch(`${u1}/sms/telnyx`, { method: 'POST', headers: { 'content-type': 'application/json', 'telnyx-signature-ed25519': sig, 'telnyx-timestamp': ts }, body: b });
+    expect((await post(inbound, 'AAAA')).status).toBe(401);
+    expect((await post(inbound, txSign(inbound, ts))).status).toBe(200);
     expect(ledger.find((e) => e.type === 'sms.received')).toMatchObject({ agent: 'agent001', from: '+14155550111' });
     expect(ledger.at(-1)).toMatchObject({ type: 'sms.sent', auto: 'message' });
     expect((await send(u1, 'agent001', { channel: 'sms', to: '+14155550111', text: 'Hi, what can I check for you?' })).status).toBe(202);
     expect((await send(u1, 'agent001', { channel: 'sms', to: '+14155550111', text: 'Second reply.' })).status).toBe(202);
-    const smsSends = sentApi.filter((s) => s.u.startsWith('https://api.plivo.com/'));
+    const smsSends = sentApi.filter((s) => s.u.startsWith('https://api.telnyx.com/'));
     expect(smsSends[0].body.text).toBe(smsTexts().welcome); // the published first reply goes out on first contact
     expect(smsSends[1].body.text).toBe('Visybl: Hi, what can I check for you?'); // agent texts carry the brand
     expect(smsSends[2].body.text).toBe('Visybl: Second reply.');
-    expect(smsSends[0].body.src).toBe('18885550001');
+    expect(smsSends[0].body).toMatchObject({ from: '+18885550001', to: '+14155550111', webhook_url: 'https://comms.test/agent001/sms/telnyx' });
+    expect(smsSends[0].auth).toBe('Bearer KEYtelnyx');
+    // a delivery report lands in the ledger as sms.status
+    const dlr = JSON.stringify({ data: { event_type: 'message.finalized', occurred_at: '2026-11-03T12:00:05Z', payload: { id: 'msg-3', to: [{ phone_number: '+14155550111', status: 'delivered' }], errors: [] } } });
+    expect((await post(dlr, txSign(dlr, ts))).status).toBe(200);
+    expect(ledger.at(-1)).toMatchObject({ type: 'sms.status', messageId: 'msg-3', status: 'delivered', to: '+14155550111' });
     for (const s of [a1.server, a2.server, relay]) s.close();
   });
 });
