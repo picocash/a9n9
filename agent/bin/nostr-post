@@ -10,3 +10,4 @@ const e = env('/home/ubuntu/a9n9/secrets/nostr.env');
 const res = await fetch('http://127.0.0.1:8830/v1/notes', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.NOSTR_API_TOKEN}` }, body: JSON.stringify({ text }) });
 const j = await res.json(); if (res.ok) { c.bump(); topicDone(); }
 out({ ok: res.ok, ...j, nostrToday: c.get() });
+process.exit(res.ok ? 0 : 1);
