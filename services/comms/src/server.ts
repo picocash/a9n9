@@ -15,13 +15,14 @@
  */
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { Policy, type Channel } from './policy.js';
+import { Policy, type Channel, type SmsTexts } from './policy.js';
 import { sendPlivoSms, verifyPlivoV3, type PlivoAccount } from './plivo.js';
 import { parseWebhook, sendWhatsAppText, verifyHub, type WaAccount, type WaWebhook } from './whatsapp.js';
 
 export interface CommsConfig {
   agentId: string;
   display: string;
+  smsTexts: SmsTexts;
   publicUrl: string;
   apiToken: string;
   inbox?: { url: string; secret: string } | undefined;
@@ -41,6 +42,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): CommsConfig
   return {
     agentId: need('AGENT_ID'),
     display: env.AGENT_DISPLAY ?? `${need('AGENT_ID')} (Visybl)`,
+    smsTexts: smsTexts(env),
     publicUrl: need('PUBLIC_URL').replace(/\/$/, ''),
     apiToken: need('COMMS_API_TOKEN'),
     inbox: env.INBOX_URL && env.INBOX_WEBHOOK_SECRET ? { url: env.INBOX_URL, secret: env.INBOX_WEBHOOK_SECRET } : undefined,
@@ -50,6 +52,17 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): CommsConfig
     wa: env.WA_PHONE_NUMBER_ID && env.WA_ACCESS_TOKEN && env.WA_RELAY_SECRET ? { phoneNumberId: env.WA_PHONE_NUMBER_ID, accessToken: env.WA_ACCESS_TOKEN, relaySecret: env.WA_RELAY_SECRET } : undefined,
     host: env.COMMS_HOST ?? '127.0.0.1',
     port: Number(env.COMMS_PORT ?? 8870),
+  };
+}
+
+/** The texts published in the SMS program terms (visybl.com/sms); carriers compare live traffic against them. */
+export function smsTexts(env: NodeJS.ProcessEnv = {}): SmsTexts {
+  const brand = env.SMS_BRAND ?? 'Visybl', program = env.SMS_PROGRAM ?? 'Visybl Reserve Alerts', care = env.SMS_CARE ?? 'agent001@a9n9.net or visybl.com/sms';
+  return {
+    prefix: `${brand}: `,
+    welcome: `${brand}: Thanks for texting ${program}. Replies come from ${brand}'s automated agent, not a person. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out.`,
+    help: `${brand}: ${program} from ${brand} Inc. Replies are automated. Help: ${care}. Msg & data rates may apply. Reply STOP to opt out.`,
+    stop: `${brand}: You are unsubscribed from ${program} and will get no further messages. Reply START to rejoin.`,
   };
 }
 
@@ -99,6 +112,12 @@ export function createCommsServer(cfg: CommsConfig) {
         const id = params.MessageUUID ?? `sms-${Date.now()}`;
         const kind = policy.inbound('sms', from, params.Text ?? '', id);
         await ledger('sms', { id: `sms:in:${id}`, type: 'sms.received', from, to, text: params.Text ?? '', consent: kind, at: new Date().toISOString() });
+        const auto = policy.autoReply('sms', from, kind, cfg.smsTexts);
+        if (auto) {
+          // Program replies are not the agent's speech and do not count against its daily cap; a STOP confirmation may be refused by the carrier, which is fine.
+          try { const mid = await sendPlivoSms(cfg.sms, from, auto, `${cfg.publicUrl}/sms/status`, fetchImpl); if (kind !== 'stop') policy.markDisclosed('sms', from); await ledger('sms', { id: `sms:out:${mid}`, type: 'sms.sent', to: from, text: auto, auto: kind, at: new Date().toISOString() }); }
+          catch (e) { log(`auto-reply (${kind}) to ${from} failed: ${e instanceof Error ? e.message : String(e)}`); }
+        }
         return send(res, 200, '', 'text/plain');
       }
 
@@ -133,7 +152,9 @@ export function createCommsServer(cfg: CommsConfig) {
           if ((ch === 'sms' && !cfg.sms) || (ch === 'whatsapp' && !cfg.wa)) return send(res, 409, { error: `${ch} is not set up for this agent yet` });
           const refused = policy.refusal(ch, b.to);
           if (refused) return send(res, 403, { error: refused });
-          if (policy.needsDisclosure(ch, b.to)) text = `${cfg.display}: ${text}\nAutomated agent, not a person. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out.`;
+          // Every program text starts with the brand (published terms); the first-contact disclosure was already sent on inbound.
+          if (ch === 'sms' && !text.startsWith(cfg.smsTexts.prefix)) text = cfg.smsTexts.prefix + text;
+          if (ch === 'sms' && text.length > 1500) return send(res, 400, { error: 'text must be 1–1500 characters' });
           try {
             const id = ch === 'sms' ? await sendPlivoSms(cfg.sms!, b.to, text, `${cfg.publicUrl}/sms/status`, fetchImpl) : await sendWhatsAppText(cfg.wa!, b.to, text, fetchImpl);
             policy.sent(ch, b.to);

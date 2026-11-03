@@ -12,8 +12,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export type Channel = 'sms' | 'whatsapp';
+export interface SmsTexts { welcome: string; help: string; stop: string; prefix: string }
 const STOP_RE = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|optout|revoke)\s*$/i;
 const START_RE = /^\s*(start|unstop)\s*$/i;
+const HELP_RE = /^\s*(help|info)\s*$/i;
 const WA_WINDOW_MS = 24 * 3600 * 1000;
 
 interface Contact { firstAt: string; firstMessageId: string; lastInboundAt: string; optedOut: boolean; disclosed?: boolean }
@@ -38,11 +40,11 @@ export class Policy {
   private roll() { const d = new Date(this.now()).toISOString().slice(0, 10); if (d !== this.s.day) { this.s.day = d; this.s.sent = {}; } }
 
   /** Record an inbound message. Returns 'stop' | 'start' | 'message' so the caller can log it. */
-  inbound(ch: Channel, from: string, text: string, messageId: string): 'stop' | 'start' | 'message' {
+  inbound(ch: Channel, from: string, text: string, messageId: string): 'stop' | 'start' | 'help' | 'message' {
     const at = new Date(this.now()).toISOString();
     const k = this.key(ch, from);
     const c = this.s.contacts[k];
-    const kind = ch === 'sms' && STOP_RE.test(text) ? 'stop' : ch === 'sms' && START_RE.test(text) ? 'start' : 'message';
+    const kind = ch === 'sms' && STOP_RE.test(text) ? 'stop' : ch === 'sms' && START_RE.test(text) ? 'start' : ch === 'sms' && HELP_RE.test(text) ? 'help' : 'message';
     if (!c) this.s.contacts[k] = { firstAt: at, firstMessageId: messageId, lastInboundAt: at, optedOut: kind === 'stop' };
     else { c.lastInboundAt = at; if (kind === 'stop') c.optedOut = true; if (kind === 'start') c.optedOut = false; }
     this.save();
@@ -63,10 +65,20 @@ export class Policy {
   /** The first SMS reply to a contact must say who is texting and how to stop (carrier rules). */
   needsDisclosure(ch: Channel, to: string): boolean { return ch === 'sms' && !this.s.contacts[this.key(ch, to)]?.disclosed; }
 
+  /** The SMS program's own keyword and first-contact replies: fixed texts published in the program terms, not the agent's words. */
+  autoReply(ch: Channel, from: string, kind: 'stop' | 'start' | 'help' | 'message', t: SmsTexts): string | null {
+    if (ch !== 'sms') return null;
+    if (kind === 'stop') return t.stop;
+    if (kind === 'help') return t.help;
+    if (kind === 'start') return t.welcome;
+    return this.needsDisclosure(ch, from) ? t.welcome : null;
+  }
+
   sent(ch: Channel, to: string) {
     this.roll(); this.s.sent[ch] = (this.s.sent[ch] ?? 0) + 1;
     const c = this.s.contacts[this.key(ch, to)]; if (c) c.disclosed = true;
     this.save();
   }
+  markDisclosed(ch: Channel, to: string) { const c = this.s.contacts[this.key(ch, to)]; if (c && !c.disclosed) { c.disclosed = true; this.save(); } }
   remaining(ch: Channel) { this.roll(); return Math.max(0, this.caps[ch] - (this.s.sent[ch] ?? 0)); }
 }

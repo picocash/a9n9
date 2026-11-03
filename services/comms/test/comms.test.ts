@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { plivoV3Signature, verifyPlivoV3 } from '../src/plivo.js';
 import { Policy } from '../src/policy.js';
 import { createRelay } from '../src/relay.js';
-import { createCommsServer } from '../src/server.js';
+import { createCommsServer, smsTexts } from '../src/server.js';
 import { hubSignature, parseWebhook, splitByNumber } from '../src/whatsapp.js';
 
 const listen = async (s: { listen: Function; address: () => AddressInfo | string | null }) => { await new Promise<void>((r) => s.listen(0, '127.0.0.1', r)); return `http://127.0.0.1:${(s.address() as AddressInfo).port}`; };
@@ -40,6 +40,13 @@ describe('policy', () => {
     now += 25 * 3600 * 1000;
     expect(p.refusal('whatsapp', '+447700900123')).toMatch(/window closed/);
     expect(p.refusal('sms', '+14155550100')).toBeNull(); // new day resets the cap
+    const t = smsTexts();
+    expect(p.autoReply('sms', '+14155550199', p.inbound('sms', '+14155550199', 'hi', 'n1'), t)).toBe(t.welcome);
+    p.markDisclosed('sms', '+14155550199');
+    expect(p.autoReply('sms', '+14155550199', p.inbound('sms', '+14155550199', 'more', 'n2'), t)).toBeNull();
+    expect(p.autoReply('sms', '+14155550199', p.inbound('sms', '+14155550199', ' HELP ', 'n3'), t)).toBe(t.help);
+    expect(p.autoReply('sms', '+14155550199', p.inbound('sms', '+14155550199', 'stop', 'n4'), t)).toBe(t.stop);
+    expect(p.autoReply('whatsapp', '+447700900123', 'message', t)).toBeNull();
   });
 });
 
@@ -67,7 +74,7 @@ describe('agent connector + relay, end to end (fake Meta, Plivo and inbox)', () 
       return globalThis.fetch(input, init);
     }) as typeof fetch;
     const mk = (agentId: string, pid: string, number: string) => createCommsServer({
-      agentId, display: `${agentId} (Visybl)`, publicUrl: 'https://comms.test/' + agentId, apiToken: 'tok-' + agentId, inbox: { url: 'http://inbox', secret: 's' },
+      agentId, display: `${agentId} (Visybl)`, smsTexts: smsTexts(), publicUrl: 'https://comms.test/' + agentId, apiToken: 'tok-' + agentId, inbox: { url: 'http://inbox', secret: 's' },
       stateFile: join(mkdtempSync(join(tmpdir(), 'comms-')), 'state.json'), caps: { sms: 10, whatsapp: 10 },
       sms: { authId: 'MA1', authToken: 'plivo-token', number }, wa: { phoneNumberId: pid, accessToken: 'EAA', relaySecret: 'relay-' + agentId },
       host: '127.0.0.1', port: 0, fetchImpl: fakeFetch, log: () => {},
@@ -99,12 +106,14 @@ describe('agent connector + relay, end to end (fake Meta, Plivo and inbox)', () 
     const nonce = 'n0nce';
     const sig = plivoV3Signature('plivo-token', 'https://comms.test/agent001/sms/plivo', params, nonce);
     expect((await fetch(`${u1}/sms/plivo`, { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-plivo-signature-v3': sig, 'x-plivo-signature-v3-nonce': nonce }, body: new URLSearchParams(params) })).status).toBe(200);
-    expect(ledger.at(-1)).toMatchObject({ agent: 'agent001', type: 'sms.received', from: '+14155550111' });
+    expect(ledger.find((e) => e.type === 'sms.received')).toMatchObject({ agent: 'agent001', from: '+14155550111' });
+    expect(ledger.at(-1)).toMatchObject({ type: 'sms.sent', auto: 'message' });
     expect((await send(u1, 'agent001', { channel: 'sms', to: '+14155550111', text: 'Hi, what can I check for you?' })).status).toBe(202);
     expect((await send(u1, 'agent001', { channel: 'sms', to: '+14155550111', text: 'Second reply.' })).status).toBe(202);
     const smsSends = sentApi.filter((s) => s.u.startsWith('https://api.plivo.com/'));
-    expect(smsSends[0].body.text).toMatch(/^agent001 \(Visybl\): Hi.*STOP to opt out\.$/s); // first reply carries the disclosure
-    expect(smsSends[1].body.text).toBe('Second reply.');
+    expect(smsSends[0].body.text).toBe(smsTexts().welcome); // the published first reply goes out on first contact
+    expect(smsSends[1].body.text).toBe('Visybl: Hi, what can I check for you?'); // agent texts carry the brand
+    expect(smsSends[2].body.text).toBe('Visybl: Second reply.');
     expect(smsSends[0].body.src).toBe('18885550001');
     for (const s of [a1.server, a2.server, relay]) s.close();
   });
