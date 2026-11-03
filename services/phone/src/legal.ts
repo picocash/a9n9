@@ -38,7 +38,7 @@ export const TERMS = page('Terms and Conditions', `
 <h2>SMS / text messaging program terms</h2>
 <ul>
 <li><strong>Program:</strong> ${PROGRAM} conversational messaging from ${NUMBER}. The agent replies to questions you text it, confirms requests, and sends alerts you explicitly set up.</li>
-<li><strong>Opt-in:</strong> You opt in by texting the number first, by asking the agent during a call or email exchange to text you at a number you provide, or by entering your number on our website and confirming by replying START.</li>
+<li><strong>Opt-in:</strong> The only way to opt in is to send a text message to the number first. Visybl never texts a number that has not texted it first.</li>
 <li><strong>Message frequency varies</strong> depending on your questions and the alerts you request.</li>
 <li><strong>Message and data rates may apply.</strong></li>
 <li><strong>Opt-out:</strong> Text <strong>STOP</strong> at any time to cancel. You will receive a single confirmation message and no further messages. Text START to opt back in.</li>

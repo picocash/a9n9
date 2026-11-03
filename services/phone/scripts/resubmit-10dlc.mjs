@@ -16,25 +16,25 @@ const payload = {
   UsAppToPersonUsecase: 'LOW_VOLUME',
   HasEmbeddedLinks: 'true',
   HasEmbeddedPhone: 'true',
-  Description: `Visybl Inc (${SITE}) operates a9n9, a Visybl Inc service that runs autonomous software agents. This campaign is two-way conversational SMS between one a9n9 agent and people who text the agent's number first, or who ask the agent by phone or email to text them at a number they give. Messages answer the person's questions about public stablecoin reserve data on the Tempo blockchain network (published by Visybl), confirm that a question was received, and deliver reserve alerts the person explicitly requested. Every message identifies the sender as an autonomous software agent operated by a9n9, a Visybl Inc service. There is no marketing, no cold outreach, no purchased or shared contact lists, and no third-party content. Mobile information and consent are never shared with third parties or affiliates for marketing or promotional purposes. Expected volume is under 100 messages per day. Program page: ${SITE}/sms`,
-  MessageFlow: `Opt-in is consumer initiated and specific to this program: (1) the person sends the first text to the agent's number, +1 510 443 3533; or (2) during a phone call or email exchange the person asks the agent to text them and gives their mobile number. The agent's first message identifies the sender as an autonomous software agent operated by a9n9, a Visybl Inc service, states that message frequency varies and that message and data rates may apply, and explains that replying STOP opts out and HELP gets help. Consent is not a condition of any purchase. Privacy Policy (states that no mobile information will be shared with third parties or affiliates for marketing or promotional purposes): ${SITE}/privacy. SMS Terms and Conditions, specific to this program: ${SITE}/sms.`,
+  Description: `Visybl Reserve Alerts: Visybl Inc (${SITE}) answers text-message questions about the public stablecoin reserve figures Visybl publishes itself (https://reserves.a9n9.net), and, when the person asks, texts them when a figure they named changes. Visybl is the sender and the subject of every message; no message is sent on behalf of, or promotes, any other company. Replies are written by Visybl's own automated software agent (Visybl's product a9n9) and every message starts with "Visybl:". No marketing, no promotions, no cold outreach, no purchased, rented or shared numbers, no third-party content. Mobile numbers and consent are never shared with third parties or affiliates. Under 100 messages per day. Program terms: ${SITE}/sms`,
+  MessageFlow: `There is exactly one opt-in method: the consumer sends a text message to Visybl's number, +1 (510) 443-3533. Any inbound message counts (a question, or the keyword START). Visybl never sends a message to a number that has not texted it first, and never adds numbers from websites, forms, calls, email or lists. The number is published, with the program terms, on ${SITE}/sms, which shows the full opt-in disclosure. Proof of consent is the stored inbound message (number, timestamp, content). Visybl's first reply, sent immediately: "Visybl: Thanks for texting Visybl Reserve Alerts. Replies come from Visybl's automated agent, not a person. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out." Consent is not a condition of purchase. Privacy Policy: ${SITE}/privacy. SMS Terms and Conditions: ${SITE}/sms.`,
   PrivacyPolicyUrl: `${SITE}/privacy`,
   TermsAndConditionsUrl: `${SITE}/sms`,
   SubscriberOptIn: 'true',
   AgeGated: 'false',
   DirectLending: 'false',
   OptInKeywords: 'START',
-  OptInMessage: `a9n9 agent: Thanks for texting. I'm an autonomous software agent operated by a9n9, a Visybl Inc service, not a person. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out, HELP for help.`,
+  OptInMessage: "Visybl: Thanks for texting Visybl Reserve Alerts. Replies come from Visybl's automated agent, not a person. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out.",
   OptOutKeywords: 'STOP,CANCEL,QUIT,OPTOUT,UNSUBSCRIBE,STOPALL,REVOKE,END',
-  OptOutMessage: 'a9n9 agent (Visybl Inc): You have been unsubscribed and will receive no more messages from this number. Reply START to resubscribe.',
+  OptOutMessage: 'Visybl: You are unsubscribed from Visybl Reserve Alerts and will receive no more messages. Reply START to resubscribe.',
   HelpKeywords: 'HELP,INFO',
-  HelpMessage: `a9n9 agent (Visybl Inc): Conversational replies and alerts you requested. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out. Help: agent001@a9n9.net or ${SITE}/sms`,
+  HelpMessage: `Visybl Reserve Alerts: answers to your questions and alerts you asked for. Msg frequency varies. Msg & data rates may apply. Reply STOP to opt out. Help: agent001@a9n9.net or ${SITE}/sms`,
 };
 const samples = [
   payload.OptInMessage,
-  'a9n9 agent: As of 16:40 UTC, pathUSD has 40.3 million dollars on Tempo and the issuer reports 40.3 million in reserves, so it reconciles. Details: https://reserves.a9n9.net Reply STOP to opt out.',
-  'a9n9 agent: The reserve alert you set up fired: USDB supply on Tempo moved from 40.4 million to 55.1 million dollars in the last hour. See https://reserves.a9n9.net Reply STOP to opt out.',
-  "a9n9 agent: I received your question and I'm checking the figures now; I'll text you back within the hour. Reply STOP to opt out.",
+  'Visybl: As of 16:40 UTC, pathUSD has 40.3 million dollars on Tempo and the issuer reports 40.3 million in reserves, so it reconciles. Details: https://reserves.a9n9.net Reply STOP to opt out.',
+  'Visybl: The alert you asked for: USDB supply on Tempo moved from 40.4 million to 55.1 million dollars in the last hour. See https://reserves.a9n9.net Reply STOP to opt out.',
+  "Visybl: Got your question. Checking the figures now, and I'll text you back within the hour. Reply STOP to opt out.",
 ];
 
 const mode = process.argv[2] ?? '--check';

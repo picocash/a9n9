@@ -18,6 +18,8 @@
  *      PHONE_SKIP_SIGNATURE=1 for local tests only
  */
 import { createHmac } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import twilio from 'twilio';
 import { WebSocketServer } from 'ws';
@@ -53,6 +55,8 @@ export interface PhoneConfig {
   grokInstructions: string;
   facts: () => Promise<string>;
   smsDailyCap: number;
+  /** Where SMS consent is persisted (inbound-first opt-in, STOP/START). */
+  smsConsentFile?: string | undefined;
   responder: Responder;
   fetchImpl: typeof fetch;
   log: (m: string) => void;
@@ -134,6 +138,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig
     grokInstructions: env.AGENT_VOICE_PROMPT_GROK ?? GROK_VOICE_INSTRUCTIONS,
     facts,
     smsDailyCap: Number(env.SMS_DAILY_CAP ?? 100),
+    smsConsentFile: env.SMS_CONSENT_FILE,
     responder,
     fetchImpl: fetch,
     log: (m) => console.log(`${new Date().toISOString()} [phone] ${m}`),
@@ -189,11 +194,41 @@ async function postEvent(cfg: PhoneConfig, channel: 'voice' | 'sms', payload: { 
   }
 }
 
+const STOP_RE = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|optout|revoke)\s*$/i;
+const START_RE = /^\s*(start|unstop|yes)\s*$/i;
+
+/**
+ * SMS consent, the 10DLC promise made enforceable: the only opt-in is the person texting us first.
+ * An inbound text records consent (number, time, message id); STOP revokes it; START restores it.
+ * Persisted to a JSON file so a restart cannot forget an opt-out.
+ */
+export class SmsConsent {
+  private map: Record<string, { firstAt: string; lastInboundAt: string; firstMessageId: string; optedOut: boolean }> = {};
+  constructor(private readonly file: string | undefined) {
+    if (file && fs.existsSync(file)) { try { this.map = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* start empty; a corrupt file must not open sending */ } }
+  }
+  private save() { if (this.file) { fs.mkdirSync(path.dirname(this.file), { recursive: true }); fs.writeFileSync(this.file + '.tmp', JSON.stringify(this.map, null, 1)); fs.renameSync(this.file + '.tmp', this.file); } }
+  inbound(from: string, body: string, messageId: string, at = new Date().toISOString()) {
+    const cur = this.map[from];
+    if (STOP_RE.test(body)) { if (cur) { cur.optedOut = true; cur.lastInboundAt = at; } else this.map[from] = { firstAt: at, lastInboundAt: at, firstMessageId: messageId, optedOut: true }; }
+    else if (cur) { cur.lastInboundAt = at; if (START_RE.test(body)) cur.optedOut = false; } // after STOP only START re-opts in
+    else this.map[from] = { firstAt: at, lastInboundAt: at, firstMessageId: messageId, optedOut: false };
+    this.save();
+  }
+  /** Why sending to `to` is not allowed, or null when it is. */
+  refusal(to: string): string | null {
+    const c = this.map[to];
+    if (!c) return 'no consent: this number has never texted us; Visybl only replies to people who text first';
+    if (c.optedOut) return 'opted out: this number replied STOP; it must text START before we may text it again';
+    return null;
+  }
+}
+
 /** Outbound SMS through Twilio's Messaging API, with a per-day cap so a runaway loop cannot drain the balance. */
 export class SmsSender {
   private day = '';
   private sentToday = 0;
-  constructor(private readonly cfg: PhoneConfig) {}
+  constructor(private readonly cfg: PhoneConfig, private readonly consent?: SmsConsent) {}
   get remainingToday(): number {
     this.roll();
     return Math.max(0, this.cfg.smsDailyCap - this.sentToday);
@@ -207,6 +242,9 @@ export class SmsSender {
     if (this.sentToday >= this.cfg.smsDailyCap) throw new Error(`daily SMS cap of ${this.cfg.smsDailyCap} reached`);
     if (!/^\+[1-9]\d{6,14}$/.test(to)) throw new Error('to must be E.164');
     if (!body.trim() || body.length > 1600) throw new Error('body must be 1–1600 characters');
+    const refused = this.consent?.refusal(to);
+    if (refused) throw new Error(refused);
+    if (!/^Visybl:/.test(body)) body = `Visybl: ${body}`; // the registered campaign promises every message starts with the brand
     const form = new URLSearchParams({ To: to, Body: body, StatusCallback: `https://${this.cfg.publicHost}/twilio/sms-status` });
     if (this.cfg.messagingServiceSid) form.set('MessagingServiceSid', this.cfg.messagingServiceSid);
     else form.set('From', this.cfg.phoneNumber);
@@ -228,7 +266,8 @@ export function createPhoneServer(cfg: PhoneConfig) {
     cfg.knownCallers.has(from)
       ? { name: 'known', maxSeconds: cfg.maxSeconds, closing: "We're at my time limit for this call. Email me at agent at a9n9 dot net and I'll continue there. Goodbye." }
       : { name: 'stranger', maxSeconds: cfg.maxSecondsStranger, closing: "That's all the call time I can give right now. Email agent at a9n9 dot net and I'll pick this up in writing. Goodbye." };
-  const sms = new SmsSender(cfg);
+  const consent = new SmsConsent(cfg.smsConsentFile);
+  const sms = new SmsSender(cfg, consent);
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
@@ -259,6 +298,7 @@ export function createPhoneServer(cfg: PhoneConfig) {
             const numMedia = Number(params.NumMedia ?? 0);
             const media = Array.from({ length: numMedia }, (_, i) => ({ url: params[`MediaUrl${i}`] ?? '', contentType: params[`MediaContentType${i}`] ?? '' }));
             const id = params.MessageSid ?? `sms-${Date.now()}`;
+            if (params.From) consent.inbound(params.From, params.Body ?? '', id);
             cfg.log(`inbound sms ${id} from ${params.From ?? '?'} (${(params.Body ?? '').length} chars, ${numMedia} media)`);
             const status = await postEvent(cfg, 'sms', { type: 'sms.received', id, receivedAt: new Date().toISOString(), from: params.From ?? '', to: params.To ?? '', body: params.Body ?? '', media, fromCity: params.FromCity ?? null, fromState: params.FromState ?? null, fromCountry: params.FromCountry ?? null });
             if (status !== 201 && status !== 200) cfg.log(`inbox returned ${status} for ${id}`);
@@ -287,7 +327,7 @@ export function createPhoneServer(cfg: PhoneConfig) {
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             cfg.log(`outbound sms to ${body.to} failed: ${message}`);
-            return send(/cap|E\.164|characters/.test(message) ? 429 : 502, JSON.stringify({ error: message }));
+            return send(/^(no consent|opted out)/.test(message) ? 403 : /cap|E\.164|characters/.test(message) ? 429 : 502, JSON.stringify({ error: message }));
           }
         }
       }
@@ -340,7 +380,7 @@ export function createPhoneServer(cfg: PhoneConfig) {
     ws.on('error', () => void session.close('error'));
   });
 
-  return { server, wss, sms };
+  return { server, wss, sms, consent };
 }
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].split('/').pop()!);
