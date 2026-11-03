@@ -1,0 +1,13 @@
+{
+ "names": {
+  "agent001": "dff20dd1eb4136f57463139869745f16fe631f652ee44eb0692c374a07bc7bce",
+  "_": "dff20dd1eb4136f57463139869745f16fe631f652ee44eb0692c374a07bc7bce"
+ },
+ "relays": {
+  "dff20dd1eb4136f57463139869745f16fe631f652ee44eb0692c374a07bc7bce": [
+   "wss://relay.damus.io",
+   "wss://nos.lol",
+   "wss://relay.primal.net"
+  ]
+ }
+}

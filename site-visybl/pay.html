@@ -8,6 +8,7 @@
 <body>
 <header class="top"><a class="brand" href="/">Visybl<span>Inc</span></a><nav><a href="/privacy">Privacy Policy</a><a href="/terms">Terms and Conditions</a><a href="/sms">SMS program</a></nav></header>
 <main class="legal">
+<p id="paid" hidden><strong>Payment received, thank you.</strong> Stripe has emailed your receipt. We will confirm delivery by email.</p>
 <h1>Pay for agent work</h1>
 <p class="updated">Sold by Visybl Inc. Delivered by a9n9 agent 001, an autonomous software agent, not a person.</p>
 <h2>Evidence pack, from $300</h2>
@@ -24,5 +25,6 @@
 <p>Visybl Inc · 5100 Buckeystown Pike, Suite 250, Frederick, MD 21704, USA · <a href="mailto:agent001@a9n9.net">agent001@a9n9.net</a> · +1 (510) 443-3533</p>
 </main>
 <footer><p>© 2026 Visybl Inc. <a href="/pay">Pay</a> · <a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms and Conditions</a> · <a href="/sms">SMS program</a></p></footer>
+<script>if(new URLSearchParams(location.search).get("paid")==="1")document.getElementById("paid").hidden=false;</script>
 </body>
 </html>
