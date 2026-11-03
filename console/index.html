@@ -48,7 +48,7 @@ th{font-weight:500;color:var(--muted);font-size:12px;border-top:0}
 .bar{display:grid;grid-template-columns:120px minmax(0,1fr) 64px;gap:8px;align-items:center;font-size:13px;padding:4px 0}
 .track{height:6px;background:var(--chip);border-radius:3px;overflow:hidden}
 .fill{height:100%;background:var(--accent)}
-.stack{display:grid;gap:18px}
+.stack{display:grid;gap:18px;align-content:start}
 details summary{cursor:pointer;color:var(--muted);font-size:12px}
 .types{display:flex;flex-wrap:wrap;gap:6px}
 .types span{font-size:11px;background:var(--chip);border-radius:4px;padding:2px 7px}
@@ -71,6 +71,25 @@ const label = { 'x.post': 'X post', 'x.reply': 'X reply', 'bsky.post': 'Bluesky 
 const feed = (items, empty) => items.length ? `<ul class="feed">${items.map((i) => `<li><span class="t">${hm(i.at)}</span><span class="ch">${esc(label[i.type] ?? i.type)}</span><span class="txt">${i.who && !/sent|post|reply/.test(i.type) ? `<b>${esc(i.who)}</b> · ` : ''}${esc(i.text) || '<span class="empty">(no text)</span>'}${i.url ? ` <a href="${esc(i.url)}" target="_blank" rel="noopener">open</a>` : ''}</span></li>`).join('')}</ul>` : `<p class="empty">${empty}</p>`;
 const bar = (name, v, target) => { const pct = target ? Math.min(100, Math.round(100 * (v ?? 0) / target)) : 0; return `<div class="bar"><span>${name}</span><div class="track"><div class="fill" style="width:${pct}%"></div></div><span class="num">${v ?? '—'} / ${target ?? '—'}</span></div>`; };
 
+function grokPanel(g) {
+  if (!g) return '<p class="empty">No usage snapshot yet.</p>';
+  const W = 300, H = 70, pad = 4;
+  const start = Date.parse(g.resetsAt) - 7 * 864e5, end = Date.parse(g.resetsAt);
+  const x = (t) => pad + (W - 2 * pad) * Math.min(1, Math.max(0, (Date.parse(t) - start) / (end - start)));
+  const y = (p) => H - pad - (H - 2 * pad) * Math.min(100, p) / 100;
+  const used = g.history.map((h) => `${x(h.at).toFixed(1)},${y(h.usedPct).toFixed(1)}`).join(' ');
+  const last = g.history.at(-1);
+  return `<div class="bar"><span>Used vs pace</span><div class="track" style="position:relative"><div class="fill" style="width:${Math.min(100, g.usedPct)}%"></div><div title="pace" style="position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--warn);left:${Math.min(100, g.pacePct)}%"></div></div><span class="num">${g.usedPct}%</span></div>
+  <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="Grok pool used this week, from 0 to ${g.usedPct} percent">
+    <line x1="${pad}" x2="${W - pad}" y1="${y(0)}" y2="${y(0)}" stroke="var(--line)"/><line x1="${pad}" x2="${W - pad}" y1="${y(100)}" y2="${y(100)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <line x1="${x(new Date(start).toISOString())}" y1="${y(0)}" x2="${x(g.resetsAt)}" y2="${y(100)}" stroke="var(--warn)" stroke-dasharray="4 3" opacity=".7"/>
+    ${used ? `<polyline points="${used}" fill="none" stroke="var(--accent)" stroke-width="2"/>` : ''}
+    ${last ? `<circle cx="${x(last.at)}" cy="${y(last.usedPct)}" r="3" fill="var(--accent)"/>` : ''}
+  </svg>
+  <p class="meta" style="margin:4px 0 0">${usd(g.usedUsd)} of ${usd(g.budgetUsd)} this week · resets ${new Date(g.resetsAt).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })} · today ${g.runsToday} runs, ${(g.tokensToday / 1e6).toFixed(1)}M tokens · snapshot ${ago(g.at)}</p>
+  <p class="meta" style="margin:2px 0 0">Blue: used. Dashed: even pace to 100% at the reset. Unused budget is lost at the reset.</p>`;
+}
+
 function render(a) {
   if (!a.money) return $(`<article class="agent"><div class="top"><h2>${esc(a.name)}</h2><span class="pill down">down</span></div><ul class="problems">${(a.problems || []).map((p) => `<li>${esc(p)}</li>`).join('')}</ul></article>`);
   const m = a.money, s = a.scoreboard, d = a.last24h;
@@ -82,6 +101,7 @@ function render(a) {
     <div class="kpi"><div class="l">Earned, 24 h</div><div class="v">${usd(m.earned24hUsd)}</div><div class="s">to date ${usd(m.toDate.incomeUsd)} · credit held ${usd(m.toDate.earned?.creditHeldUsd)}</div></div>
     <div class="kpi"><div class="l">Budget left</div><div class="v">${usd(m.toDate.budgetLeftUsd)}</div><div class="s">of ${usd(m.toDate.startUsd)} · spent ${usd(m.toDate.spentUsd)} to date</div></div>
     <div class="kpi"><div class="l">Runway</div><div class="v">${m.toDate.runwayDays ?? '—'} d</div><div class="s">before hibernation</div></div>
+    <div class="kpi"><div class="l">Grok weekly pool</div><div class="v">${a.grok ? a.grok.usedPct + '%' : '—'}</div><div class="s">${a.grok ? `pace ${a.grok.pacePct}% · ${usd(a.grok.usedUsd)} of ${usd(a.grok.budgetUsd)} · ${esc(a.grok.verdict)}` : 'no snapshot'}</div></div>
     <div class="kpi"><div class="l">Public actions, 24 h</div><div class="v">${d.actions.length}</div><div class="s">${d.inbound.length} inbound · ${d.total} ledger entries</div></div>
   </div>
   <div class="cols">
@@ -92,6 +112,7 @@ function render(a) {
     </section>
     <section class="stack">
       <div><h3>Scoreboard</h3>${s.error ? `<p class="err">${esc(s.error)}</p>` : bar('Engaged', s.engaged, s.engagedTarget) + bar('Helped (week)', s.helped, s.helpedWeeklyTarget) + bar('Paid jobs', s.paid, s.paidTarget) + `<div class="bar"><span>Followers</span><span class="meta">X ${s.followersX ?? '—'} · Bluesky ${s.followersBluesky ?? '—'}</span><span></span></div><div class="bar"><span>Email</span><span class="meta">${s.emailsIn ?? 0} in · ${s.threadsReplied ?? 0} replied</span><span></span></div>`}</div>
+      <div><h3>Grok weekly pool</h3>${grokPanel(a.grok)}</div>
       <div><h3>Runs</h3><div class="tbl"><table><thead><tr><th>Job</th><th>Every</th><th>Last</th><th>Status</th></tr></thead><tbody>${a.jobs.map((j) => `<tr><td>${esc(j.name)}</td><td>${esc(j.every)}</td><td>${j.lastRun ? ago(j.lastRun) : 'not yet'}</td><td>${j.enabled ? esc(j.lastStatus ?? '—') : 'paused'}</td></tr>`).join('')}</tbody></table></div></div>
       <div><h3>Uptime (off-box probe)</h3>${a.probe ? `<div class="tbl"><table><tbody>${a.probe.map((t) => `<tr><td>${esc(t.target.replace(/^https?:\/\//, ''))}</td><td><span class="pill ${t.ok ? 'ok' : 'down'}">${t.ok ? 'up' : 'down'}</span></td><td class="meta">since ${ago(t.since)}</td></tr>`).join('')}</tbody></table></div>` : '<p class="empty">Probe unavailable.</p>'}</div>
       <div><h3>Today's posting allowance</h3><div class="types">${Object.entries(a.counters).filter(([k]) => k !== 'day').map(([k, v]) => `<span>${esc(k)} ${esc(v)}</span>`).join('')}</div></div>

@@ -52,6 +52,11 @@ async function agentStatus(a) {
   const journal = readLines(path.join(a.home, 'state', 'journal.jsonl')).filter((j) => Date.parse(j.at) > now - DAY).reverse();
   const corrections = readJson(path.join(a.home, 'state', 'corrections.json'), []);
   const tickets = (readJson(path.join(a.home, 'state', 'tickets.json'), { tickets: [] }).tickets ?? []).filter((t) => t.status !== 'closed');
+  // Grok (X Premium) weekly pool: latest snapshot plus this week's history since the last reset
+  const grokNow = readJson(path.join(a.home, 'state', 'grok-latest.json'), null);
+  const weekStart = grokNow?.resetsAt ? Date.parse(grokNow.resetsAt) - 7 * DAY : now - 7 * DAY;
+  const grokHist = readLines(path.join(a.home, 'state', 'grok-usage.jsonl')).filter((g) => Date.parse(g.at) >= weekStart).map((g) => ({ at: g.at, usedPct: g.usedPct, pacePct: g.pacePct }));
+  const grok = grokNow ? { at: grokNow.at, usedPct: grokNow.usedPct, pacePct: grokNow.pacePct, usedUsd: grokNow.usedCents / 100, budgetUsd: grokNow.budgetCents / 100, verdict: grokNow.verdict, resetsAt: grokNow.resetsAt, runsToday: grokNow.runsToday, tokensToday: grokNow.tokensToday, history: grokHist } : null;
   const lastAction = detailed.find((d) => PUBLIC.test(d.type))?.at ?? null;
 
   const problems = [];
@@ -60,12 +65,15 @@ async function agentStatus(a) {
   for (const t of probe ?? []) if (!t.ok) problems.push(`probe: ${t.target} down since ${t.since}`);
   for (const j of jobs) if (j.enabled && j.lastStatus && j.lastStatus !== 'ok') problems.push(`run "${j.name}" last status ${j.lastStatus}`);
   if (!lastAction) problems.push('no public action in 24 hours');
+  if (!grok) problems.push('no Grok usage snapshot');
+  else if (now - Date.parse(grok.at) > 2 * 3600_000) problems.push(`Grok usage snapshot is stale (${grok.at})`);
+  else if (grok.usedPct > grok.pacePct + 10) problems.push(`Grok pool over pace: ${grok.usedPct}% used vs ${grok.pacePct}% pace`);
   if (corrections.length) problems.push(`${corrections.length} correction(s) waiting to be published`);
 
   return {
     id: a.id, name: a.name, public: a.public, generatedAt: new Date(now).toISOString(),
     state: problems.some((p) => /unreachable|down|status/.test(p)) ? 'down' : problems.length ? 'attention' : 'ok', problems,
-    jobs, heartbeat, probe, counters: readJson(path.join(a.home, 'state', 'counters.json'), {}),
+    jobs, heartbeat, probe, grok, counters: readJson(path.join(a.home, 'state', 'counters.json'), {}),
     last24h: { byType, total: events.length, actions: detailed.filter((d) => PUBLIC.test(d.type)), inbound: detailed.filter((d) => INBOUND.test(d.type)), opportunities: detailed.filter((d) => d.type === 'agent.opportunity'), journal },
     money: { spent24hUsd: +(fixed24 + xApi24 + tools24).toFixed(2), spent24h: { fixedShareUsd: +fixed24.toFixed(2), xApiUsd: +xApi24.toFixed(3), toolBuysUsd: +tools24.toFixed(3) }, earned24hUsd: +income24.toFixed(2),
       toDate: { spentUsd: runway.spentToDateUsd ?? null, incomeUsd: runway.incomeUsd ?? null, budgetLeftUsd: runway.budgetLeftUsd ?? null, runwayDays: runway.runwayDays ?? null, startUsd: 100, earned: runway.earned ?? null }, runwayError: runway.ok === false ? runway.error : null },
