@@ -7,6 +7,7 @@
  *   POST /twilio/sms         inbound SMS/MMS → signed `sms.received` event to the inbox; no auto-reply
  *   POST /twilio/sms-status  delivery status for outbound SMS → `sms.status` event
  *   POST /v1/sms/send        the agent sends an SMS (bearer API_TOKEN); daily cap
+ *   POST /aws/sms            inbound SMS from AWS End User Messaging via SNS (signature and topic checked) → `sms.received`
  *   GET  /livez
  *
  * Env: PHONE_PORT (8820) PHONE_HOST (127.0.0.1) PUBLIC_HOST (phone.a9n9.net)
@@ -15,6 +16,8 @@
  *      API_TOKEN (bearer for /v1/*)  INBOX_URL INBOX_WEBHOOK_SECRET
  *      AGENT_GREETING VOICE_MAX_SECONDS (180) VOICE_MAX_SECONDS_STRANGER (120) VOICE_KNOWN_CALLERS
  *      SMS_DAILY_CAP (100)  LLM_BASE_URL LLM_API_KEY LLM_MODEL (unset → scripted responder)
+ *      SMS_BACKEND (twilio|aws)  AWS_SMS_REGION (us-east-1) AWS_SMS_ACCESS_KEY_ID AWS_SMS_SECRET_ACCESS_KEY
+ *      AWS_SMS_ORIGINATION (toll-free phone number id or ARN)  AWS_SMS_TOPIC_ARN (inbound SNS topic)
  *      PHONE_SKIP_SIGNATURE=1 for local tests only
  */
 import { createHmac } from 'node:crypto';
@@ -24,6 +27,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import twilio from 'twilio';
 import { WebSocketServer } from 'ws';
 import WebSocket from 'ws';
+import { handleSns, sendTextMessage, type AwsSmsConfig } from './aws-sms.js';
 import { GROK_VOICE_INSTRUCTIONS, GrokVoiceSession } from './grok-voice.js';
 import { LEGAL_PAGES } from './legal.js';
 import { LlmResponder, RelaySession, ScriptedResponder, type Responder, type SessionSummary, type Tier } from './relay.js';
@@ -57,6 +61,9 @@ export interface PhoneConfig {
   smsDailyCap: number;
   /** Where SMS consent is persisted (inbound-first opt-in, STOP/START). */
   smsConsentFile?: string | undefined;
+  /** Which provider sends SMS. Inbound works from both as long as each is configured. */
+  smsBackend: 'twilio' | 'aws';
+  aws?: Omit<AwsSmsConfig, 'fetchImpl'> | undefined;
   responder: Responder;
   fetchImpl: typeof fetch;
   log: (m: string) => void;
@@ -139,6 +146,10 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig
     facts,
     smsDailyCap: Number(env.SMS_DAILY_CAP ?? 100),
     smsConsentFile: env.SMS_CONSENT_FILE,
+    smsBackend: env.SMS_BACKEND === 'aws' ? 'aws' : 'twilio',
+    aws: env.AWS_SMS_TOPIC_ARN || env.AWS_SMS_ORIGINATION
+      ? { region: env.AWS_SMS_REGION ?? 'us-east-1', accessKeyId: env.AWS_SMS_ACCESS_KEY_ID ?? '', secretAccessKey: env.AWS_SMS_SECRET_ACCESS_KEY ?? '', originationIdentity: env.AWS_SMS_ORIGINATION ?? '', topicArn: env.AWS_SMS_TOPIC_ARN ?? '' }
+      : undefined,
     responder,
     fetchImpl: fetch,
     log: (m) => console.log(`${new Date().toISOString()} [phone] ${m}`),
@@ -245,6 +256,12 @@ export class SmsSender {
     const refused = this.consent?.refusal(to);
     if (refused) throw new Error(refused);
     if (!/^Visybl:/.test(body)) body = `Visybl: ${body}`; // the registered campaign promises every message starts with the brand
+    if (this.cfg.smsBackend === 'aws') {
+      if (!this.cfg.aws?.originationIdentity || !this.cfg.aws.accessKeyId) throw new Error('aws sms is not configured (AWS_SMS_ORIGINATION and the send-only key)');
+      const r = await sendTextMessage({ ...this.cfg.aws, fetchImpl: this.cfg.fetchImpl }, to, body);
+      this.sentToday++;
+      return r;
+    }
     const form = new URLSearchParams({ To: to, Body: body, StatusCallback: `https://${this.cfg.publicHost}/twilio/sms-status` });
     if (this.cfg.messagingServiceSid) form.set('MessagingServiceSid', this.cfg.messagingServiceSid);
     else form.set('From', this.cfg.phoneNumber);
@@ -275,6 +292,20 @@ export function createPhoneServer(cfg: PhoneConfig) {
     try {
       if (url.pathname === '/livez') return send(200, JSON.stringify({ ok: true, smsRemainingToday: sms.remainingToday }));
       if (req.method === 'GET' && LEGAL_PAGES[url.pathname]) return send(200, LEGAL_PAGES[url.pathname]!, 'text/html; charset=utf-8');
+
+      if (url.pathname === '/aws/sms' && req.method === 'POST') {
+        if (!cfg.aws?.topicArn) return send(404, '{"error":"not found"}');
+        const r = await handleSns(await readBody(req), cfg.aws.topicArn, cfg.fetchImpl);
+        if (r.kind === 'rejected') { cfg.log(`rejected /aws/sms from ${req.socket.remoteAddress}: ${r.reason}`); return send(403, JSON.stringify({ error: r.reason })); }
+        if (r.kind === 'subscribed') { cfg.log('confirmed the SNS subscription for inbound SMS'); return send(200, '{"ok":true}'); }
+        if (r.kind === 'ignored') return send(200, JSON.stringify({ ignored: r.reason }));
+        const m = r.sms; const id = `aws-${m.inboundMessageId}`;
+        consent.inbound(m.originationNumber, m.messageBody, id);
+        cfg.log(`inbound sms ${id} from ${m.originationNumber} via aws (${m.messageBody.length} chars)`);
+        const status = await postEvent(cfg, 'sms', { type: 'sms.received', id, receivedAt: new Date().toISOString(), from: m.originationNumber, to: m.destinationNumber, body: m.messageBody, media: [], provider: 'aws', keyword: m.messageKeyword ?? null });
+        if (status !== 201 && status !== 200) cfg.log(`inbox returned ${status} for ${id}`);
+        return send(200, '{"ok":true}');
+      }
 
       if (url.pathname.startsWith('/twilio/') && req.method === 'POST') {
         const params = parseForm(await readBody(req));
