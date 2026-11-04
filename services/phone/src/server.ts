@@ -18,6 +18,7 @@
  *      SMS_DAILY_CAP (100)  LLM_BASE_URL LLM_API_KEY LLM_MODEL (unset → scripted responder)
  *      SMS_BACKEND (twilio|aws)  AWS_SMS_REGION (us-east-1) AWS_SMS_ACCESS_KEY_ID AWS_SMS_SECRET_ACCESS_KEY
  *      AWS_SMS_ORIGINATION (toll-free phone number id or ARN)  AWS_SMS_TOPIC_ARN (inbound SNS topic)
+ *      (also read from secrets/aws-sms.env: AWS_REGION AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY SMS_PHONE_NUMBER_ID)
  *      PHONE_SKIP_SIGNATURE=1 for local tests only
  */
 import { createHmac } from 'node:crypto';
@@ -147,8 +148,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): PhoneConfig
     smsDailyCap: Number(env.SMS_DAILY_CAP ?? 100),
     smsConsentFile: env.SMS_CONSENT_FILE,
     smsBackend: env.SMS_BACKEND === 'aws' ? 'aws' : 'twilio',
-    aws: env.AWS_SMS_TOPIC_ARN || env.AWS_SMS_ORIGINATION
-      ? { region: env.AWS_SMS_REGION ?? 'us-east-1', accessKeyId: env.AWS_SMS_ACCESS_KEY_ID ?? '', secretAccessKey: env.AWS_SMS_SECRET_ACCESS_KEY ?? '', originationIdentity: env.AWS_SMS_ORIGINATION ?? '', topicArn: env.AWS_SMS_TOPIC_ARN ?? '' }
+    aws: env.AWS_SMS_TOPIC_ARN || env.AWS_SMS_ORIGINATION || env.SMS_PHONE_NUMBER_ID
+      ? { region: env.AWS_SMS_REGION ?? env.AWS_REGION ?? 'us-east-1', accessKeyId: env.AWS_SMS_ACCESS_KEY_ID ?? env.AWS_ACCESS_KEY_ID ?? '', secretAccessKey: env.AWS_SMS_SECRET_ACCESS_KEY ?? env.AWS_SECRET_ACCESS_KEY ?? '', originationIdentity: env.AWS_SMS_ORIGINATION ?? env.SMS_PHONE_NUMBER_ID ?? '', topicArn: env.AWS_SMS_TOPIC_ARN ?? '' }
       : undefined,
     responder,
     fetchImpl: fetch,
