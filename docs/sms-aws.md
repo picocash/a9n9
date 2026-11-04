@@ -17,10 +17,10 @@ Decision (2026-11-04, Arun: "go ahead with the AWS SMS plan"): each agent gets i
 | Number | +1 (833) 334-0989, us-east-1, SMS and voice, TRANSACTIONAL, deletion protection on, tag agent=agent001 |
 | Phone-number id | `phone-ac4ccbf660ab41ce94be6c35904012e0` |
 | Registration id | `registration-1e32ba5dfb9643a2afe69302bc6dd451` (US_TOLL_FREE_REGISTRATION, associated, not yet submitted) |
-| Step 1 | **blocked:** the account has no Service Quotas service-linked role (`DependencyAccessDeniedException`). Fix: Arun files the quota request once in the console (that creates the role), or the Mac policy gets `iam:CreateServiceLinkedRole` with condition `iam:AWSServiceName = servicequotas.amazonaws.com`. CLI: `aws service-quotas request-service-quota-increase --service-code sms-voice --quota-code L-2325465C --desired-value 20 --region us-east-1`. |
+| Step 1 | **done 2026-11-04:** TextMessageMonthlySpend approved at $20; the enforced spend-limit override is set to $20. (It was blocked at first: the account has no Service Quotas service-linked role (`DependencyAccessDeniedException`). Fix: Arun files the quota request once in the console (that creates the role), or the Mac policy gets `iam:CreateServiceLinkedRole` with condition `iam:AWSServiceName = servicequotas.amazonaws.com`. CLI: `aws service-quotas request-service-quota-increase --service-code sms-voice --quota-code L-2325465C --desired-value 20 --region us-east-1`.) |
 | Step 2 | done 2026-11-04 12:52 EST |
 | Step 3 | done: number on visybl.com/sms, /privacy and agent001.a9n9.net; screenshot `docs/sms-optin-agent001.png` (179 KB) |
-| Step 4 | form filled except company name, EIN and contact (Arun); not submitted |
+| Step 4 | **submitted 2026-11-04 13:35 EST** (version 1, company VISYBL INC, category CUSTOMER_CARE because AWS has no Info-on-demand option, use-case text trimmed to the 500-character limit, opt-in PNG attached). Up to 15 business days. |
 | Step 5 | done: topic `a9n9-sms-inbound`, two-way on, HTTPS subscription to `/aws/sms` confirmed by the phone service |
 | Step 6 | done: `~/a9n9/secrets/aws-sms.env` (600), loaded by the phone container; verified with a read-only DescribePhoneNumbers (number PENDING). Sending stays on Twilio until approval (`SMS_BACKEND=aws` then). |
 
@@ -108,7 +108,7 @@ Items marked **Arun** are not in this repository. Supply them at submission.
 | Field | Value |
 |---|---|
 | Monthly SMS volume | the lowest bracket offered (we expect under 1,000) |
-| Use case category | Info on demand |
+| Use case category | Customer care (the API has no Info-on-demand option) |
 | Privacy Policy URL | https://www.visybl.com/privacy |
 | Terms and Conditions URL | https://www.visybl.com/sms |
 | Opt-in category | Text |
