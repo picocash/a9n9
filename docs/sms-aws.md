@@ -34,7 +34,7 @@ Decision (2026-11-04, Arun: "go ahead with the AWS SMS plan"): each agent gets i
 | 4 | Fill in and submit the registration with the text below, plus the EIN and contact details from Arun | Arun or Mac | 3, Arun's details |
 | 5 | Incoming texts: SNS topic `a9n9-sms-inbound`, with two-way enabled on the number and pointing at the topic. HTTPS subscription to `https://phone.a9n9.net/aws/sms` (this box confirms the subscription). | Arun or Mac | 2, and the endpoint deployed (this box) |
 | 6 | Send-only IAM user `a9n9-sms-sender` with the policy below; its key written over SSH into `~/a9n9/secrets/aws-sms.env` | Arun or Mac | 2 |
-| 7 | Switch the phone service's SMS backend to AWS and run end-to-end tests (Arun texts the number; the agent replies; STOP and HELP work) | this box | registration approved |
+| 7 | Switch the phone service's SMS backend to AWS (`SMS_BACKEND=aws` in `~/a9n9/docker-compose.yml`). Give agent001 a guarded `bin/sms-reply <event id> '<text>'`: it replies only to a pending `sms.received` sender, at most 160 characters × 2, no links unless asked, and logs to the ledger; mount the phone API token into the sandbox for it. Change the a9n9-respond skill from "SMS read-only until 10DLC" to answering by SMS. HELP keyword (Mac side). Then the end-to-end test: Arun texts the number, the agent replies with the disclosure first, STOP blocks, START restores, HELP answers. | this box (keyword: Mac) | registration approved |
 
 ## Scoped policy for the Mac session (attach for steps 1, 2, 4, 5 and 6; remove afterwards)
 
