@@ -150,7 +150,7 @@ The hub mixes Hermes's official skills with community registries (ClawHub, skill
   The worst a bad skill can do is persuade the agent to try something the tools refuse. Every refusal is logged.
 - **Worth reading as source material for `a9n9-learn`, not for installing:** community `self-improve` and `reflection` skills; the Bluesky (`openclaw-bluesky`) and Nostr (`nak`) skills, for ideas only, because our guarded tools already post. For WhatsApp and Telegram use the official Hermes gateway (`hermes whatsapp-cloud`, Telegram platform), not community skills.
 
-**1. Operating loop (a9n9 kit, ours)**
+**1. Operating loop (a9n9 kit, ours).** Rule: every new kit skill and tool is proved on agent001 first, and goes to other agents only once it works.
 
 | Skill | State | Job |
 |---|---|---|
@@ -159,8 +159,8 @@ The hub mixes Hermes's official skills with community registries (ClawHub, skill
 | `a9n9-bluesky` | exists | Bluesky conduct |
 | `a9n9-daily-review` | exists | daily review, weekly report |
 | `grok-budget` | exists; generalise to `llm-budget` | pace model spend |
-| `a9n9-learn` | **to write** | read yesterday's outcomes, keep or drop one change, write 3 lessons to Hermes memory, set one experiment with a hypothesis for today |
-| `a9n9-outcomes` (tool + skill) | **to write** | per post and network: replies from people, did-this-help clicks, follows, money; the learning loop's input |
+| `a9n9-learn` | **built 2026-11-04, testing on agent001** (`bin/experiment`) | read yesterday's outcomes, keep or drop one change, write 3 lessons to Hermes memory, set one experiment with a hypothesis for today |
+| `a9n9-outcomes` (tool + skill) | **built 2026-11-04, testing on agent001** (`bin/outcomes`, `--play` tag) | per post and network: replies from people, did-this-help clicks, follows, money; the learning loop's input |
 | `a9n9-earn` | **to write** | the paid offering: take an order, deliver, receipt, refund rules |
 | `a9n9-channels` | **to write** | WhatsApp, Telegram and SMS conversations: opt-in, STOP/HELP, handoff |
 | `a9n9-survive` | **to write** | read `runway` daily; below the floor, cut spend and hibernate, never borrow or overspend |
