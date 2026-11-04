@@ -3,7 +3,7 @@ import { createServer, type Server } from 'node:http';
 import { once } from 'node:events';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { handleSns, sigv4, type SnsMessage } from '../src/aws-sms.js';
-import { configFromEnv, createPhoneServer } from '../src/server.js';
+import { configFromEnv, createPhoneServer, SMS_WELCOME } from '../src/server.js';
 
 const TOPIC = 'arn:aws:sns:us-east-1:671013084319:a9n9-sms-inbound';
 const CERT_URL = 'https://sns.us-east-1.amazonaws.com/SimpleNotificationService-test.pem';
@@ -88,7 +88,10 @@ describe('phone server with the AWS backend', () => {
     const call = awsCalls.at(-1)!;
     expect(call.headers['x-amz-target']).toBe('PinpointSMSVoiceV2.SendTextMessage');
     expect(call.headers.authorization).toMatch(/^AWS4-HMAC-SHA256 Credential=AKIDTEST\/\d{8}\/us-east-1\/sms-voice\/aws4_request/);
-    expect(JSON.parse(call.body)).toEqual({ DestinationPhoneNumber: '+15550002222', OriginationIdentity: 'phone-abc', MessageBody: 'Visybl: Yes, as of 16:40 UTC it reconciles.', MessageType: 'TRANSACTIONAL' });
+    expect(JSON.parse(call.body)).toEqual({ DestinationPhoneNumber: '+15550002222', OriginationIdentity: 'phone-abc', MessageBody: `${SMS_WELCOME}\n\nYes, as of 16:40 UTC it reconciles.`, MessageType: 'TRANSACTIONAL' });
+    // Only the first message to a number carries the disclosure.
+    expect((await sendSms('+15550002222', 'Second answer.')).status).toBe(202);
+    expect(JSON.parse(awsCalls.at(-1)!.body).MessageBody).toBe('Visybl: Second answer.');
   });
   it('STOP by text blocks further sends; a forged notification is refused', async () => {
     await post('/aws/sms', JSON.stringify(inbound('+15550002222', 'STOP', 'in-3')));

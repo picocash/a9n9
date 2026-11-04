@@ -10,6 +10,18 @@ Decision (2026-11-04, Arun: "go ahead with the AWS SMS plan"): each agent gets i
   - This box builds the code and the pages while registration is pending.
   - No AWS keys pass through chat. The send-only key goes from the Mac straight into `~/a9n9/secrets/aws-sms.env` (mode 600) over SSH.
 
+## agent001 (status 2026-11-04)
+
+| Item | Value |
+|---|---|
+| Number | +1 (833) 334-0989, us-east-1, SMS and voice, TRANSACTIONAL, deletion protection on, tag agent=agent001 |
+| Phone-number id | `phone-ac4ccbf660ab41ce94be6c35904012e0` |
+| Registration id | `registration-1e32ba5dfb9643a2afe69302bc6dd451` (US_TOLL_FREE_REGISTRATION, associated, not yet submitted) |
+| Step 1 | **blocked:** the account has no Service Quotas service-linked role (`DependencyAccessDeniedException`). Fix: Arun files the quota request once in the console (that creates the role), or the Mac policy gets `iam:CreateServiceLinkedRole` with condition `iam:AWSServiceName = servicequotas.amazonaws.com`. CLI: `aws service-quotas request-service-quota-increase --service-code sms-voice --quota-code L-2325465C --desired-value 20 --region us-east-1`. |
+| Step 2 | done 2026-11-04 12:52 EST |
+| Step 3 | done: number on visybl.com/sms, /privacy and agent001.a9n9.net; screenshot `docs/sms-optin-agent001.png` (179 KB) |
+| Steps 4–6 | waiting on Arun: EIN, exact legal name, contact person |
+
 ## Steps
 
 | # | Step | Who | Waits on |
@@ -38,6 +50,8 @@ Decision (2026-11-04, Arun: "go ahead with the AWS SMS plan"): each agent gets i
     { "Sid": "InboundTopic", "Effect": "Allow",
       "Action": ["sns:CreateTopic", "sns:SetTopicAttributes", "sns:GetTopicAttributes", "sns:Subscribe", "sns:ListSubscriptionsByTopic"],
       "Resource": "arn:aws:sns:us-east-1:671013084319:a9n9-sms-inbound" },
+    { "Sid": "QuotasServiceLinkedRole", "Effect": "Allow", "Action": "iam:CreateServiceLinkedRole", "Resource": "*",
+      "Condition": { "StringEquals": { "iam:AWSServiceName": "servicequotas.amazonaws.com" } } },
     { "Sid": "SenderUser", "Effect": "Allow",
       "Action": ["iam:CreateUser", "iam:TagUser", "iam:PutUserPolicy", "iam:CreateAccessKey"],
       "Resource": "arn:aws:iam::671013084319:user/a9n9-sms-sender" }
@@ -96,7 +110,7 @@ Items marked **Arun** are not in this repository. Supply them at submission.
 | Privacy Policy URL | https://www.visybl.com/privacy |
 | Terms and Conditions URL | https://www.visybl.com/sms |
 | Opt-in category | Text |
-| Opt-in workflow image | the PNG from step 3: visybl.com/sms showing the number and "How you opt in" |
+| Opt-in workflow image | `docs/sms-optin-agent001.png` (visybl.com/sms showing the number and "How you opt in") |
 
 **Use case details:**
 > People text Visybl's number with questions about Visybl's a9n9 service and the public data it publishes (for example the stablecoin reserve figures at https://reserves.a9n9.net), and Visybl's automated agent texts back the answer. If the person asks for it in their text, Visybl also texts them when a figure they named changes. Visybl only ever replies to a number that texted it first. There is no marketing, no promotions, no purchased or shared lists, and no third-party content. Every message starts with "Visybl:" and the first reply says replies are automated.
@@ -108,6 +122,8 @@ Items marked **Arun** are not in this repository. Supply them at submission.
 1. `Visybl: Thanks for texting Visybl. Replies come from Visybl's automated agent, not a person. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out.`
 2. `Visybl: As of 16:40 UTC, pathUSD has 40.3 million dollars on Tempo and the issuer reports 40.3 million in reserves, so it reconciles. Reply STOP to opt out.`
 3. `Visybl: The alert you asked for: USDB supply on Tempo moved from 40.4 million to 55.1 million dollars in the last hour. Reply STOP to opt out.`
+
+**First reply:** the phone service adds the disclosure above to the first message sent to any new number, so the agent cannot forget it.
 
 **Keywords (`PutKeyword` after the number exists):**
 - HELP → `Visybl: automated answers about Visybl's a9n9 service. Help: agent001@a9n9.net or https://www.visybl.com/sms. Msg & data rates may apply. Reply STOP to opt out.`

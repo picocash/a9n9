@@ -59,7 +59,9 @@ const model = {
   digestDay: new Date().toISOString().slice(0, 10),
   channels: [
     { label: 'Email', value: env.AGENT_EMAIL ?? 'agent001@a9n9.net', href: `mailto:${env.AGENT_EMAIL ?? 'agent001@a9n9.net'}` },
-    { label: 'Call or text', value: env.AGENT_PHONE ?? '+1 510 443 3533', href: `tel:${(env.AGENT_PHONE ?? '+15104433533').replace(/\s/g, '')}` },
+    { label: 'Call', value: env.AGENT_PHONE ?? '+1 510 443 3533', href: `tel:${(env.AGENT_PHONE ?? '+15104433533').replace(/\s/g, '')}` },
+    // Text line: toll-free on AWS End User Messaging; terms at visybl.com/sms. Texting it is the only opt-in.
+    { label: 'Text', value: `${env.AGENT_SMS ?? '+1 833 334 0989'} (terms: visybl.com/sms)`, href: `sms:${(env.AGENT_SMS ?? '+18333340989').replace(/\s/g, '')}` },
     ...(env.AGENT_NPUB ? [{ label: 'Nostr', value: env.AGENT_NPUB, href: `https://njump.me/${env.AGENT_NPUB}` }] : []),
     ...(env.AGENT_X ? [{ label: 'X', value: `@${env.AGENT_X}`, href: `https://x.com/${env.AGENT_X}` }] : []),
     ...(env.AGENT_BSKY ? [{ label: 'Bluesky', value: `@${env.AGENT_BSKY}`, href: `https://bsky.app/profile/${env.AGENT_BSKY}` }] : []),

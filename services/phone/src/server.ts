@@ -205,6 +205,8 @@ async function postEvent(cfg: PhoneConfig, channel: 'voice' | 'sms', payload: { 
   }
 }
 
+export const SMS_WELCOME = "Visybl: Thanks for texting Visybl. Replies come from Visybl's automated agent, not a person. Msg frequency varies. Msg & data rates may apply. Reply HELP for help, STOP to opt out.";
+
 const STOP_RE = /^\s*(stop|stopall|unsubscribe|cancel|end|quit|optout|revoke)\s*$/i;
 const START_RE = /^\s*(start|unstop|yes)\s*$/i;
 
@@ -214,7 +216,7 @@ const START_RE = /^\s*(start|unstop|yes)\s*$/i;
  * Persisted to a JSON file so a restart cannot forget an opt-out.
  */
 export class SmsConsent {
-  private map: Record<string, { firstAt: string; lastInboundAt: string; firstMessageId: string; optedOut: boolean }> = {};
+  private map: Record<string, { firstAt: string; lastInboundAt: string; firstMessageId: string; optedOut: boolean; welcomedAt?: string }> = {};
   constructor(private readonly file: string | undefined) {
     if (file && fs.existsSync(file)) { try { this.map = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { /* start empty; a corrupt file must not open sending */ } }
   }
@@ -226,6 +228,9 @@ export class SmsConsent {
     else this.map[from] = { firstAt: at, lastInboundAt: at, firstMessageId: messageId, optedOut: false };
     this.save();
   }
+  /** True until the program disclosure has gone to this number once. */
+  needsWelcome(to: string): boolean { return !this.map[to]?.welcomedAt; }
+  markWelcomed(to: string, at = new Date().toISOString()) { const c = this.map[to]; if (c) { c.welcomedAt = at; this.save(); } }
   /** Why sending to `to` is not allowed, or null when it is. */
   refusal(to: string): string | null {
     const c = this.map[to];
@@ -256,10 +261,14 @@ export class SmsSender {
     const refused = this.consent?.refusal(to);
     if (refused) throw new Error(refused);
     if (!/^Visybl:/.test(body)) body = `Visybl: ${body}`; // the registered campaign promises every message starts with the brand
+    // The registration promises the first reply carries the program disclosure; the tool adds it, the agent cannot forget it.
+    const welcome = this.consent?.needsWelcome(to) ?? false;
+    if (welcome) body = `${SMS_WELCOME}\n\n${body.replace(/^Visybl:\s*/, '')}`;
     if (this.cfg.smsBackend === 'aws') {
       if (!this.cfg.aws?.originationIdentity || !this.cfg.aws.accessKeyId) throw new Error('aws sms is not configured (AWS_SMS_ORIGINATION and the send-only key)');
       const r = await sendTextMessage({ ...this.cfg.aws, fetchImpl: this.cfg.fetchImpl }, to, body);
       this.sentToday++;
+      if (welcome) this.consent?.markWelcomed(to);
       return r;
     }
     const form = new URLSearchParams({ To: to, Body: body, StatusCallback: `https://${this.cfg.publicHost}/twilio/sms-status` });
@@ -274,6 +283,7 @@ export class SmsSender {
     const data = (await res.json()) as { sid?: string; status?: string; code?: number; message?: string };
     if (!res.ok || !data.sid) throw new Error(`twilio ${res.status}${data.code ? ` ${data.code}` : ''}: ${data.message ?? 'send failed'}`);
     this.sentToday++;
+    if (welcome) this.consent?.markWelcomed(to);
     return { sid: data.sid, status: data.status ?? 'queued' };
   }
 }
