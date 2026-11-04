@@ -114,6 +114,22 @@ Skills are instructions. They don't make an agent decide or learn on its own; th
 - Each cron job names its skills (`skills: [...]`). Put `grok-budget` on every job; today agent001's jobs only mention it in the prompt.
 - Skills an agent writes itself land in its own `~/.hermes/skills`. The weekly review diffs them, and good ones are promoted into the kit by a person.
 
+**Format: the Agent Skills spec (agentskills.io/specification)**
+
+Hermes reads the same format: `SKILL.md` with YAML frontmatter, plus optional `scripts/`, `references/` and `assets/`. The kit follows the spec, with two deliberate exceptions:
+- **Hermes fields kept:** top-level `version`, `author` and `platforms`, and a nested `metadata.hermes` map. The spec allows only string-to-string `metadata`, but Hermes reads these fields. Stay compatible with Hermes first.
+- **Guards stay out of `scripts/`:** tools that carry guards (`bin/`, `_lib.mjs`) live in the kit's read-only `bin`, never in a skill's `scripts/`. Skills are text the agent can rewrite; guards must not be.
+
+**CI lint for every kit skill (it would have caught a real bug):**
+- frontmatter parses as strict YAML;
+- `name` matches the directory (lowercase letters, digits and single hyphens, at most 64 characters);
+- `description` is 1–1024 characters and says what the skill does and when to use it;
+- `platforms` is a list;
+- the body is under 500 lines (spec: under about 5,000 tokens); longer material moves to `references/`;
+- also run `skills-ref validate` and allow only the Hermes exceptions above.
+
+**The bug the lint would have caught.** `a9n9-daily-review` had an unquoted colon in its description, so its frontmatter wasn't valid YAML. Hermes fell back to splitting lines on colons, read `platforms: [linux]` as the string `"[linux]"`, and the platform check rejected the skill. The nightly review and the weekly report therefore ran without their skill ("Skill(s) not found and skipped"). Fixed 2026-11-04 by quoting the description.
+
 **1. Operating loop (a9n9 kit, ours)**
 
 | Skill | State | Job |
