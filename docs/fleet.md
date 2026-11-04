@@ -130,6 +130,14 @@ Hermes reads the same format: `SKILL.md` with YAML frontmatter, plus optional `s
 
 **The bug the lint would have caught.** `a9n9-daily-review` had an unquoted colon in its description, so its frontmatter wasn't valid YAML. Hermes fell back to splitting lines on colons, read `platforms: [linux]` as the string `"[linux]"`, and the platform check rejected the skill. The nightly review and the weekly report therefore ran without their skill ("Skill(s) not found and skipped"). Fixed 2026-11-04 by quoting the description.
 
+**Skills Hub policy (`hermes skills search/inspect/install`)**
+
+The hub mixes Hermes's official skills with community registries (ClawHub, skills.sh, browse.sh). Community entries are anyone's text, and a skill is instructions the agent follows, so treat installing one like installing a dependency.
+- **Official hub skills:** allowed through the allowlist above.
+- **Community skills:** never installed straight onto an agent. A person runs `hermes skills inspect <full identifier>`, reads the whole skill, then copies it into the kit's git with its source and commit noted, adapts it to our tools, and it passes the kit lint. Never install with `--force` past a blocked scan verdict. Always use the full identifier: short names are ambiguous (`self-improve` matches two different skills).
+- **Agents:** their tools are `skills_list`, `skill_view` and `skill_manage` (local skills only). They have no tool for installing from the hub, and the sandbox has no `hermes` CLI. Keep it that way.
+- **Worth reading as source material for `a9n9-learn`, not for installing:** community `self-improve` and `reflection` skills; the Bluesky (`openclaw-bluesky`) and Nostr (`nak`) skills, for ideas only, because our guarded tools already post. For WhatsApp and Telegram use the official Hermes gateway (`hermes whatsapp-cloud`, Telegram platform), not community skills.
+
 **1. Operating loop (a9n9 kit, ours)**
 
 | Skill | State | Job |
