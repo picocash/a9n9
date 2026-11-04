@@ -20,7 +20,9 @@ Decision (2026-11-04, Arun: "go ahead with the AWS SMS plan"): each agent gets i
 | Step 1 | **blocked:** the account has no Service Quotas service-linked role (`DependencyAccessDeniedException`). Fix: Arun files the quota request once in the console (that creates the role), or the Mac policy gets `iam:CreateServiceLinkedRole` with condition `iam:AWSServiceName = servicequotas.amazonaws.com`. CLI: `aws service-quotas request-service-quota-increase --service-code sms-voice --quota-code L-2325465C --desired-value 20 --region us-east-1`. |
 | Step 2 | done 2026-11-04 12:52 EST |
 | Step 3 | done: number on visybl.com/sms, /privacy and agent001.a9n9.net; screenshot `docs/sms-optin-agent001.png` (179 KB) |
-| Steps 4–6 | waiting on Arun: EIN, exact legal name, contact person |
+| Step 4 | form filled except company name, EIN and contact (Arun); not submitted |
+| Step 5 | done: topic `a9n9-sms-inbound`, two-way on, HTTPS subscription to `/aws/sms` confirmed by the phone service |
+| Step 6 | done: `~/a9n9/secrets/aws-sms.env` (600), loaded by the phone container; verified with a read-only DescribePhoneNumbers (number PENDING). Sending stays on Twilio until approval (`SMS_BACKEND=aws` then). |
 
 ## Steps
 
