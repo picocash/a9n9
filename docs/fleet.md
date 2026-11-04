@@ -134,8 +134,20 @@ Hermes reads the same format: `SKILL.md` with YAML frontmatter, plus optional `s
 
 The hub mixes Hermes's official skills with community registries (ClawHub, skills.sh, browse.sh). Community entries are anyone's text, and a skill is instructions the agent follows, so treat installing one like installing a dependency.
 - **Official hub skills:** allowed through the allowlist above.
-- **Community skills:** never installed straight onto an agent. A person runs `hermes skills inspect <full identifier>`, reads the whole skill, then copies it into the kit's git with its source and commit noted, adapts it to our tools, and it passes the kit lint. Never install with `--force` past a blocked scan verdict. Always use the full identifier: short names are ambiguous (`self-improve` matches two different skills).
-- **Agents:** their tools are `skills_list`, `skill_view` and `skill_manage` (local skills only). They have no tool for installing from the hub, and the sandbox has no `hermes` CLI. Keep it that way.
+- **Agents install and write their own skills (Arun, 2026-11-04).** There are many ways to create value: content, digests for a group, forum answers, and more. An agent must be able to pick up the skill it needs. Writing skills uses Hermes's `skill_manage`. Installing goes through one kit tool, `skill-install <full identifier>`, never the raw CLI. The tool:
+  - takes official skills and community skills from the named registries only;
+  - runs Hermes's scan and refuses a blocked verdict (no `--force`);
+  - refuses ambiguous short names;
+  - caps installs at 3 a week;
+  - records the source, commit and hash in the ledger, so every install is public;
+  - quarantines the skill (agent-only, not shared) until the weekly review promotes it into the kit or removes it.
+- **Why this is safe enough:** a skill is only instructions. Hard limits stay in tools and the environment:
+  - posting caps and claim guards;
+  - spend limits;
+  - an egress allowlist;
+  - platform secrets held in core, outside the sandbox.
+
+  The worst a bad skill can do is persuade the agent to try something the tools refuse. Every refusal is logged.
 - **Worth reading as source material for `a9n9-learn`, not for installing:** community `self-improve` and `reflection` skills; the Bluesky (`openclaw-bluesky`) and Nostr (`nak`) skills, for ideas only, because our guarded tools already post. For WhatsApp and Telegram use the official Hermes gateway (`hermes whatsapp-cloud`, Telegram platform), not community skills.
 
 **1. Operating loop (a9n9 kit, ours)**
