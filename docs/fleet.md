@@ -104,6 +104,67 @@ The aim is fleet scale and verifiable identity. None of this adds reach: posts l
 - **Timing:** build it once several agents have a record worth labelling.
 - **Blue check:** Bluesky grants verification only through organizations it chooses as trusted verifiers, so we don't plan on it.
 
+## Skill set: what every agent starts with
+
+Skills are instructions. They don't make an agent decide or learn on its own; the loop does: act, measure what happened, decide what to change, and remember it. Rules stay in tools (guards), never only in skills. Hermes already supports what the loop needs: built-in memory (on in cron runs, `skip_memory=False`), session search, and skill creation (`skills.creation_nudge_interval: 15`). On agent001, though, `~/.hermes/memories` is empty: everything it learns goes to its own journal, and nothing from it enters Hermes memory.
+
+**How skills are loaded on a new agent**
+- `hermes skills opt-out`: no seeding of the full bundled catalogue. Install only the allowlist below.
+- The a9n9 kit's skills come from git through `skills.external_dirs` (read-only and versioned), so a skill fixed once is fixed for every agent.
+- Each cron job names its skills (`skills: [...]`). Put `grok-budget` on every job; today agent001's jobs only mention it in the prompt.
+- Skills an agent writes itself land in its own `~/.hermes/skills`. The weekly review diffs them, and good ones are promoted into the kit by a person.
+
+**1. Operating loop (a9n9 kit, ours)**
+
+| Skill | State | Job |
+|---|---|---|
+| `a9n9-explore` | exists | find questions, publish one checkable finding |
+| `a9n9-respond` | exists | answer mentions and messages within the hour |
+| `a9n9-bluesky` | exists | Bluesky conduct |
+| `a9n9-daily-review` | exists | daily review, weekly report |
+| `grok-budget` | exists; generalise to `llm-budget` | pace model spend |
+| `a9n9-learn` | **to write** | read yesterday's outcomes, keep or drop one change, write 3 lessons to Hermes memory, set one experiment with a hypothesis for today |
+| `a9n9-outcomes` (tool + skill) | **to write** | per post and network: replies from people, did-this-help clicks, follows, money; the learning loop's input |
+| `a9n9-earn` | **to write** | the paid offering: take an order, deliver, receipt, refund rules |
+| `a9n9-channels` | **to write** | WhatsApp, Telegram and SMS conversations: opt-in, STOP/HELP, handoff |
+| `a9n9-survive` | **to write** | read `runway` daily; below the floor, cut spend and hibernate, never borrow or overspend |
+
+**2. Bundled Hermes skills to enable**
+
+| Skill | Why |
+|---|---|
+| `grounded-citations` | every claim tied to a source |
+| `competitor-news-monitor` | watch named projects for news worth a finding |
+| `product-price-monitor` | price checks (the Pay Safe kind) |
+| `humanizer` | strip AI-isms from posts |
+| `email-inbox-triage` | its own inbox, drafts held by guards |
+| `weekly-review-planning` | weekly reset feeding `a9n9-learn` |
+| `document-to-action-items` | turn specs and terms into checkable claims |
+| `llm-wiki` | a long-term knowledge base it builds from its findings |
+| `hermes-agent` | knowing its own harness |
+
+**3. Optional Hermes skills to install**
+
+| Skill | Why |
+|---|---|
+| `watchers`, `rss-feeds` | poll feeds and APIs instead of spending model calls on search |
+| `duckduckgo-search` or `searxng-search` | free search to lower the Grok spend |
+| `parallel-cli` | deep research (a Parallel.ai key already exists, via the egress proxy) |
+| `one-three-one-rule` | decision briefs: problem, three options, one pick, written to the journal |
+| `evm` | read-only on-chain checks (Tempo is EVM) |
+| `mpp-agent` | pay HTTP 402 APIs; fits picocash; wallet limits stay in tools |
+
+**4. Never enable (conflicts with standing rules)**
+- **Bot-wall or Cloudflare bypass:** `blocked-page-recovery` and `scrapling`.
+- **Posting or telephony outside our guarded tools:** `xurl` (posts to X without the claim, repeat and correction guards); `telephony` (Twilio, which is ignored for SMS).
+- **Money or keys outside policy:** `stripe-link-cli` and `stripe-projects` (the agent never gets the Stripe key); `1password`.
+- **Unbounded or offensive capability:**
+  - `godmode`, `sherlock`, `unbroker`, `web-pentest`;
+  - `computer-use`;
+  - the coding-delegation CLIs (`claude-code`, `codex`, `opencode`, `grok`, `openhands`, `blackbox`);
+  - `apple/*`.
+- **Not our work:** creative video and music, mlops, gaming, health.
+
 ## Work this needs before the first new agent
 
 1. **Agent kit into git.** agent001's tools and guards live only in `~/a9n9/agent001/bin` today. Move them into this repo as a versioned kit that every agent installs, so a guard fixed once is fixed for all.
