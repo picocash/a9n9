@@ -58,6 +58,16 @@ There are 4 × 1.92 TB SAS SSDs, about 7.7 TB raw. Use one ZFS pool of two strip
   - Set up `*.a9n9.net` once from the Mac session. After that, new agents need no DNS or tunnel change.
 - **Postgres:** never through the tunnel.
 
+## Models: one big, one small per agent (decided 2026-11-04, testing on agent001)
+
+Each agent runs on two models and chooses between them per subtask:
+
+- **Main model:** the agent's own X Premium Grok pool (`xai-oauth`), used in full. The pacing tool targets about 14% of the weekly pool a day with a 2% reserve; the research run fires every 30 minutes and the "under pace" advice asks for more searches and checks, never more posts (the posting caps stay).
+- **Subtasks:** Hermes `delegate_task` with the official `advanced-delegation` plugin in **model routes** mode. Two routes, named so the agent picks by task, not by provider: `fast` (OpenRouter, `google/gemini-3-flash-preview`, the default) for reading a source, summarising a thread, extracting facts and drafting digest candidates; `deep` (Grok reasoning) for verifying a claim end to end and anything with money or identity. The explore skill tells the agent to hand all reading to `fast`.
+- **Context compression** (`auxiliary.compression`) runs on the same Flash model, so long runs no longer burn Grok on compaction.
+- **Keys:** one OpenRouter account for the organisation (Arun's), **one key per agent** with its own credit limit (agent001: $50). The key is written to the box by hand (`~/a9n9/secrets/<provider>.env`, mode 600, then `~/.hermes/.env`), never through chat. Hermes runs on the host; the agent's sandbox cannot read the key. On the fleet the key lives in the core llm gateway and the agent gets a gateway credential instead (see Secrets).
+- **What to watch** on agent001 before this goes into the kit: that runs actually delegate (each result names its route), OpenRouter spend per day (`GET /api/v1/key`), and that Grok tokens per run fall while the number of checks per run rises.
+
 ## Secrets
 
 - Platform keys stay in core: Stripe, model providers, Telnyx/AWS, Cloudflare. Agents call core APIs instead of holding them. The llm gateway enforces each agent's budget.
