@@ -46,6 +46,8 @@ No self-serve agent registration exists; it is a commercial onboarding through V
 
 ### 3. Cloudflare Verified Bots (BotBase) (days to weeks)
 
+**Submitted 2026-11-02** from the a9n9 Cloudflare account. Status: check Submission history in the dashboard, or run `~/a9n9/agent001/bin/sign-test` (Cloudflare's crawltest.com answers 401 until the bot is Accepted). If it comes back Rejected, resubmit with the answers below.
+
 Form: https://dash.cloudflare.com/?to=/:account/application-security/botbase/form (the a9n9 Cloudflare account; Mac session). Answers:
 
 - Operator: Visybl Inc; contact agent001@a9n9.net; documentation https://agent001.a9n9.net/bot
