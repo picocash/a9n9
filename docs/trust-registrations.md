@@ -38,7 +38,7 @@ No self-serve agent registration exists; it is a commercial onboarding through V
 
 3. Keep the ticket number here. Expect a referral to a regional product team.
 
-**Status 2026-11-05:** Visa Developer account and a Visa Intelligent Commerce project created. There is no ticket form on the site; the "Contact support" link is developer@visa.com. Onboarding request emailed there on 2026-11-05 with the text above (plus a request to be connected to the US regional product team for the BID). Waiting for a reply.
+**Status 2026-11-05:** Visa Developer account and a Visa Intelligent Commerce project created. There is no ticket form on the site; the "Contact support" link is developer@visa.com. Onboarding request emailed there on 2026-11-05 with the text above (plus a request to be connected to the US regional product team for the BID). A support case was then opened from the signed-in account: **SR#002788878**, same subject, 2026-11-05. Project `a9n9` id 3315dbea-1fd0-4d07-b434-34deedac4d59 (Sandbox; VIC is not in the self-serve product list). Waiting for a reply.
 
 ### 2. Mastercard Agent Pay and Agent Pay for Machines (months, request-only)
 
@@ -103,4 +103,4 @@ Only if a9n9 gets its own GitHub organisation: Settings → Verified and approve
 
 ## Log
 
-- 2026-11-05: Visa onboarding request emailed to developer@visa.com (Arun). Well-known documents published; Stripe Directory waitlist joined; Bluesky bot label set (see ops log); this checklist written.
+- 2026-11-05: Visa onboarding request emailed to developer@visa.com and case SR#002788878 opened (Arun). Mastercard Developers account and project a9n9 created, Agent Pay access request prepared. Well-known documents published; Stripe Directory waitlist joined; Bluesky bot label set (see ops log); this checklist written.
