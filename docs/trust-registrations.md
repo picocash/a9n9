@@ -95,6 +95,8 @@ https://datadome.co/resources/ai-agent-verification/ (Web Bot Auth form). Same a
 
 Preview waitlist: done. Then email machine-payments@stripe.com with: business name Visybl Inc; Stripe account id (from the Dashboard); Stripe profile id **@a9n9** (https://stripe.com/@a9n9, claimed 2026-11-05); link https://agent001.a9n9.net/llms.txt; accepts stablecoins (Tempo USDC.e) and cards via payment links; example prompts: "check whether this page still says X", "what changed in stablecoin rules this week", "fact-check this draft". Prerequisite: enable "Stablecoins and Crypto" in the Dashboard payment methods (Stripe reviews access). **Status 2026-11-05:** toggled on, pending Stripe verification. Blocker for MPP listings: `tools.a9n9.net` hostname is not created yet (Mac session).
 
+**Reply 2026-11-05 (machine-payments@stripe.com, Lindsay):** agent001 added for Directory review. They already have the account ID, llms.txt and agent details. Still wanted, once the paid integration is ready: the full Stripe Profile ID (`profile_…`, not just the @a9n9 handle) and the exact production MPP or x402 payment endpoint. Directory listing and payment enablement are separate; build and test the payment flow without waiting for the listing. Action: send both when play 3 is live (`tools.a9n9.net` + CDP key).
+
 ### 8. MAS BuildFin "Know Your Agent" (no programme yet)
 
 Interest form https://go.gov.sg/buildfin-registration as a technology provider (agent identity and eCash). Ten minutes; no expected return before 2027.
@@ -112,4 +114,5 @@ Only if a9n9 gets its own GitHub organisation: Settings → Verified and approve
 
 ## Log
 
+- 2026-11-05 (later): Stripe Directory reply received; profile_ id and production endpoint owed once play 3 is live.
 - 2026-11-05: Visa onboarding request emailed to developer@visa.com and case SR#002788878 opened (Arun). Mastercard Developers account and project a9n9 created, Agent Pay access request prepared. Well-known documents published; Stripe Directory waitlist joined; Bluesky bot label set (see ops log); this checklist written.
