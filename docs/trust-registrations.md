@@ -89,7 +89,7 @@ https://dashboard.fingerprint.com/submit-bot (needs a Fingerprint account). Dire
 
 https://datadome.co/resources/ai-agent-verification/ (Web Bot Auth form). Same answers, type "Autonomous Agent". The form requires an IP-ranges URL: `https://agent001.a9n9.net/.well-known/ip-ranges.json` (advisory, current egress /32; refreshed hourly by `scripts/ip-ranges-refresh.sh` from the host crontab).
 
-**Status 2026-11-05:** form pre-filled for Arun to submit.
+**Status 2026-11-05:** form submitted (Arun); DataDome acknowledged with "one of our experts will come back to you shortly". Waiting for a reply.
 
 ### 7. Stripe Directory for machine payments (weeks)
 
