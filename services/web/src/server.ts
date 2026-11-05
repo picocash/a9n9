@@ -32,6 +32,8 @@ if (!INBOX_URL || !INBOX_SECRET || !INBOX_TOKEN) {
 const log = (m: string) => console.log(`${new Date().toISOString()} [web] ${m}`);
 /** Directory of static evidence pages served under /evidence/ (read-only mount); unset = none. */
 const STATIC = env.WEB_EVIDENCE_DIR ?? '';
+/** Directory of public identity documents served under /.well-known/ and /llms.txt (read-only mount); unset = none. */
+const WELLKNOWN = env.WEB_WELLKNOWN_DIR ?? '';
 /** Agent runtime heartbeat: reads the Hermes cron state (read-only mount). 503 when the scheduler ticker is older than 10 min or no job has completed in 3 h. */
 const HERMES_CRON = env.HERMES_CRON_DIR ?? '';
 async function heartbeat(): Promise<{ ok: boolean; tickerAgeSec: number | null; lastJobAgeSec: number | null; jobs: Array<{ name: string; lastRun: string | null; status: string | null }> }> {
@@ -177,6 +179,17 @@ const server = createServer(async (req, res) => {
     if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
     if (url.pathname === '/bot' && req.method === 'GET') return send(res, 200, botHtml, 'text/html; charset=utf-8');
     // AT Protocol handle verification: lets the agent use this hostname as its Bluesky handle.
+    // Public identity documents (A2A agent card, ERC-8004 registration, NIP-05, signature-agent card, llms.txt): plain files from a read-only mount.
+    if (WELLKNOWN && req.method === 'GET' && (url.pathname.startsWith('/.well-known/') || url.pathname === '/llms.txt')) {
+      const name = url.pathname === '/llms.txt' ? 'llms.txt' : url.pathname.slice('/.well-known/'.length);
+      if (/^[A-Za-z0-9._-]+$/.test(name)) {
+        try {
+          const body = await readFile(join(WELLKNOWN, name));
+          const type = name.endsWith('.json') ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8';
+          res.writeHead(200, { 'content-type': type, 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' }); return res.end(body);
+        } catch { /* fall through to 404 */ }
+      }
+    }
     if (url.pathname === '/.well-known/atproto-did' && req.method === 'GET' && env.AGENT_ATPROTO_DID) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300' }); return res.end(env.AGENT_ATPROTO_DID); }
     if (url.pathname === '/rules' && req.method === 'GET') return send(res, 200, renderRules(env.AGENT_PUBLIC_HOST ?? 'agent001.a9n9.net'), 'text/html; charset=utf-8');
     const dayFile = url.pathname.match(/^\/ledger\/(\d{4}-\d{2}-\d{2})\.(jsonl|digest)$/);
