@@ -14,6 +14,9 @@ const c = enforce('replies', policy.max_replies_per_day, text);
 import fs from 'node:fs'; import { HOME } from './_lib.mjs';
 const seenF = `${HOME}/state/replied.json`; const seen = fs.existsSync(seenF) ? JSON.parse(fs.readFileSync(seenF, 'utf8')) : {};
 if (seen[id]) { out({ ok: false, error: `already replied to ${id} at ${seen[id]}; one reply per thread` }); process.exit(4); }
+// Links through the X API cost $0.20 a post (13x a plain post) and earn nothing extra: the same link goes out free on Bluesky and Nostr.
+// Operator override only: --link-ok (never used by the agent).
+if (hasUrl(text) && !process.argv.includes('--link-ok')) { out({ ok: false, error: 'no links through the X API ($0.20 each): post the finding without the URL here, and put the link in the Bluesky or Nostr version, which is free' }); process.exit(2); }
 const r = await x('POST', '/tweets', { body: { text, reply: { in_reply_to_tweet_id: id } }, price: hasUrl(text) ? PRICE.postWithUrl : PRICE.post, label: 'reply' });
 if (r.status !== 201 || !r.body?.data?.id) { out({ ok: false, error: apiError(r), status: r.status }); process.exit(1); }
 c.bump(); seen[id] = new Date().toISOString(); fs.writeFileSync(seenF, JSON.stringify(seen));

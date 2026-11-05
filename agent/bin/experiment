@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+// experiment — change one thing on purpose, measure it, keep it only if the numbers improved.
+//   experiment start --metric <key> --days <2-7> --change '<what you will do differently>' '<hypothesis: why it should move the metric>'
+//   experiment list
+//   experiment close <id> keep|drop|inconclusive '<what you saw>'
+// Baseline = the metric over the same number of days before the start. Result = the metric from the start until now.
+// The tool refuses "keep" unless the result beats the baseline, and refuses closing before the window ends unless the verdict is drop.
+import fs from 'node:fs';
+import { out, HOME, paused, ledger } from './_lib.mjs';
+import { computeOutcomes, METRIC_HELP } from './_outcomes.mjs';
+const F = `${HOME}/state/experiments.json`; const MAX_OPEN = 2;
+const load = () => (fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : []);
+const save = (l) => fs.writeFileSync(F, JSON.stringify(l, null, 1));
+const flag = (a, f) => { const i = a.indexOf(f); if (i < 0) return undefined; const v = a[i + 1]; a.splice(i, 2); return v; };
+const usage = 'experiment start --metric <key> --days <2-7> --change \'<what you will do differently>\' \'<hypothesis>\' | experiment list | experiment close <id> keep|drop|inconclusive \'<what you saw>\'';
+const a = process.argv.slice(2); const cmd = a.shift();
+const needsX = (m) => /(^|\.)x(\.|$)/.test(m);
+const all = load();
+if (cmd === 'list' || !cmd) { out({ ok: true, open: all.filter((e) => !e.closedAt), closed: all.filter((e) => e.closedAt).slice(-10), usage }); process.exit(0); }
+if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
+if (cmd === 'start') {
+  const metric = flag(a, '--metric'); const days = Number(flag(a, '--days')); const change = (flag(a, '--change') ?? '').trim(); const hypothesis = a.join(' ').trim();
+  if (!metric || !/^[a-zA-Z.:_-]{3,60}$/.test(metric)) { out({ ok: false, error: `--metric is required. ${METRIC_HELP}`, usage }); process.exit(2); }
+  if (!(days >= 2 && days <= 7)) { out({ ok: false, error: '--days must be 2 to 7: long enough to see a change, short enough to learn this week.', usage }); process.exit(2); }
+  if (change.length < 15 || hypothesis.length < 15) { out({ ok: false, error: 'say concretely what you will do differently (--change) and why it should move the metric (the hypothesis).', usage }); process.exit(2); }
+  const open = all.filter((e) => !e.closedAt);
+  if (open.length >= MAX_OPEN) { out({ ok: false, error: `${open.length} experiments are already open; close one first (one change at a time is what makes a result readable).`, open }); process.exit(4); }
+  if (open.some((e) => e.metric === metric)) { out({ ok: false, error: `an open experiment already measures ${metric}; two changes on one metric cannot be told apart.` }); process.exit(4); }
+  const now = Date.now(); const base = await computeOutcomes({ since: new Date(now - days * 86_400_000).toISOString(), until: new Date(now).toISOString(), readX: needsX(metric) });
+  if (/^(xApiUsd|helpedNo)$/.test(metric)) { out({ ok: false, error: 'pick a metric where higher is better (engagement, people, replies, helpedYes, income); "keep" means the number went up.' }); process.exit(2); }
+  // A new play has no history: compare it with your overall average per item, which is what it has to beat.
+  let baselineFrom = metric;
+  if (!(metric in base.metrics) && /^engagementPerItem\.play\.[a-z][a-z0-9-]{1,29}$/.test(metric)) baselineFrom = 'engagementPerItem';
+  if (!(baselineFrom in base.metrics)) { out({ ok: false, error: `metric "${metric}" has no value in the last ${days} days. Pick one that exists now, or engagementPerItem.play.<name> for a new play (tag its items with --play <name>).`, available: Object.keys(base.metrics), help: METRIC_HELP }); process.exit(2); }
+  const e = { id: `exp-${new Date(now).toISOString().slice(0, 10)}-${Math.random().toString(36).slice(2, 6)}`, startedAt: new Date(now).toISOString(), endsAt: new Date(now + days * 86_400_000).toISOString(), days, metric, change, hypothesis, baseline: base.metrics[baselineFrom], baselineFrom };
+  save([...all, e]); const st = await ledger({ id: `agent:experiment:${e.id}:start`, type: 'agent.experiment', channel: 'agent', ...e, phase: 'start' });
+  out({ ok: true, started: e, ledgerStatus: st, next: `do the change for ${days} days, then: experiment close ${e.id} keep|drop|inconclusive '<what you saw>'` }); process.exit(0);
+}
+if (cmd === 'close') {
+  const id = a.shift(); const verdict = a.shift(); const saw = a.join(' ').trim();
+  const e = all.find((x) => x.id === id && !x.closedAt);
+  if (!e) { out({ ok: false, error: `no open experiment ${id}`, open: all.filter((x) => !x.closedAt).map((x) => x.id) }); process.exit(2); }
+  if (!['keep', 'drop', 'inconclusive'].includes(verdict) || saw.length < 15) { out({ ok: false, error: 'verdict must be keep, drop or inconclusive, followed by what you saw (one sentence with the numbers).', usage }); process.exit(2); }
+  if (Date.now() < Date.parse(e.endsAt) && verdict !== 'drop') { out({ ok: false, error: `the window ends at ${e.endsAt}; before then you may only drop it (if it is clearly hurting). Give it the full time otherwise.` }); process.exit(4); }
+  const r = await computeOutcomes({ since: e.startedAt, readX: needsX(e.metric) }); const result = r.metrics[e.metric] ?? 0;
+  if (verdict === 'keep' && !(result > e.baseline)) { out({ ok: false, error: `"keep" needs the result to beat the baseline: ${e.metric} was ${e.baseline} before and is ${result} now. Close it as drop or inconclusive.` }); process.exit(4); }
+  Object.assign(e, { closedAt: new Date().toISOString(), verdict, result, saw }); save(all);
+  const st = await ledger({ id: `agent:experiment:${e.id}:close`, type: 'agent.experiment', channel: 'agent', ...e, phase: 'close' });
+  out({ ok: true, closed: e, ledgerStatus: st, next: verdict === 'keep' ? 'make the change your default: record the lesson in memory and, if it is a procedure, in a skill' : 'record what you learned in memory, then start the next experiment' }); process.exit(0);
+}
+out({ ok: false, error: `unknown command ${cmd}`, usage }); process.exit(2);

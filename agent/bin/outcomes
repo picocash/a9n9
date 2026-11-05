@@ -1,0 +1,17 @@
+#!/usr/bin/env node
+// outcomes [--days 7] [--x] — what your posts and replies actually produced: replies from other people, quotes, reposts, likes, zaps,
+// "Did this help?" answers, people reached, money. Bluesky and Nostr are free to read; X costs $0.005 per post read, so add --x only once a day (daily review).
+// Each run appends a summary to state/outcomes.jsonl so the trend is kept.
+import fs from 'node:fs';
+import { out, HOME } from './_lib.mjs';
+import { computeOutcomes, METRIC_HELP } from './_outcomes.mjs';
+const a = process.argv.slice(2);
+if (a.includes('--help') || a.includes('-h')) { out({ ok: true, usage: 'outcomes [--days N] [--x]', metrics: METRIC_HELP }); process.exit(0); }
+const di = a.indexOf('--days'); const days = Math.min(30, Math.max(1, Number(di >= 0 ? a[di + 1] : 7) || 7));
+const since = new Date(Date.now() - days * 86_400_000).toISOString();
+const r = await computeOutcomes({ since, readX: a.includes('--x') });
+fs.appendFileSync(`${HOME}/state/outcomes.jsonl`, JSON.stringify({ at: new Date().toISOString(), days, readX: r.readX, metrics: r.metrics }) + '\n');
+const top = [...r.items].sort((p, q) => q.engagement - p.engagement);
+const show = (i) => ({ net: i.net, kind: i.kind, at: i.at.slice(0, 16), play: i.play, engagement: i.engagement, replies: i.repliesReceived ?? null, likes: i.likes ?? null, reposts: i.reposts ?? null, quotes: i.quotes ?? null, helped: i.helpedYes ?? 0, people: (i.people ?? []).length, text: i.text, url: i.url });
+out({ ok: true, days, readX: r.readX, metrics: r.metrics, best: top.slice(0, 5).map(show), worst: top.slice(-5).reverse().map(show), note: r.readX ? METRIC_HELP : `${METRIC_HELP} X items are counted but not measured without --x.`, errors: r.errors });
+process.exit(0);

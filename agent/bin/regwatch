@@ -1,0 +1,78 @@
+#!/usr/bin/env node
+// regwatch [--days N] [--all] — new official notices on stablecoins, payment stablecoins (GENIUS Act), crypto custody and
+// digital-asset market rules, from primary sources only: the Federal Register API (Treasury/OCC/FDIC/Fed/SEC/CFTC/FinCEN/NCUA)
+// and the OCC bulletins feed. Each new item is fetched once and recorded with status, bytes and SHA-256 so a digest can cite
+// "what changed, where, and the hash of what we read". State: state/regwatch.json (seen items). Prints JSON.
+// This is the input for the stablecoin rules feed (play 1). The agent writes the digest; it never invents an item that is not here.
+import fs from 'node:fs';
+import { createHash } from 'node:crypto';
+import { out, HOME } from './_lib.mjs';
+
+const argv = process.argv.slice(2);
+const days = Number(argv[argv.indexOf('--days') + 1]) || 7;
+const showAll = argv.includes('--all');
+const STATE = `${HOME}/state/regwatch.json`;
+const seen = fs.existsSync(STATE) ? JSON.parse(fs.readFileSync(STATE, 'utf8')) : { items: {} };
+
+const since = new Date(Date.now() - days * 86400e3).toISOString().slice(0, 10);
+const TERMS = ['stablecoin', '"payment stablecoin"', 'GENIUS Act', '"digital asset"', '"crypto asset"', '"virtual currency"'];
+const AGENCY_HINT = /treasury|comptroller|deposit insurance|federal reserve|securities and exchange|commodity futures|financial crimes|credit union/i;
+const TOPIC = /stablecoin|digital asset|crypto|virtual currency|tokeni|distributed ledger|payment system|money transmi|GENIUS/i;
+
+async function federalRegister() {
+  const found = new Map();
+  for (const term of TERMS) {
+    const u = new URL('https://www.federalregister.gov/api/v1/documents.json');
+    u.searchParams.set('conditions[term]', term);
+    u.searchParams.set('conditions[publication_date][gte]', since);
+    u.searchParams.set('order', 'newest'); u.searchParams.set('per_page', '40');
+    for (const f of ['document_number', 'title', 'type', 'publication_date', 'agencies', 'html_url', 'abstract', 'comments_close_on', 'effective_on']) u.searchParams.append('fields[]', f);
+    const r = await fetch(u, { signal: AbortSignal.timeout(20000) }); if (!r.ok) continue;
+    for (const d of (await r.json()).results ?? []) {
+      const agencies = (d.agencies ?? []).map((a) => a.name).filter(Boolean);
+      // keep rules and notices that are about the topic, not every document that mentions the word in a footnote
+      if (!TOPIC.test(`${d.title} ${d.abstract ?? ''}`) && !AGENCY_HINT.test(agencies.join(' '))) continue;
+      // The public page sits behind a bot wall ("Request Access"), so the hash is taken over the official full-text file, and the PDF link is kept as the citation of record.
+      const [y, mo, da] = String(d.publication_date).split('-');
+      found.set(`fr:${d.document_number}`, { id: `fr:${d.document_number}`, source: 'Federal Register', kind: d.type, date: d.publication_date, title: d.title, agencies, url: d.html_url, textUrl: `https://www.federalregister.gov/documents/full_text/text/${y}/${mo}/${da}/${d.document_number}.txt`, pdfUrl: `https://www.govinfo.gov/content/pkg/FR-${d.publication_date}/pdf/${d.document_number}.pdf`, abstract: (d.abstract ?? '').slice(0, 600), commentsCloseOn: d.comments_close_on ?? null, effectiveOn: d.effective_on ?? null });
+    }
+  }
+  return [...found.values()];
+}
+
+async function occBulletins() {
+  const r = await fetch('https://www.occ.gov/rss/occ_bulletins.xml', { headers: { 'user-agent': 'a9n9-agent001 (+https://agent001.a9n9.net)' }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) return [];
+  const xml = await r.text(); const items = [];
+  for (const m of xml.matchAll(/<item>([\s\S]*?)<\/item>/g)) {
+    const g = (t) => (m[1].match(new RegExp(`<${t}>([\\s\\S]*?)<\\/${t}>`)) ?? [])[1]?.replace(/<!\[CDATA\[|\]\]>/g, '').trim() ?? '';
+    const title = g('title'), link = g('link'), pub = g('pubDate');
+    const date = pub ? new Date(pub).toISOString().slice(0, 10) : null;
+    if (!date || date < since) continue;
+    if (!TOPIC.test(`${title} ${g('description')}`)) continue;
+    const id = `occ:${(link.match(/bulletin-(\d{4}-\d+)/) ?? [, link])[1]}`;
+    items.push({ id, source: 'OCC bulletin', kind: 'Bulletin', date, title, agencies: ['Comptroller of the Currency'], url: link.startsWith('http') ? link : `https://www.occ.gov${link}`, abstract: g('description').replace(/<[^>]+>/g, '').slice(0, 600) });
+  }
+  return items;
+}
+
+async function observe(url) {
+  try {
+    const r = await fetch(url, { headers: { 'user-agent': 'a9n9-agent001 (+https://agent001.a9n9.net)' }, redirect: 'follow', signal: AbortSignal.timeout(25000) });
+    const buf = Buffer.from(await r.arrayBuffer());
+    return { status: r.status, bytes: buf.length, sha256: createHash('sha256').update(buf).digest('hex'), fetchedAt: new Date().toISOString() };
+  } catch (e) { return { status: 0, error: e.message, fetchedAt: new Date().toISOString() }; }
+}
+
+const all = [...await federalRegister(), ...await occBulletins()].sort((a, b) => (b.date > a.date ? 1 : -1));
+const fresh = [];
+for (const it of all) {
+  if (seen.items[it.id]) continue;
+  it.observed = await observe(it.textUrl ?? it.url); it.observed.of = it.textUrl ?? it.url;
+  if (it.observed.status === 200 && it.observed.bytes < 2000) { const alt = await observe(it.pdfUrl ?? it.url); if (alt.status === 200) { it.observed = alt; it.observed.of = it.pdfUrl ?? it.url; } }
+  seen.items[it.id] = it; fresh.push(it);
+}
+fs.writeFileSync(STATE, JSON.stringify(seen, null, 1));
+const list = showAll ? all.map((a) => seen.items[a.id] ?? a) : fresh;
+out({ ok: true, since, newItems: fresh.length, totalInWindow: all.length, items: list, note: 'Cite only items listed here, with their url and sha256. A digest item is: what changed, who issued it, the date, comment or effective dates, and the link.' });
+process.exit(0);

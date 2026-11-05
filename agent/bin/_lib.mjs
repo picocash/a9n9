@@ -14,10 +14,22 @@ export function counter(kind) {
   if (c.day !== today()) { for (const k of Object.keys(c)) delete c[k]; c.day = today(); }
   return { get: () => c[kind] ?? 0, bump: () => { c[kind] = (c[kind] ?? 0) + 1; fs.writeFileSync(f, JSON.stringify(c)); } };
 }
+// Pacing: a day's budget is spread over the UTC day instead of being spent in the first hours (with 30-minute runs the
+// 4 Bluesky posts were all gone by 02:35Z, leaving nothing for the US daytime). `head` is how many may go at any time
+// of day (replies and DMs keep half for answering people); the rest unlock evenly: allowed = head + floor((max-head) * minuteOfDay / 1440).
+const PACE_HEAD = { bskyReplies: 5, replies: 5, nostrDm: 5 };
+export function paceAllowed(kind, max, minuteOfDay) { const head = Math.min(max, PACE_HEAD[kind] ?? 1); return Math.min(max, head + Math.floor((max - head) * minuteOfDay / 1440)); }
+export function paceNextSlot(kind, max, used) { const head = Math.min(max, PACE_HEAD[kind] ?? 1); if (used < head || max === head) return 0; return Math.ceil((used - head + 1) * 1440 / (max - head)); }
 export function enforce(kind, max, text) {
   if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
   const c = counter(kind);
   if (c.get() >= max) { out({ ok: false, error: `${kind} cap reached (${max}/day); try tomorrow` }); process.exit(4); }
+  const now = new Date(); const minute = now.getUTCHours() * 60 + now.getUTCMinutes();
+  if (c.get() >= paceAllowed(kind, max, minute)) {
+    const slot = paceNextSlot(kind, max, c.get()); const hh = String(Math.floor(slot / 60)).padStart(2, '0'), mm = String(slot % 60).padStart(2, '0');
+    out({ ok: false, error: `${kind} is paced: ${c.get()} of ${max} used by ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC; the day's budget is spread over 24 hours so people in other time zones see you too. The next slot opens at ${hh}:${mm} UTC (in ${slot - minute} min). Journal what you wanted to publish and post it in a later run; use the time on checks and reading.`, nextSlotUtc: `${hh}:${mm}` });
+    process.exit(4);
+  }
   if (text && text.length > policy.max_chars) { out({ ok: false, error: `text is ${text.length} chars; max ${policy.max_chars}` }); process.exit(4); }
   return c;
 }
@@ -65,6 +77,9 @@ export const CLAIM = /(?<!\bnot |\bnever |n't |\bun)\b(verified|confirmed|confir
 export const CHECK_MAX_AGE_MS = 12 * 3600_000;
 const checkFlagAt = process.argv.indexOf('--check');
 const checkFlag = checkFlagAt >= 2 ? process.argv.splice(checkFlagAt, 2)[1] : undefined;
+// --play <name>: which way of creating value this item tries (e.g. answer, digest, finding, tutorial). Recorded with the item so `outcomes` can compare plays.
+const playFlagAt = process.argv.indexOf('--play');
+const playFlag = playFlagAt >= 2 ? process.argv.splice(playFlagAt, 2)[1] : undefined;
 export function claimVerdict(text, checkId, checkLines, now = Date.now()) {
   const word = text.match(CLAIM)?.[1];
   if (!word) return { ok: true, fields: {} };
@@ -75,18 +90,42 @@ export function claimVerdict(text, checkId, checkLines, now = Date.now()) {
   if (now - Date.parse(rec.at) > CHECK_MAX_AGE_MS) return { ok: false, error: `check ${checkId} is older than 12 hours. ${how}` };
   return { ok: true, fields: { basedOnCheck: checkId, checkedUrl: rec.url } };
 }
+/** Share of the shorter text's content words (4+ letters, links and the feedback footer dropped) that also appear in the other. */
+const words = (t) => new Set(t.toLowerCase().replace(/https?:\/\/\S+/g, '').replace(/did this help\?.*/s, '').match(/[a-z0-9]{4,}/g) ?? []);
+export function overlap(a, b) { const A = words(a), B = words(b); let n = 0; for (const w of A) if (B.has(w)) n++; return n / Math.max(1, Math.min(A.size, B.size)); }
+export const REPEAT_MAX = 0.45, REPEAT_WINDOW_MS = 48 * 3600_000;
 export function claimGuard(text) {
   if (/^-{1,2}[a-z][\w-]*$/i.test(text.trim())) { out({ ok: false, error: `"${text.trim()}" looks like a flag, not a post: nothing was published. Run the tool with no arguments to see its usage.` }); process.exit(2); }
   let clearCorrection = () => {};
+  // Internal plumbing (tool names, flags, search parameters, file paths) means nothing to readers and leaks how the agent works.
+  const internal = text.match(/\.\/bin\/|\bbin\/[a-z]|\b(bsky-delete|bsky-follow|bsky-mentions|bsky-post|bsky-profile|bsky-reply|bsky-search|email-send|grok-usage|grok-xsearch|inbox-recent|ledger-log|nostr-delete|nostr-dm|nostr-post|nostr-reply|publish-record|reserves-brief|sign-test|x-delete|x-follow|x-mentions|x-post|x-reply|x-stats)\b|\bisQuestion\b|--(play|check|file)\b|\bstate\/[a-z-]+\.json/i);
+  if (internal) { out({ ok: false, error: `the text mentions your internal tooling ("${internal[0]}"). Readers cannot use it. Nothing was published. Say what you found or how a person could do it themselves, in plain words.` }); process.exit(2); }
+  // A backslash before a quote is shell escaping that leaked into the text; readers would see the backslash.
+  if (/\\["'`]/.test(text)) { out({ ok: false, error: 'the text contains a backslash before a quote (\\" or \\\'): shell escaping leaked into it and readers would see the backslash. Nothing was published. Write the text to a file and pass --file <path>, or use plain quotes inside single-quoted text.' }); process.exit(2); }
   // Receipt ids mean nothing to a reader; the flag records them on the post.
-  if (/\bagent:check:\d+/.test(text)) { out({ ok: false, error: 'remove the receipt id from the text: readers cannot use it. Pass it as --check <id> and it is recorded on the post.' }); process.exit(2); }
+  if (/\bagent:check:\d+|\bcheck\s*#?\s*(id\s*)?\d{10,}|\b\d{13}\b/i.test(text)) { out({ ok: false, error: 'remove the receipt id from the text: readers cannot use it. Pass it as --check <id> and it is recorded on the post.' }); process.exit(2); }
   // An operator-listed overstatement on this network blocks other posts there until a correction goes out.
   const cf = `${HOME}/state/corrections.json`; const net = process.argv[1].split('/').pop().split('-')[0];
   if (fs.existsSync(cf)) { const list = JSON.parse(fs.readFileSync(cf, 'utf8')); const open = list.find((c) => c.network === net); if (open) {
     if (!/^correction\b/i.test(text)) { out({ ok: false, error: `publish a correction first. Your post ${open.post ?? ''} said: "${open.said}". Problem: ${open.problem} Start the text with "Correction:" and say what you actually saw.` }); process.exit(4); }
+    // A correction belongs under the post it corrects, where that post's readers will see it: only a reply to that exact post counts.
+    if (open.post) { const rkey = open.post.split('/').pop(); const tool = process.argv[1].split('/').pop(); const target = process.argv[2] ?? '';
+      // The correction must not repeat what it corrects (operator lists the phrases in `forbid`).
+      const hit = (open.forbid ?? []).find((f) => new RegExp(f, 'i').test(text));
+      if (hit) { out({ ok: false, error: `the correction repeats the claim being corrected ("${hit}"). Drop it and say only what is true: ${open.problem}` }); process.exit(4); }
+      if (!tool.endsWith('-reply') || target.split('/').pop() !== rkey) { out({ ok: false, error: `a correction must be a reply to the post it corrects, so its readers see it: run ${net}-reply ${open.post} 'Correction: ...'` }); process.exit(4); } }
     // Clear only once the post is really out: every posting tool exits 0 on success and non-zero on any refusal or failure.
     clearCorrection = () => process.on('exit', (code) => { if (code === 0) fs.writeFileSync(cf, JSON.stringify(list.filter((c) => c !== open), null, 1)); });
   } }
+  // Repeat guard: refuse a post that makes the same point as one this agent published on this network in the last 48 hours. Corrections are exempt.
+  const pf = `${HOME}/state/published.jsonl`;
+  const published = fs.existsSync(pf) ? fs.readFileSync(pf, 'utf8').trim().split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
+  if (!/^correction\b/i.test(text)) { const prev = published.filter((p) => p.net === net && Date.now() - Date.parse(p.at) < REPEAT_WINDOW_MS).find((p) => overlap(text, p.text) >= REPEAT_MAX);
+    if (prev) { out({ ok: false, error: `this makes the same point as your ${net} post at ${prev.at}: "${prev.text.slice(0, 140)}". Saying it again adds nothing for readers. Write about something you have not covered in the last 48 hours: a new question someone asked, a new source, or a check of something else.` }); process.exit(4); } }
+  if (playFlag !== undefined && !/^[a-z][a-z0-9-]{1,29}$/.test(playFlag)) { out({ ok: false, error: `--play must be a short lowercase name like answer, digest or finding (got "${playFlag}"). Nothing was published.` }); process.exit(2); }
+  // A digest retells other people's work: it must link the original so the reader can find it and the author gets the credit.
+  if (playFlag === 'digest' && !/https?:\/\/\S+/.test(text)) { out({ ok: false, error: 'a digest must link the original (the post or page you are retelling) so readers can find it and its author gets credit. Nothing was published.' }); process.exit(2); }
+  process.on('exit', (code) => { if (code === 0) fs.appendFileSync(pf, JSON.stringify({ net, at: new Date().toISOString(), text, ...(playFlag ? { play: playFlag } : {}) }) + '\n'); });
   const f = `${HOME}/state/checks.jsonl`;
   const lines = fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim().split('\n') : [];
   const v = claimVerdict(text, checkFlag, lines);

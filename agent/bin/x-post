@@ -4,6 +4,9 @@ import { enforce, ledger, out, policy, textArg, suspicious, claimGuard, topicGua
 import { x, hasUrl, PRICE, apiError } from './_x.mjs';
 const { text } = textArg(process.argv.slice(2));
 if (!text) { out({ ok: false, error: "usage: x-post '<text>' | x-post --file <path>" }); process.exit(2); }
+// Links through the X API cost $0.20 a post (13x a plain post) and earn nothing extra: the same link goes out free on Bluesky and Nostr.
+// Operator override only: --link-ok (never used by the agent).
+if (hasUrl(text) && !process.argv.includes('--link-ok')) { out({ ok: false, error: 'no links through the X API ($0.20 each): post the finding without the URL here, and put the link in the Bluesky or Nostr version, which is free' }); process.exit(2); }
 const sus = suspicious(text); if (sus) { out({ ok: false, error: sus }); process.exit(2); }
 const claim = claimGuard(text);
 const topicDone = topicGuard(text, 'x');

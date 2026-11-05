@@ -2,12 +2,12 @@
 // grok-usage — where the week's included Grok budget stands and what that means for this run.
 // Reads grok.com's own usage endpoint through the agent's logged-in Chrome (no scraping), appends a snapshot
 // to state/grok-usage.jsonl, and prints a pace verdict. The pool resets weekly and unused budget is lost, so
-// both under-spending and over-spending are failures. Plan: ~12% a day, ~16% held in reserve for the last day.
+// both under-spending and over-spending are failures. Plan (operator, 2026-11-04): use the whole pool — ~14% a day, only 2% held back so the agent is never mute before the reset.
 import fs from 'node:fs';
 import { chrome, out, HOME } from './_lib.mjs';
 // The sandbox has no route to Chrome: a host cron runs --snapshot, everyone else reads the latest one.
 if (!process.argv.includes('--snapshot')) { try { const l = JSON.parse(fs.readFileSync(`${HOME}/state/grok-latest.json`, 'utf8')); const ageMin = Math.round((Date.now() - Date.parse(l.at)) / 60000); out({ ...l, snapshotAgeMin: ageMin }); process.exit(0); } catch { out({ ok: false, error: 'no usage snapshot yet' }); process.exit(1); } }
-const DAILY = 12, RESERVE = 100 - 7 * DAILY; // 12%/day → 84% by the reset, 16% reserve
+const DAILY = 14, RESERVE = 100 - 7 * DAILY; // 14%/day → 98% by the reset, 2% reserve
 const { ctx } = await chrome();
 let page = ctx.pages().find(p => p.url().startsWith('https://grok.com/'));
 const opened = !page; if (!page) { page = await ctx.newPage(); await page.goto('https://grok.com/dashboard', { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(2500); }
@@ -19,13 +19,13 @@ const start = Date.parse(w.periodStart), reset = Date.parse(w.resetsAt);
 const usedPct = +(100 * w.usedCents / w.budgetCents).toFixed(1);
 const weekFrac = Math.min(1, Math.max(0, (now - start) / (reset - start)));
 const dayOfWeek = Math.min(7, Math.floor(weekFrac * 7) + 1);           // 1..7
-const pacePct = +((100 - RESERVE) * weekFrac).toFixed(1);               // where a steady 12%/day would be right now
+const pacePct = +((100 - RESERVE) * weekFrac).toFixed(1);               // where a steady 14%/day would be right now
 const todayCapPct = +Math.max(0, DAILY * dayOfWeek - usedPct).toFixed(1); // what is left to spend before today's line
 const hoursToReset = +((reset - now) / 36e5).toFixed(1);
 let verdict, advice;
 if (usedPct >= 100 - RESERVE && hoursToReset > 24) { verdict = 'reserve'; advice = 'The reserve is all that is left. Essentials only until the reset: mentions, inbox, one reply if someone is waiting. No searches, no reviews longer than 3 lines.'; }
 else if (usedPct > pacePct + 4) { verdict = 'over'; advice = 'Over pace. This run: mentions, inbox, at most one search and one reply; keep the final message and the ledger entry short.'; }
-else if (usedPct < pacePct - 4) { verdict = 'under'; advice = `Under pace by ${(pacePct - usedPct).toFixed(1)} points: unused budget is lost at the reset. This run do more: 2–3 grok-xsearch queries on different angles of the beat, reply in 2 threads, read one source properly before replying, and write a fuller journal entry.`; }
+else if (usedPct < pacePct - 4) { verdict = 'under'; advice = `Under pace by ${(pacePct - usedPct).toFixed(1)} points: unused budget is lost at the reset. This run do more: 3–4 grok-xsearch queries on different angles (at least one outside your usual beat), read two sources properly and check their claims before replying, reply in 2 threads, prepare tomorrow's digest candidates, and write a fuller journal entry. Spending is the goal; posting caps still apply, so put the extra into research and checks, not extra posts.`; }
 else { verdict = 'on'; advice = 'On pace. Run the normal cycle.'; }
 // local view: runs today from Hermes' audit, so cost per run is known
 let runsToday = 0, tokensToday = 0; try { for (const l of fs.readFileSync('/home/ubuntu/.hermes/cron/usage_audit.jsonl', 'utf8').trim().split('\n')) { const j = JSON.parse(l); if (j.ts.slice(0, 10) === new Date().toISOString().slice(0, 10)) { runsToday++; tokensToday += j.total_tokens ?? 0; } } } catch {}

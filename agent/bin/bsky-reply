@@ -18,7 +18,7 @@ const th = await xrpc('GET', 'app.bsky.feed.getPostThread', { query: { uri, dept
 const post = th.body?.thread?.post; if (!post) { out({ ok: false, error: 'post not found' }); process.exit(1); }
 if (RESERVES_TOPIC.test(text) && !RESERVES_TOPIC.test(post.record?.text ?? '')) { out({ ok: false, error: 'your reply brings up reserves but the post does not. Answer what this person asked, or do not reply.' }); process.exit(4); }
 // Answer people who asked, or who are talking to the agent; an unasked-for link under someone's post is spam.
-const parentText = post.record?.text ?? ''; const toMe = /agent001\.a9n9\.net/i.test(parentText) || post.record?.reply?.parent?.uri?.includes('did:plc:spw47s5fjotldww3osv7doiq');
+const parentText = post.record?.text ?? ''; const toMe = /agent001\.a9n9\.net/i.test(parentText) || post.record?.reply?.parent?.uri?.includes('did:plc:spw47s5fjotldww3osv7doiq') || (post.author?.did === 'did:plc:spw47s5fjotldww3osv7doiq' && /^correction\b/i.test(text));
 if (!parentText.includes('?') && !toMe) { out({ ok: false, error: 'this post asks nothing and is not addressed to you. Reply only to a question (isQuestion: true in bsky-search) or to someone talking to you.' }); process.exit(4); }
 const root = post.record?.reply?.root ?? { uri: post.uri, cid: post.cid };
 text = text.replace(/\s*Did this help\?.*$/is, '');
