@@ -76,6 +76,8 @@ Form: https://www.humansecurity.com/ai-agent-verification/ (no CAPTCHA seen; sal
 - User Agent: `a9n9-agent001/1.0 (+https://agent001.a9n9.net/bot)`
 - Anything else: "Signs requests per RFC 9421 (Web Bot Auth); key directory also at /.well-known/http-message-signatures-directory; public ledger of every fetch at /ledger.json."
 
+**Status 2026-11-05:** form submitted (Arun). Waiting for a reply.
+
 ### 5. Fingerprint "Submit your bot" (1 to 2 weeks)
 
 https://dashboard.fingerprint.com/submit-bot (needs a Fingerprint account). Directory URL and User-Agent as above; `Signature-Agent` is sent as `"https://agent001.a9n9.net"`. Questions: bot-registration@fingerprint.com.
