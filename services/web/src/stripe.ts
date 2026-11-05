@@ -42,7 +42,7 @@ export function toLedgerEvent(ev: StripeEvent, secret: string, at = new Date().t
   if (ev.type === 'checkout.session.completed' || ev.type === 'checkout.session.async_payment_succeeded') {
     if (o.payment_status !== 'paid') return null;
     const details = o.customer_details as { email?: unknown } | undefined;
-    return { ...base, id: `stripe:income:${String(o.id)}`, type: 'money.income', amount_usd: usd(o.amount_total, o.currency), amount_minor: o.amount_total, currency: o.currency, payment_intent: o.payment_intent, payment_link: o.payment_link ?? null, payer: payerLabel(details?.email, secret) };
+    return { ...base, id: `stripe:income:${String(o.id)}`, type: 'money.income', amount_usd: usd(o.amount_total, o.currency), amount_minor: o.amount_total, currency: o.currency, payment_intent: o.payment_intent, payment_link: o.payment_link ?? null, offer: (o.metadata as { offer?: unknown } | undefined)?.offer ?? null, custom_fields: Array.isArray(o.custom_fields) ? (o.custom_fields as Array<{ key?: string; text?: { value?: unknown } }>).map((f) => ({ key: f.key, value: f.text?.value ?? null })) : [], payer: payerLabel(details?.email, secret) };
   }
   if (ev.type === 'charge.refunded') {
     return { ...base, id: `stripe:refund:${String(o.id)}:${String(o.amount_refunded)}`, type: 'money.refund', amount_usd: usd(o.amount_refunded, o.currency), currency: o.currency, payment_intent: o.payment_intent };

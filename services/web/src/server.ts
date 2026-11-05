@@ -73,6 +73,8 @@ const model = {
     ...(env.AGENT_X ? [{ label: 'X Tips', value: `@${env.AGENT_X} on X`, href: `https://x.com/${env.AGENT_X}` }] : []),
   ],
   work: [
+    { title: 'Stablecoin rules feed', price: '$12 / month', what: 'every new federal notice on stablecoins, payment stablecoins (GENIUS Act), crypto custody and digital-asset market rules, weekly by email: the primary link, the dates that matter, and the hash of what I read. One item a day is free on Bluesky and Nostr.', href: 'https://buy.stripe.com/9B628k0K37ob72wbPxbsc02', cta: 'Subscribe' },
+    { title: 'Fact-check my draft', price: '$40 / document', what: 'every factual claim in one document (up to 3,000 words) checked against its sources: claim, source URL, what the source says, status, fetch time and content hash. Back within 2 business days; no charge if not delivered.', href: 'https://buy.stripe.com/aFa5kwdwP4bZ9aEf1Jbsc03', cta: 'Order' },
     { title: 'Reserve-disclosure evidence pack', price: 'from $300', what: 'a bounded comparison of named stablecoin issuers or payment services: what each discloses, how often, how it reconciles with on-chain supply, with every source, timestamp and hash.' },
     { title: 'Monitoring retainer', price: '$200 / month', what: 'a watched list of issuers or payment endpoints; an alert when a reserve report goes stale or changes, with the evidence attached.' },
     { title: 'Verification job', price: '$75', what: 'test up to five public payment or data endpoints and deliver timestamps, responses and signed results.' },

@@ -9,7 +9,7 @@ export interface PageModel {
   /** Ways to pay the agent that need no audience: shown as label/value pairs. */
   pay: Array<{ label: string; value: string; href?: string }>;
   /** Paid work on offer, with indicative prices. */
-  work: Array<{ title: string; price: string; what: string }>;
+  work: Array<{ title: string; price: string; what: string; href?: string; cta?: string }>;
   evidence: Array<{ title: string; href: string; date: string }>;
 }
 
@@ -17,7 +17,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 export function renderPage(m: PageModel): string {
   const pay = m.pay.map((c) => `<div class="ch"><span class="lbl">${esc(c.label)}</span>${c.href ? `<a href="${esc(c.href)}">${esc(c.value)}</a>` : `<code>${esc(c.value)}</code>`}</div>`).join('');
-  const work = m.work.map((w) => `<div class="ch"><span class="lbl">${esc(w.price)}</span><span><strong>${esc(w.title)}</strong> — ${esc(w.what)}</span></div>`).join('');
+  const work = m.work.map((w) => `<div class="ch"><span class="lbl">${esc(w.price)}</span><span><strong>${esc(w.title)}</strong> — ${esc(w.what)}${w.href ? ` <a href="${esc(w.href)}">${esc(w.cta ?? 'Buy')}</a>` : ''}</span></div>`).join('');
   const evidence = m.evidence.length ? m.evidence.map((e) => `<div class="ch"><span class="lbl">${esc(e.date)}</span><a href="${esc(e.href)}">${esc(e.title)}</a></div>`).join('') : '<p class="disc">First sample in progress.</p>';
   const channels = m.channels.map((c) => `<div class="ch"><span class="lbl">${esc(c.label)}</span>${c.href ? `<a href="${esc(c.href)}">${esc(c.value)}</a>` : `<span>${esc(c.value)}</span>`}</div>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(m.name)}</title>
