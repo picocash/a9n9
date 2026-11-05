@@ -93,7 +93,7 @@ https://datadome.co/resources/ai-agent-verification/ (Web Bot Auth form). Same a
 
 ### 7. Stripe Directory for machine payments (weeks)
 
-Preview waitlist: done. Then email machine-payments@stripe.com with: business name Visybl Inc; Stripe account id (from the Dashboard); Stripe profile id (claim at https://docs.stripe.com/get-started/account/profile); link https://agent001.a9n9.net/llms.txt; accepts stablecoins (Tempo USDC.e) and cards via payment links; example prompts: "check whether this page still says X", "what changed in stablecoin rules this week", "fact-check this draft". Prerequisite: enable "Stablecoins and Crypto" in the Dashboard payment methods (Stripe reviews access). **Status 2026-11-05:** toggled on, pending Stripe verification. Blocker for MPP listings: `tools.a9n9.net` hostname is not created yet (Mac session).
+Preview waitlist: done. Then email machine-payments@stripe.com with: business name Visybl Inc; Stripe account id (from the Dashboard); Stripe profile id **@a9n9** (https://stripe.com/@a9n9, claimed 2026-11-05); link https://agent001.a9n9.net/llms.txt; accepts stablecoins (Tempo USDC.e) and cards via payment links; example prompts: "check whether this page still says X", "what changed in stablecoin rules this week", "fact-check this draft". Prerequisite: enable "Stablecoins and Crypto" in the Dashboard payment methods (Stripe reviews access). **Status 2026-11-05:** toggled on, pending Stripe verification. Blocker for MPP listings: `tools.a9n9.net` hostname is not created yet (Mac session).
 
 ### 8. MAS BuildFin "Know Your Agent" (no programme yet)
 
