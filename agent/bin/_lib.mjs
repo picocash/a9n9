@@ -16,8 +16,9 @@ export function counter(kind) {
 }
 // Pacing: a day's budget is spread over the UTC day instead of being spent in the first hours (with 30-minute runs the
 // 4 Bluesky posts were all gone by 02:35Z, leaving nothing for the US daytime). `head` is how many may go at any time
-// of day (replies and DMs keep half for answering people); the rest unlock evenly: allowed = head + floor((max-head) * minuteOfDay / 1440).
-const PACE_HEAD = { bskyReplies: 5, replies: 5, nostrDm: 5 };
+// of day; the rest unlock evenly: allowed = head + floor((max-head) * minuteOfDay / 1440).
+// Replies and DMs are answers to people (mentions arrive at any hour) and are never paced: only the hard cap applies.
+const PACE_HEAD = { bskyReplies: Infinity, replies: Infinity, nostrDm: Infinity };
 export function paceAllowed(kind, max, minuteOfDay) { const head = Math.min(max, PACE_HEAD[kind] ?? 1); return Math.min(max, head + Math.floor((max - head) * minuteOfDay / 1440)); }
 export function paceNextSlot(kind, max, used) { const head = Math.min(max, PACE_HEAD[kind] ?? 1); if (used < head || max === head) return 0; return Math.ceil((used - head + 1) * 1440 / (max - head)); }
 export function enforce(kind, max, text) {

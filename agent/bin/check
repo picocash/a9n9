@@ -5,8 +5,21 @@ import { createHash } from 'node:crypto';
 import { out, ledger, HOME } from './_lib.mjs';
 import { signedFetch } from './_sign.mjs';
 const argv = process.argv.slice(2); const finds = []; let url;
-for (let i = 0; i < argv.length; i++) { if (argv[i] === '--find') finds.push(argv[++i]); else url = argv[i]; }
+for (let i = 0; i < argv.length; i++) { if (argv[i] === '--find') finds.push(argv[++i]); else if (argv[i] !== '--again') url = argv[i]; }
 if (!/^https:\/\//.test(url ?? '')) { out({ ok: false, error: "usage: check <https url> [--find '<text>']" }); process.exit(2); }
+// Same-day cache: a receipt stays valid for --check for 12 h, and re-fetching the same page every run teaches nothing
+// (one day the agent checked the same two URLs ten runs in a row). Return the earlier receipt unless --again is given.
+const again = argv.includes('--again'); const CF = `${HOME}/state/checks.jsonl`;
+if (!again && fs.existsSync(CF)) {
+  const cutoff = Date.now() - 12 * 3600_000;
+  const prev = fs.readFileSync(CF, 'utf8').trim().split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } })
+    .filter((c) => c && c.url === url && Date.parse(c.at) > cutoff && finds.every((f) => f in (c.found ?? {}))).pop();
+  if (prev) {
+    const min = Math.round((Date.now() - Date.parse(prev.at)) / 60000);
+    out({ ok: true, cached: true, ...prev, rule: `You already checked this URL ${min} min ago; receipt ${prev.id} is still valid for --check and nothing has been learned since. Do not check it again this run (--again only if you have a reason to expect a change): spend the time on a different query, source or person.` });
+    process.exit(0);
+  }
+}
 try {
   const r = await signedFetch(url, { signal: AbortSignal.timeout(20000), redirect: 'follow' }); const body = await r.text();
   const at = new Date().toISOString(); const sha256 = createHash('sha256').update(body).digest('hex');
