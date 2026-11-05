@@ -46,6 +46,8 @@ No self-serve agent registration exists; it is a commercial onboarding through V
 2. Open https://developer.mastercard.com/mastercard-agent-pay/documentation/ and click "Request access". Use the same text as Visa's, replacing the programme names with "Agent Pay (agent registration and Agentic Tokens) and Agent Pay for Machines early access"; mention stablecoin settlement on Base and Tempo and that the agent is an x402/MPP seller.
 3. Record what the request form asks for; the fields are behind the login.
 
+**Status 2026-11-05:** account and project `a9n9` (id 6bf4950b-ed98-4c5a-9772-08c37f206982, OAuth 1.0a, sandbox credential not yet added) created; company verification in progress. The Agent Pay docs redirect to `/access-request` with one field, "Reason for access"; submitted 2026-11-05 with the text above. Waiting for a reply.
+
 ### 3. Cloudflare Verified Bots (BotBase) (days to weeks)
 
 **Submitted 2026-11-02** from the a9n9 Cloudflare account. Status: check Submission history in the dashboard, or run `~/a9n9/agent001/bin/sign-test` (Cloudflare's crawltest.com answers 401 until the bot is Accepted). If it comes back Rejected, resubmit with the answers below.
