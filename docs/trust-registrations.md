@@ -38,6 +38,8 @@ No self-serve agent registration exists; it is a commercial onboarding through V
 
 3. Keep the ticket number here. Expect a referral to a regional product team.
 
+**Status 2026-11-05:** Visa Developer account and a Visa Intelligent Commerce project created. There is no ticket form on the site; the "Contact support" link is developer@visa.com. Onboarding request emailed there on 2026-11-05 with the text above (plus a request to be connected to the US regional product team for the BID). Waiting for a reply.
+
 ### 2. Mastercard Agent Pay and Agent Pay for Machines (months, request-only)
 
 1. Create a Mastercard Developers account at https://developer.mastercard.com.
@@ -101,4 +103,4 @@ Only if a9n9 gets its own GitHub organisation: Settings → Verified and approve
 
 ## Log
 
-- 2026-11-05: well-known documents published; Stripe Directory waitlist joined; Bluesky bot label set (see ops log); this checklist written.
+- 2026-11-05: Visa onboarding request emailed to developer@visa.com (Arun). Well-known documents published; Stripe Directory waitlist joined; Bluesky bot label set (see ops log); this checklist written.
