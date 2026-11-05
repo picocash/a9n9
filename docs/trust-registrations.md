@@ -14,6 +14,7 @@ Decision (Arun, 2026-11-05): register with every established trust program whose
 | NIP-05 (`_@agent001.a9n9.net` and `agent001@agent001.a9n9.net`) | `/.well-known/nostr.json` | live; the Nostr profile already carries `bot: true` |
 | HUMAN's key path | `/.well-known/web-bot-public-key.json` (same JWKS) | live |
 | `llms.txt` | `/llms.txt` | live |
+| Advisory IP list (egress /32, hourly refresh) | `/.well-known/ip-ranges.json` | live |
 | Bluesky `bot` self-label on the profile | app.bsky.actor.profile | see ops log |
 | Stripe Directory preview waitlist | registered with agent001@a9n9.net | done 2026-11-05 |
 
@@ -82,9 +83,13 @@ Form: https://www.humansecurity.com/ai-agent-verification/ (no CAPTCHA seen; sal
 
 https://dashboard.fingerprint.com/submit-bot (needs a Fingerprint account). Directory URL and User-Agent as above; `Signature-Agent` is sent as `"https://agent001.a9n9.net"`. Questions: bot-registration@fingerprint.com.
 
+**Status 2026-11-05:** submitted for review from workspace `a9n9` (Arun). Reply comes from support@fingerprint.com.
+
 ### 6. DataDome verified bot (unstated)
 
-https://datadome.co/resources/ai-agent-verification/ (Web Bot Auth form). Same answers.
+https://datadome.co/resources/ai-agent-verification/ (Web Bot Auth form). Same answers, type "Autonomous Agent". The form requires an IP-ranges URL: `https://agent001.a9n9.net/.well-known/ip-ranges.json` (advisory, current egress /32; refreshed hourly by `scripts/ip-ranges-refresh.sh` from the host crontab).
+
+**Status 2026-11-05:** form pre-filled for Arun to submit.
 
 ### 7. Stripe Directory for machine payments (weeks)
 
