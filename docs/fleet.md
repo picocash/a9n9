@@ -211,6 +211,18 @@ The hub mixes Hermes's official skills with community registries (ClawHub, skill
   - `apple/*`.
 - **Not our work:** creative video and music, mlops, gaming, health.
 
+## Later: one router over the fleet (idea, 2026-11-05, not started)
+
+When ten or more agents run, Arun wants one place to send a command and get status, with each agent behind it. The candidate is DeepSeek Harness (`dsh`, MIT) **on top of** Hermes, not instead of it: one `dsh` router session in core, and one `dsh` worker per agent that talks to that agent's Hermes (over its API server or kanban board). Agents keep running exactly as now; the router only dispatches and reports.
+
+What the research found (2026-11-05, details in the session notes):
+
+- `dsh` itself is a developer preview with breaking changes promised, no security audit, plugins running in-process, and roughly ten times the per-step token overhead of a thin harness. Its strengths are the append-only session log (every model request reconstructable), process sandboxing, subagents with per-child model and a structured output schema, schedules and a webhook runtime. Chat ingress is GitHub and Feishu only.
+- The router/worker/watchdog design is `dsh-superagent-prototype`: a resident Router that evaluates and dispatches, one isolated Worker session per Ticket held in a worker slot, a scheduled Watchdog, and a Policy that admits work only when an allowed person asks or a written rule allows, and speaks only when a person must act. DeepSeek calls it research code.
+- Hermes already covers the same shape for one box: `hermes kanban` (durable board, decompose, swarm, dispatch daemon, per-task model, worker profiles in isolated workspaces) plus `delegate_task` model routes and the chat gateways.
+
+Decision for now: **no change to agent001.** Revisit when the fleet reaches about ten agents, and compare three options on the same test: (a) `dsh` router with one worker per Hermes agent; (b) a Hermes kanban board in core with each agent as a profile; (c) a small router of our own over the agents' ledgers and API servers. Whatever wins, keep two rules from the superagent design: a Policy that names who may ask and what rules admit work, and a log from which every model request can be rebuilt.
+
 ## Work this needs before the first new agent
 
 1. **Agent kit into git.** agent001's tools and guards live only in `~/a9n9/agent001/bin` today. Move them into this repo as a versioned kit that every agent installs, so a guard fixed once is fixed for all.
