@@ -21,12 +21,52 @@ export function counter(kind) {
 const PACE_HEAD = { bskyReplies: Infinity, replies: Infinity, nostrDm: Infinity };
 export function paceAllowed(kind, max, minuteOfDay) { const head = Math.min(max, PACE_HEAD[kind] ?? 1); return Math.min(max, head + Math.floor((max - head) * minuteOfDay / 1440)); }
 export function paceNextSlot(kind, max, used) { const head = Math.min(max, PACE_HEAD[kind] ?? 1); if (used < head || max === head) return 0; return Math.ceil((used - head + 1) * 1440 / (max - head)); }
+// Experiments hold a slot. While an open experiment names a play (metric engagementPerItem.play.<play>) and that play has not
+// been published today on this network, one of the day's posts is held back for it; a post tagged with that play also skips
+// pacing (it is at most one a day). Reason: 30-minute explore runs spent all 4 Bluesky posts before the daily digest and
+// factcheck experiments could run (daily review 2026-11-06).
+const NET_OF = { bsky: 'bsky', nostr: 'nostr', posts: 'x' };
+export function reservePlan({ kind, exps, published, now }) {
+  const net = NET_OF[kind]; if (!net || !Array.isArray(exps)) return { plays: [], pending: [], reserved: 0 };
+  const iso = now.toISOString(); const day = iso.slice(0, 10);
+  const doneToday = new Set(published.filter((r) => r && r.net === net && String(r.at).slice(0, 10) === day && r.play).map((r) => r.play));
+  const plays = [];
+  for (const e of exps) {
+    if (!e || (e.endsAt && e.endsAt < iso) || (e.startedAt && e.startedAt > iso)) continue;
+    const m = /^engagementPerItem\.play\.([a-z0-9-]+)$/.exec(e.metric ?? ''); if (!m) continue;
+    const text = String(e.change ?? ''); const nets = [];
+    if (/bluesky|bsky/i.test(text)) nets.push('bsky'); if (/nostr/i.test(text)) nets.push('nostr'); if (/\bX\b|twitter/.test(text)) nets.push('x');
+    if (!nets.length) nets.push('bsky');
+    if (nets.includes(net) && !plays.includes(m[1])) plays.push(m[1]);
+  }
+  const pending = plays.filter((p) => !doneToday.has(p));
+  return { plays, pending, reserved: pending.length };
+}
+export function experimentPlays(kind, now = new Date()) {
+  const rd = (f, fb) => { try { return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : fb; } catch { return fb; } };
+  const exps = rd(`${HOME}/state/experiments.json`, []);
+  const pf = `${HOME}/state/published.jsonl`;
+  const published = fs.existsSync(pf) ? fs.readFileSync(pf, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }) : [];
+  return reservePlan({ kind, exps, published, now });
+}
+// Tickets: a conversation nobody has touched for 3 days is closed as "no reply" by the tool itself (the daily review kept
+// asking the agent to close them and it never did); after 24 hours the listing says "note or close today".
+export const TICKET_NUDGE_H = 24, TICKET_STALE_H = 72;
+export function ticketStatus(t, now = new Date()) {
+  const idleHours = Math.round((now.getTime() - Date.parse(t.touched || t.opened)) / 36e5);
+  return { idleHours, stale: idleHours > TICKET_STALE_H, nudge: idleHours > TICKET_NUDGE_H };
+}
 export function enforce(kind, max, text) {
   if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
   const c = counter(kind);
   if (c.get() >= max) { out({ ok: false, error: `${kind} cap reached (${max}/day); try tomorrow` }); process.exit(4); }
   const now = new Date(); const minute = now.getUTCHours() * 60 + now.getUTCMinutes();
-  if (c.get() >= paceAllowed(kind, max, minute)) {
+  const ex = experimentPlays(kind, now); const isExperiment = playFlag !== undefined && ex.pending.includes(playFlag);
+  if (!isExperiment && ex.reserved && c.get() + ex.reserved >= max) {
+    out({ ok: false, error: `${kind}: ${c.get()} of ${max} used today and ${ex.reserved} slot(s) are held for the open experiment play(s) ${ex.pending.join(', ')}, not yet published on this network today. Publish those first (--play ${ex.pending[0]}), or journal this item for tomorrow.`, reservedFor: ex.pending });
+    process.exit(4);
+  }
+  if (!isExperiment && c.get() >= paceAllowed(kind, max, minute)) {
     const slot = paceNextSlot(kind, max, c.get()); const hh = String(Math.floor(slot / 60)).padStart(2, '0'), mm = String(slot % 60).padStart(2, '0');
     out({ ok: false, error: `${kind} is paced: ${c.get()} of ${max} used by ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC; the day's budget is spread over 24 hours so people in other time zones see you too. The next slot opens at ${hh}:${mm} UTC (in ${slot - minute} min). Journal what you wanted to publish and post it in a later run; use the time on checks and reading.`, nextSlotUtc: `${hh}:${mm}` });
     process.exit(4);

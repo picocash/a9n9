@@ -5,7 +5,7 @@
 //   tickets note <id> '<what happened / next action>'
 //   tickets close <id> '<outcome>'       (helped, no reply, declined, handed to operator)
 import fs from 'node:fs';
-import { out, HOME, ledger } from './_lib.mjs';
+import { out, HOME, ledger, ticketStatus } from './_lib.mjs';
 const F = `${HOME}/state/tickets.json`;
 const read = () => fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { seq: 0, tickets: [] };
 const save = (d) => fs.writeFileSync(F, JSON.stringify(d, null, 1));
@@ -26,6 +26,13 @@ if (cmd === 'open') {
   t.notes.push({ at: now, text }); t.touched = now; if (cmd === 'close') { t.status = 'closed'; t.outcome = text; t.closed = now; }
   save(d); out({ ok: true, ticket: t });
 } else {
-  const open = d.tickets.filter((t) => t.status === 'open');
-  out({ ok: true, open, closedCount: d.tickets.length - open.length, rule: 'Every person who wrote gets a ticket; answer within the hour; a second message from the same person goes to the same ticket; close with an outcome.' });
+  const autoClosed = [];
+  for (const t of d.tickets) {
+    if (t.status !== 'open') continue;
+    const st = ticketStatus(t);
+    if (st.stale) { const text = `auto-closed by the tickets tool: no exchange for ${Math.floor(st.idleHours / 24)} days`; t.notes.push({ at: now, text }); t.touched = now; t.status = 'closed'; t.outcome = 'no reply'; t.closed = now; t.autoClosed = true; autoClosed.push(t.id); }
+  }
+  if (autoClosed.length) { save(d); for (const id of autoClosed) await ledger({ id: `agent:ticket:${id}:autoclose:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'ticket.autoclose', ticket: id, at: now }).catch(() => {}); }
+  const open = d.tickets.filter((t) => t.status === 'open').map((t) => { const st = ticketStatus(t); return { ...t, idleHours: st.idleHours, ...(st.nudge ? { action: 'stale: note or close today (closed automatically after 3 days)' } : {}) }; });
+  out({ ok: true, open, autoClosed, closedCount: d.tickets.length - open.length, rule: 'Every person who wrote gets a ticket; answer within the hour; a second message from the same person goes to the same ticket; close with an outcome. Idle 24 h: note or close; idle 72 h: closed by the tool as no reply.' });
 }
