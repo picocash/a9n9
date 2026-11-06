@@ -68,7 +68,7 @@ export function enforce(kind, max, text) {
   }
   if (!isExperiment && c.get() >= paceAllowed(kind, max, minute)) {
     const slot = paceNextSlot(kind, max, c.get()); const hh = String(Math.floor(slot / 60)).padStart(2, '0'), mm = String(slot % 60).padStart(2, '0');
-    out({ ok: false, error: `${kind} is paced: ${c.get()} of ${max} used by ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC; the day's budget is spread over 24 hours so people in other time zones see you too. The next slot opens at ${hh}:${mm} UTC (in ${slot - minute} min). Journal what you wanted to publish and post it in a later run; use the time on checks and reading.`, nextSlotUtc: `${hh}:${mm}` });
+    out({ ok: false, error: `${kind} is paced: ${c.get()} of ${max} used by ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC; the day's budget is spread over 24 hours so people in other time zones see you too. The next slot opens at ${hh}:${mm} UTC (in ${slot - minute} min). Journal what you wanted to publish and post it in a later run; use the time on checks and reading.${ex.pending.length ? ` A post for the open experiment play(s) ${ex.pending.join(', ')} (--play ${ex.pending[0]}) is not paced and can go now.` : ''}`, nextSlotUtc: `${hh}:${mm}`, ...(ex.pending.length ? { unpacedPlays: ex.pending } : {}) });
     process.exit(4);
   }
   if (text && text.length > policy.max_chars) { out({ ok: false, error: `text is ${text.length} chars; max ${policy.max_chars}` }); process.exit(4); }
