@@ -20,11 +20,13 @@ Decision (Arun, 2026-11-05): register with every established trust program whose
 
 Files live in `~/a9n9/agent001/public/well-known/` (mounted read-only into the web container; `WEB_WELLKNOWN_DIR`).
 
-## ERC-8004: Base done, Tempo waits for funding
+## ERC-8004: registered on Base and Tempo
 
 **Base (2026-11-06, done).** Arun funded the agent wallet with $2 of ETH and $2 of USDC on Base; `register(string)` on `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` succeeded in tx `0x387056fa644e2d6ee7f1ce6d2540158a382104c3a1f8d19eed293f472a445d52` (block 53990026, 178k gas, under a cent). **agentId 1167546**, owner `0xbC907d1E4DaaEe23eb56dA405F9E24843d30f832`, tokenURI = the registration file. The file now carries `registrations: [{agentId: 1167546, agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"}]` and `x402Support: true` (the tools service sells over x402 since the same day, see `docs/x402-seller.md`). Explorer: https://erc-8004.quicknode.com (search the id or the owner).
 
-**Tempo (open).** Same contract on Tempo mainnet (chain 4217); `eth_call` of `register` from the agent address succeeds (would be id 668 at the time of the check), but a real send needs a fee token on Tempo. Arun still to send about $2 of USDC.e or pathUSD to the agent address on Tempo; then `cast send … --rpc-url https://rpc.tempo.xyz`, append `{agentId, agentRegistry: "eip155:4217:0x8004…"}` to `registrations`.
+**Tempo (2026-11-06, done).** No separate funding was needed: the agent wallet bridged 1.50 USDC on Base to pathUSD on Tempo through Across (exact approval tx `0x26d29d6f…`, deposit tx `0x54bcbba6…` to the Base SpokePool `0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64`; fee $0.0013; 1.498706 pathUSD arrived at the same address on Tempo in about ten seconds). Then `register(string)` on Tempo mainnet (chain 4217): tx `0x0843e8f60073c10bfb3849971e258b5bfda3f3a61596058d9bced4a850648074`, block 47747568, 1.81M gas paid in pathUSD (about 0.001). **agentId 668**, owner the agent wallet, tokenURI = the registration file. The file carries both entries. Explorer: https://explore.tempo.xyz/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432.
+
+**Bridging note.** Across quotes USDC (Base) → pathUSD (Tempo) at about a tenth of a cent for $1.50 (minimum 0.50 USDC) and delivers in seconds; Relay charged about $0.024 for the same. The Across API (`GET app.across.to/api/swap/approval?…`) returns the approval and deposit calldata; use an exact approval instead of the unlimited one it suggests. Status: `GET app.across.to/api/deposit/status?originChainId=8453&depositTxHash=…`.
 
 ### Original plan (kept for the Tempo step)
 
