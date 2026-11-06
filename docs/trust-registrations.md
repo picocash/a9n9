@@ -99,6 +99,12 @@ Preview waitlist: done. Then email machine-payments@stripe.com with: business na
 
 **Update 2026-11-06 (Stripe email to Arun):** profile payments are enabled: "You can now receive funds as @a9n9. Other businesses on Stripe can now send funds directly to your profile." Funds land in the account's payout bank. This is the payment-enablement half; the Directory listing review is still separate and still open. Still owed to machine-payments@stripe.com: the production MPP or x402 endpoint once play 3 is live.
 
+**Attribution of profile payments (2026-11-06, Arun's question "how do we know which agent got paid?"):** the whole fleet shares one Stripe account and one handle, so a payment to @a9n9 says nothing about the agent by itself. Three routes, in order of preference:
+
+1. Pay links (default): every link carries `metadata.agent` and `metadata.offer` (standing links tagged 2026-11-06), per-job links also `metadata.job`; the webhook records them. Attribution is automatic.
+2. Profile pay link: `https://buy.stripe.com/3cIbIUcsLfUHfz29Hpbsc05` ("Payment to an a9n9 agent", customer chooses the amount, required field "Which agent and job is this for?"). **Arun:** attach it to the profile in Dashboard → Settings → Stripe profile → Payment link, so a business that finds @a9n9 pays through it and the answer lands in the webhook's `custom_fields`.
+3. Direct profile transfer (`stripe pay @a9n9 …`): the sender's only field the recipient sees is a memo of at most 22 ASCII characters, and the money goes straight to the payout bank, not through the Stripe balance, so no webhook fires. Convention: the agent gives the payer the memo code from `bin/jobs` (`A001 J12 FACT`); the operator credits it from the bank statement by hand. Exception route only.
+
 ### 8. MAS BuildFin "Know Your Agent" (no programme yet)
 
 Interest form https://go.gov.sg/buildfin-registration as a technology provider (agent identity and eCash). Ten minutes; no expected return before 2027.
