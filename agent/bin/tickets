@@ -2,7 +2,7 @@
 // tickets — open conversations with people, so a thread continues across runs instead of restarting.
 //   tickets                              list open tickets
 //   tickets open <person> <channel> '<what they want>' [--ref <inbox event id or post url>]
-//   tickets note <id> '<what happened / next action>'
+//   tickets note <id> '<what happened / next action>' [--ref <post url or inbox id>]   (--ref = a real message to or from the person; resets the idle clock)
 //   tickets close <id> '<outcome>'       (helped, no reply, declined, handed to operator)
 import fs from 'node:fs';
 import { out, HOME, ledger, ticketStatus } from './_lib.mjs';
@@ -17,13 +17,15 @@ if (cmd === 'open') {
   if (!person || !channel || !want) { out({ ok: false, error: "usage: tickets open <person> <channel> '<what they want>' [--ref <id>]" }); process.exit(2); }
   const dup = d.tickets.find((t) => t.status === 'open' && t.person === person && t.channel === channel);
   if (dup) { out({ ok: true, existing: dup }); process.exit(0); }
-  const t = { id: `t${++d.seq}`, person, channel, want, ref, opened: now, status: 'open', touched: now, notes: [] }; d.tickets.push(t); save(d);
+  const t = { id: `t${++d.seq}`, person, channel, want, ref, opened: now, exchanged: now, status: 'open', touched: now, notes: [] }; d.tickets.push(t); save(d);
   await ledger({ id: `agent:ticket:${t.id}:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'ticket.open', ticket: t.id, channelUsed: channel, at: now });
   out({ ok: true, ticket: t });
 } else if (cmd === 'note' || cmd === 'close') {
-  const [id, ...w] = argv.slice(1); const text = w.join(' ').trim(); const t = d.tickets.find((x) => x.id === id);
-  if (!t || !text) { out({ ok: false, error: `usage: tickets ${cmd} <id> '<text>'` }); process.exit(2); }
-  t.notes.push({ at: now, text }); t.touched = now; if (cmd === 'close') { t.status = 'closed'; t.outcome = text; t.closed = now; }
+  const ri = argv.indexOf('--ref'); const ref = ri >= 0 ? argv[ri + 1] : null;
+  const [id, ...w] = argv.slice(1).filter((a, i) => ri < 0 || (i + 1 !== ri && i + 1 !== ri + 1)); const text = w.join(' ').trim(); const t = d.tickets.find((x) => x.id === id);
+  if (!t || !text) { out({ ok: false, error: `usage: tickets ${cmd} <id> '<text>' [--ref <post url or inbox id>]` }); process.exit(2); }
+  t.notes.push({ at: now, text, ...(ref ? { ref } : {}) }); t.touched = now; if (ref) t.exchanged = now;
+  if (cmd === 'close') { t.status = 'closed'; t.outcome = text; t.closed = now; }
   save(d); out({ ok: true, ticket: t });
 } else {
   const autoClosed = [];
@@ -33,6 +35,6 @@ if (cmd === 'open') {
     if (st.stale) { const text = `auto-closed by the tickets tool: no exchange for ${Math.floor(st.idleHours / 24)} days`; t.notes.push({ at: now, text }); t.touched = now; t.status = 'closed'; t.outcome = 'no reply'; t.closed = now; t.autoClosed = true; autoClosed.push(t.id); }
   }
   if (autoClosed.length) { save(d); for (const id of autoClosed) await ledger({ id: `agent:ticket:${id}:autoclose:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'ticket.autoclose', ticket: id, at: now }).catch(() => {}); }
-  const open = d.tickets.filter((t) => t.status === 'open').map((t) => { const st = ticketStatus(t); return { ...t, idleHours: st.idleHours, ...(st.nudge ? { action: 'stale: note or close today (closed automatically after 3 days)' } : {}) }; });
-  out({ ok: true, open, autoClosed, closedCount: d.tickets.length - open.length, rule: 'Every person who wrote gets a ticket; answer within the hour; a second message from the same person goes to the same ticket; close with an outcome. Idle 24 h: note or close; idle 72 h: closed by the tool as no reply.' });
+  const open = d.tickets.filter((t) => t.status === 'open').map((t) => { const st = ticketStatus(t); return { ...t, idleHours: st.idleHours, ...(st.nudge ? { action: `no exchange for ${st.idleHours} h: write to the person (tickets note ${t.id} '<text>' --ref <post url or inbox id>) or close it today; a note without --ref does not reset the clock (closed by the tool after 3 days without an exchange)` } : {}) }; });
+  out({ ok: true, open, autoClosed, closedCount: d.tickets.length - open.length, rule: 'Every person who wrote gets a ticket; answer within the hour; a second message from the same person goes to the same ticket; close with an outcome. No exchange for 24 h: write to the person (note --ref) or close; 72 h: closed by the tool as no reply. Notes without --ref do not reset the clock.' });
 }

@@ -28,6 +28,7 @@ let st = ticketStatus({ opened: '2026-11-02T19:00:00Z', touched: '2026-11-02T19:
 assert.ok(st.stale && st.nudge);
 st = ticketStatus({ opened: '2026-11-05T06:00:00Z' }, now);
 assert.ok(!st.stale && st.nudge);
-st = ticketStatus({ opened: '2026-11-06T06:00:00Z', touched: '2026-11-06T11:00:00Z' }, now);
+st = ticketStatus({ opened: '2026-11-06T06:00:00Z', exchanged: '2026-11-06T11:00:00Z' }, now);
+assert.equal(ticketStatus({ opened: '2026-11-02T19:00:00Z', touched: '2026-11-06T11:00:00Z' }, now).stale, true, 'a self-note (touched) must not reset the idle clock');
 assert.ok(!st.stale && !st.nudge);
 console.log('guards ok');

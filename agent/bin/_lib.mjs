@@ -53,8 +53,10 @@ export function experimentPlays(kind, now = new Date()) {
 // Tickets: a conversation nobody has touched for 3 days is closed as "no reply" by the tool itself (the daily review kept
 // asking the agent to close them and it never did); after 24 hours the listing says "note or close today".
 export const TICKET_NUDGE_H = 24, TICKET_STALE_H = 72;
+// Idle time counts from the last exchange with the person (ticket opened, or a note carrying --ref for a message sent or
+// received), never from the agent's own notes: a "will close in 24 h" note must not reset the clock.
 export function ticketStatus(t, now = new Date()) {
-  const idleHours = Math.round((now.getTime() - Date.parse(t.touched || t.opened)) / 36e5);
+  const idleHours = Math.round((now.getTime() - Date.parse(t.exchanged || t.opened)) / 36e5);
   return { idleHours, stale: idleHours > TICKET_STALE_H, nudge: idleHours > TICKET_NUDGE_H };
 }
 export function enforce(kind, max, text) {
