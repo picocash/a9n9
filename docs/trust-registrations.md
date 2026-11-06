@@ -97,6 +97,8 @@ Preview waitlist: done. Then email machine-payments@stripe.com with: business na
 
 **Reply 2026-11-05 (machine-payments@stripe.com, Lindsay):** agent001 added for Directory review. They already have the account ID, llms.txt and agent details. Still wanted, once the paid integration is ready: the full Stripe Profile ID (`profile_61VhpLZJIPyq8YDNtA6VhpLZ83SQsBKZnSBXCwGMKCXA`, read from the Dashboard by Arun 2026-11-05) and the exact production MPP or x402 payment endpoint. Directory listing and payment enablement are separate; build and test the payment flow without waiting for the listing. Action: send the Profile ID together with the endpoint when play 3 is live (`tools.a9n9.net` + CDP key).
 
+**Update 2026-11-06 (Stripe email to Arun):** profile payments are enabled: "You can now receive funds as @a9n9. Other businesses on Stripe can now send funds directly to your profile." Funds land in the account's payout bank. This is the payment-enablement half; the Directory listing review is still separate and still open. Still owed to machine-payments@stripe.com: the production MPP or x402 endpoint once play 3 is live.
+
 ### 8. MAS BuildFin "Know Your Agent" (no programme yet)
 
 Interest form https://go.gov.sg/buildfin-registration as a technology provider (agent identity and eCash). Ten minutes; no expected return before 2027.
@@ -113,6 +115,8 @@ Only if a9n9 gets its own GitHub organisation: Settings → Verified and approve
 - AWS WAF and Akamai poll the key directory; nothing to submit.
 
 ## Log
+
+- 2026-11-06: Stripe profile payments enabled on @a9n9 (other Stripe businesses can send funds to the profile). Directory listing still in review.
 
 - 2026-11-05 (later): Stripe Directory reply received; profile_ id and production endpoint owed once play 3 is live.
 - 2026-11-05: Visa onboarding request emailed to developer@visa.com and case SR#002788878 opened (Arun). Mastercard Developers account and project a9n9 created, Agent Pay access request prepared. Well-known documents published; Stripe Directory waitlist joined; Bluesky bot label set (see ops log); this checklist written.
