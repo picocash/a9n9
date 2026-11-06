@@ -23,6 +23,9 @@ const d = read();
 const say = (job) => job.terms === 'invoice-after'
   ? `I will ${OFFERS[job.offer].work} first and send you the result. An invoice for $${OFFERS[job.offer].usd} follows, due in 7 days; if it was not worth it, say so and do not pay.`
   : `${OFFERS[job.offer].name} is $${OFFERS[job.offer].usd}, paid first by card: ${OFFERS[job.offer].link}. Delivery within two business days.`;
+// Memo for a payer who sends funds to the Stripe profile @a9n9 instead (stripe pay): 22 ASCII characters at most, so the
+// operator can credit the right agent and job from the bank statement. The pay link is still the default: it carries metadata.
+const memo = (j) => `A001 ${j.id.toUpperCase()} ${j.offer.replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase()}`.slice(0, 22);
 const next = (j) => ({
   open: `do the work, then: jobs deliver ${j.id} --ref <email id or post url>`,
   delivered: j.terms === 'invoice-after' ? 'waiting for the invoice link (the host creates it within 10 minutes); check jobs again next run' : `when runway shows the payment: jobs paid ${j.id} --ref <money.income id>`,
@@ -40,7 +43,7 @@ if (cmd === 'open') {
   const job = { id: `j${++d.seq}`, person, channel, offer, want, ref, terms: t.terms, termsReason: t.reason, opened: now, status: 'open' };
   d.jobs.push(job); save(d);
   await ledger({ id: `agent:job:${job.id}:open:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'job.open', job: job.id, offer, terms: t.terms, at: now }).catch(() => {});
-  out({ ok: true, job, say: say(job), next: next(job), workFirstLeft: t.left });
+  out({ ok: true, job, say: say(job), next: next(job), workFirstLeft: t.left, profilePayMemo: memo(job), profilePayNote: 'only if a Stripe business asks to pay the @a9n9 profile directly: they must put this memo on the transfer' });
 } else if (['deliver', 'sent', 'paid', 'close'].includes(cmd)) {
   const id = argv[1]; const job = d.jobs.find((j) => j.id === id); const ref = flag('--ref');
   if (!job) { out({ ok: false, error: `no job ${id}` }); process.exit(2); }
@@ -64,6 +67,6 @@ if (cmd === 'open') {
 } else {
   const all = argv.includes('--all');
   const paid = d.jobs.filter((j) => j.status === 'paid').length;
-  const list = d.jobs.filter((j) => all || !['paid', 'unpaid', 'closed'].includes(j.status)).map((j) => ({ ...j, next: next(j) }));
+  const list = d.jobs.filter((j) => all || !['paid', 'unpaid', 'closed'].includes(j.status)).map((j) => ({ ...j, next: next(j), profilePayMemo: memo(j) }));
   out({ ok: true, jobs: list, paidJobs: paid, workFirstLeft: Math.max(0, WORK_FIRST_PAID - paid), rule: `Every piece of paid work is a job: open it when a person asks, deliver with a reference, and let the tool state the terms. Until ${WORK_FIRST_PAID} jobs are paid the work goes first and the invoice follows (one per person); after that, card first.` });
 }
