@@ -26,6 +26,7 @@ export function paceNextSlot(kind, max, used) { const head = Math.min(max, PACE_
 // pacing (it is at most one a day). Reason: 30-minute explore runs spent all 4 Bluesky posts before the daily digest and
 // factcheck experiments could run (daily review 2026-11-06).
 const NET_OF = { bsky: 'bsky', nostr: 'nostr', posts: 'x' };
+const TOOL_OF = { bsky: 'bsky-post', nostr: 'nostr-post', posts: 'x-post' };
 export function reservePlan({ kind, exps, published, now }) {
   const net = NET_OF[kind]; if (!net || !Array.isArray(exps)) return { plays: [], pending: [], reserved: 0 };
   const iso = now.toISOString(); const day = iso.slice(0, 10);
@@ -68,7 +69,7 @@ export function enforce(kind, max, text) {
   }
   if (!isExperiment && c.get() >= paceAllowed(kind, max, minute)) {
     const slot = paceNextSlot(kind, max, c.get()); const hh = String(Math.floor(slot / 60)).padStart(2, '0'), mm = String(slot % 60).padStart(2, '0');
-    out({ ok: false, error: `${kind} is paced: ${c.get()} of ${max} used by ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC; the day's budget is spread over 24 hours so people in other time zones see you too. The next slot opens at ${hh}:${mm} UTC (in ${slot - minute} min). Journal what you wanted to publish and post it in a later run; use the time on checks and reading.${ex.pending.length ? ` A post for the open experiment play(s) ${ex.pending.join(', ')} (--play ${ex.pending[0]}) is not paced and can go now.` : ''}`, nextSlotUtc: `${hh}:${mm}`, ...(ex.pending.length ? { unpacedPlays: ex.pending } : {}) });
+    out({ ok: false, error: `${kind} is paced: ${c.get()} of ${max} used by ${String(now.getUTCHours()).padStart(2, '0')}:${String(now.getUTCMinutes()).padStart(2, '0')} UTC; the day's budget is spread over 24 hours so people in other time zones see you too. The next slot opens at ${hh}:${mm} UTC (in ${slot - minute} min). Journal what you wanted to publish and post it in a later run; use the time on checks and reading.${ex.pending.length ? ` Exception: the open experiment play(s) ${ex.pending.join(', ')} are still owed on ${NET_OF[kind]} today and are not paced here. Run bin/${TOOL_OF[kind]} --play ${ex.pending[0]} '<text>' now, on this network, not another one.` : ''}`, nextSlotUtc: `${hh}:${mm}`, ...(ex.pending.length ? { unpacedPlays: ex.pending } : {}) });
     process.exit(4);
   }
   if (text && text.length > policy.max_chars) { out({ ok: false, error: `text is ${text.length} chars; max ${policy.max_chars}` }); process.exit(4); }
