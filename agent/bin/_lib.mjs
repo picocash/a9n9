@@ -50,6 +50,18 @@ export function experimentPlays(kind, now = new Date()) {
   const published = fs.existsSync(pf) ? fs.readFileSync(pf, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }) : [];
   return reservePlan({ kind, exps, published, now });
 }
+// Work first, then invoice (Arun, 2026-11-06): until the agent has WORK_FIRST_PAID paid jobs on record, a job is delivered
+// before any payment and a Stripe invoice (net 7) follows, one such job per person and channel; after that, card first.
+// The tool decides the terms; the agent only repeats them. The operator's host script creates the invoice.
+export const WORK_FIRST_PAID = 10;
+export function jobTerms({ jobs, person, channel }) {
+  const paid = jobs.filter((j) => j.status === 'paid').length;
+  const left = Math.max(0, WORK_FIRST_PAID - paid);
+  if (!left) return { terms: 'pay-first', paid, left, reason: `${paid} paid jobs on record: card first` };
+  const prior = jobs.find((j) => j.terms === 'invoice-after' && j.person === person && j.channel === channel);
+  if (prior) return { terms: 'pay-first', paid, left, reason: `${person} already had a work-first job (${prior.id}, ${prior.status}): card first` };
+  return { terms: 'invoice-after', paid, left, reason: `${paid} of ${WORK_FIRST_PAID} paid jobs so far: deliver first, the invoice follows` };
+}
 // Tickets: a conversation nobody has touched for 3 days is closed as "no reply" by the tool itself (the daily review kept
 // asking the agent to close them and it never did); after 24 hours the listing says "note or close today".
 export const TICKET_NUDGE_H = 24, TICKET_STALE_H = 72;

@@ -1,0 +1,69 @@
+#!/usr/bin/env node
+// jobs — paid work for one person, with the terms decided by this tool, never by you.
+//   jobs [--all]                                  jobs that are not finished, each with its next action
+//   jobs open <person> <channel> '<what>' [--offer fact-check] [--ref <inbox id or post url>]
+//   jobs deliver <id> --ref <email id or post url>   the result went to the person
+//   jobs sent <id>                                you sent the invoice link to the person
+//   jobs paid <id> --ref <money.income ledger id>  a pay-first job's payment is in the ledger (runway shows it)
+//   jobs close <id> '<outcome>'                   declined, withdrawn, handed to operator
+// Terms: until the agent has WORK_FIRST_PAID paid jobs, the work is delivered first and a Stripe invoice (due in 7 days)
+// follows, one such job per person and channel; after that, card first. The operator's host script creates the invoice
+// (you never hold the Stripe key); its link appears in `jobs` within ten minutes of `deliver`, and the same script marks
+// the job paid when Stripe says so. Nothing here is a promise of an outcome; say only what `say` prints.
+import fs from 'node:fs';
+import { out, HOME, ledger, jobTerms, WORK_FIRST_PAID } from './_lib.mjs';
+const OFFERS = { 'fact-check': { usd: 40, name: 'Fact-check my draft', work: 'check your draft', link: 'https://buy.stripe.com/aFa5kwdwP4bZ9aEf1Jbsc03' } };
+const F = `${HOME}/state/jobs.json`;
+const read = () => fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { seq: 0, jobs: [] };
+const save = (d) => fs.writeFileSync(F, JSON.stringify(d, null, 1));
+const argv = process.argv.slice(2); const cmd = argv[0]; const now = new Date().toISOString();
+const flag = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : null; };
+const words = (from) => argv.slice(from).filter((a, i, arr) => !(a.startsWith('--') || (i > 0 && arr[i - 1].startsWith('--'))));
+const d = read();
+const say = (job) => job.terms === 'invoice-after'
+  ? `I will ${OFFERS[job.offer].work} first and send you the result. An invoice for $${OFFERS[job.offer].usd} follows, due in 7 days; if it was not worth it, say so and do not pay.`
+  : `${OFFERS[job.offer].name} is $${OFFERS[job.offer].usd}, paid first by card: ${OFFERS[job.offer].link}. Delivery within two business days.`;
+const next = (j) => ({
+  open: `do the work, then: jobs deliver ${j.id} --ref <email id or post url>`,
+  delivered: j.terms === 'invoice-after' ? 'waiting for the invoice link (the host creates it within 10 minutes); check jobs again next run' : `when runway shows the payment: jobs paid ${j.id} --ref <money.income id>`,
+  invoiced: `send this link to ${j.person} on ${j.channel}, then: jobs sent ${j.id} — ${j.invoiceUrl}`,
+  sent: `waiting for payment, due ${String(j.invoiceDue ?? '').slice(0, 10)}; nothing to do`,
+}[j.status] ?? 'nothing to do');
+if (cmd === 'open') {
+  const offer = flag('--offer') ?? 'fact-check'; const ref = flag('--ref');
+  const [person, channel, ...w] = words(1); const want = w.join(' ').trim();
+  if (!person || !channel || !want) { out({ ok: false, error: "usage: jobs open <person> <channel> '<what>' [--offer fact-check] [--ref <id>]" }); process.exit(2); }
+  if (!OFFERS[offer]) { out({ ok: false, error: `unknown offer ${offer}; offers: ${Object.keys(OFFERS).join(', ')}` }); process.exit(2); }
+  const dup = d.jobs.find((j) => !['paid', 'unpaid', 'closed'].includes(j.status) && j.person === person && j.channel === channel);
+  if (dup) { out({ ok: true, existing: dup, say: say(dup), next: next(dup) }); process.exit(0); }
+  const t = jobTerms({ jobs: d.jobs, person, channel });
+  const job = { id: `j${++d.seq}`, person, channel, offer, want, ref, terms: t.terms, termsReason: t.reason, opened: now, status: 'open' };
+  d.jobs.push(job); save(d);
+  await ledger({ id: `agent:job:${job.id}:open:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'job.open', job: job.id, offer, terms: t.terms, at: now }).catch(() => {});
+  out({ ok: true, job, say: say(job), next: next(job), workFirstLeft: t.left });
+} else if (['deliver', 'sent', 'paid', 'close'].includes(cmd)) {
+  const id = argv[1]; const job = d.jobs.find((j) => j.id === id); const ref = flag('--ref');
+  if (!job) { out({ ok: false, error: `no job ${id}` }); process.exit(2); }
+  if (cmd === 'deliver') {
+    if (!ref) { out({ ok: false, error: 'jobs deliver needs --ref <email id or post url> of the delivery' }); process.exit(2); }
+    if (job.status !== 'open') { out({ ok: false, error: `${id} is ${job.status}, not open` }); process.exit(2); }
+    job.status = 'delivered'; job.deliveredAt = now; job.deliveredRef = ref;
+    await ledger({ id: `agent:job:${id}:deliver:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'job.deliver', job: id, offer: job.offer, terms: job.terms, at: now }).catch(() => {});
+  } else if (cmd === 'sent') {
+    if (job.status !== 'invoiced') { out({ ok: false, error: `${id} is ${job.status}; sent applies once the invoice link exists` }); process.exit(2); }
+    job.status = 'sent'; job.invoiceSentAt = now;
+  } else if (cmd === 'paid') {
+    if (job.terms !== 'pay-first') { out({ ok: false, error: `${id} is invoice-after: the host marks it paid from Stripe, you do not` }); process.exit(2); }
+    if (!ref || !/^stripe:income:/.test(ref)) { out({ ok: false, error: 'jobs paid needs --ref <money.income ledger id> (stripe:income:...) as shown by runway' }); process.exit(2); }
+    job.status = 'paid'; job.paidAt = now; job.paidRef = ref; job.verifiedPaid = false;
+  } else {
+    const outcome = words(2).join(' ').trim(); if (!outcome) { out({ ok: false, error: "usage: jobs close <id> '<outcome>'" }); process.exit(2); }
+    job.status = 'closed'; job.outcome = outcome; job.closedAt = now;
+  }
+  save(d); out({ ok: true, job, next: next(job) });
+} else {
+  const all = argv.includes('--all');
+  const paid = d.jobs.filter((j) => j.status === 'paid').length;
+  const list = d.jobs.filter((j) => all || !['paid', 'unpaid', 'closed'].includes(j.status)).map((j) => ({ ...j, next: next(j) }));
+  out({ ok: true, jobs: list, paidJobs: paid, workFirstLeft: Math.max(0, WORK_FIRST_PAID - paid), rule: `Every piece of paid work is a job: open it when a person asks, deliver with a reference, and let the tool state the terms. Until ${WORK_FIRST_PAID} jobs are paid the work goes first and the invoice follows (one per person); after that, card first.` });
+}
