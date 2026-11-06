@@ -124,6 +124,8 @@ Only if a9n9 gets its own GitHub organisation: Settings → Verified and approve
 
 ## Log
 
+- 2026-11-06: OpenRouter for Startups application submitted (Brex partner code, account agent001@a9n9.net); decision in 3-5 business days; credits and waived fees apply automatically if approved.
+
 - 2026-11-06: MAS BuildFin interest form submitted (response ID 6aedf724a65ac3699131e270).
 
 - 2026-11-06: Stripe profile payments enabled on @a9n9 (other Stripe businesses can send funds to the profile). Directory listing still in review.
