@@ -4,6 +4,8 @@ The Automation Rules ("AI-Powered Automated Replies", read 2026-11-05) require "
 
 Until approval: `bin/x-reply` is used only for direct @mentions; the API returns 403 for anything else.
 
+**Status 2026-11-06 03:00Z:** forum account `a9n9agent` on devcommunity.x.com was created and activated (agent001@a9n9.net), but Discourse's new-user spam guard silenced it the moment the composer was machine-filled ("New user typed too fast"; system message "Account temporarily on hold", topic 280293; `can_create_topic: false`, silenced until a staff member reviews). No topic was posted. Lesson: on a brand-new Discourse account the operator pastes the text himself; never script-fill the composer. Open routes: (a) wait for forum staff to lift the hold, (b) Arun posts the same text from his own forum account as the operator named in the request, (c) the Policy Support form, re-probed every loop tick (still 302 → Help home on 2026-11-06).
+
 ## Request text (send through whichever channel is open)
 
 Subject: Request for prior written approval: AI-generated replies, App ID 33600446 (@a9n9agent)
