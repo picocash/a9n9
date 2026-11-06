@@ -79,24 +79,6 @@ export async function createToolsApp(opts: ToolsOptions) {
         void report({ id: `x402:settle-failed:${crypto.randomUUID()}`, type: 'agent.note', channel: 'tools', kind: 'x402.settlement-failed', tool: tool?.name, reason: s.errorReason ?? null, transaction: s.transaction ?? null, payer: s.payer ?? null, at });
       }
     });
-    // Protocol switch on paid routes: x402 retry → verify, handler, settle; MPP retry → the existing gate; unpaid → one merged 402.
-    app.use('*', async (c, next) => {
-      if (!x402.paidRoutes.has(`${c.req.method} ${c.req.path}`)) return next();
-      const h = c.req.raw.headers;
-      if (h.has('payment-signature') || h.has('x-payment')) return x402.middleware(c, async () => { c.set('paidVia', 'x402'); await next(); });
-      if (h.get('authorization')?.startsWith('Payment ')) return next();
-      const xres = (await x402.middleware(c, async () => {})) ?? c.res;
-      if (!xres || xres.status !== 402) return xres ?? c.res;
-      const tool = CATALOG.find((t) => t.path === c.req.path);
-      const chargeMw = mppx.charge;
-      const out = new Response(xres.body, { status: 402, headers: new Headers(xres.headers) });
-      if (tool && chargeMw) {
-        const mres = (await chargeMw({ amount: tool.price })(c, async () => {})) ?? c.res;
-        const www = mres?.headers.get('www-authenticate');
-        if (www) out.headers.set('WWW-Authenticate', www);
-      }
-      return out;
-    });
   }
 
   app.get('/livez', (c) => c.json({ ok: true }));
@@ -202,7 +184,7 @@ export async function createToolsApp(opts: ToolsOptions) {
         if (err instanceof ToolInputError) return c.json({ error: err.message }, 400);
         throw err;
       }
-      return gate(c, tool, async () => {
+      const run = async (): Promise<Response> => {
         if (tool.name === 'search') {
           const res = await fetchImpl('https://api.parallel.ai/v1beta/search', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.PARALLEL_API_KEY! }, body: JSON.stringify(parallelRequest(body)), signal: AbortSignal.timeout(45_000) });
           return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
@@ -244,7 +226,28 @@ export async function createToolsApp(opts: ToolsOptions) {
         }
         const res = await fetchImpl(`https://api.search.brave.com/res/v1/web/search?${braveQuery(body)}`, { headers: { accept: 'application/json', 'x-subscription-token': opts.vendorKeys.BRAVE_API_KEY! }, signal: AbortSignal.timeout(20_000) });
         return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
-      });
+      };
+      // Protocol switch, in the route's own context (mppx scopes a challenge to the route that issued it):
+      // x402 retry → verify, handler, settle; MPP retry → the gate below; unpaid → one merged 402 with both rails.
+      if (x402 && x402.paidRoutes.has(`POST ${tool.path}`)) {
+        const h = c.req.raw.headers;
+        if (h.has('payment-signature') || h.has('x-payment')) {
+          const r = await x402.middleware(c, async () => { c.set('paidVia', 'x402'); c.res = await gate(c, tool, run); });
+          return r ?? c.res;
+        }
+        if (!h.get('authorization')?.startsWith('Payment ')) {
+          const xres = (await x402.middleware(c, async () => {})) ?? c.res;
+          if (xres && xres.status === 402) {
+            const out = new Response(xres.body, { status: 402, headers: new Headers(xres.headers) });
+            const chargeMw = mppx.charge;
+            const mres = chargeMw ? ((await chargeMw({ amount: tool.price })(c, async () => {})) ?? c.res) : undefined;
+            const www = mres?.headers.get('www-authenticate');
+            if (www) out.headers.set('WWW-Authenticate', www);
+            return out;
+          }
+        }
+      }
+      return gate(c, tool, run);
     });
   }
   return { app, acceptor, lockPubkey, keyset, stats, x402Stats };
