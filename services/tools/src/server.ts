@@ -2,6 +2,8 @@
  *   PICOCASH_MINT_URL (https://mint.picocash.dev)  TOOLS_REALM (public origin)
  *   MPP_SECRET_KEY  TOOLS_LOCK_KEY (32-byte hex)   PARALLEL_API_KEY  BRAVE_API_KEY  EXA_API_KEY  TAVILY_API_KEY  XAI_API_KEY (images, video)
  *   TOOLS_PORT (8860)  TOOLS_HOST (127.0.0.1)   INBOX_URL  INBOX_WEBHOOK_SECRET
+ *   x402 (optional): X402_PAY_TO (Base address)  X402_NETWORK (eip155:8453 | eip155:84532, default mainnet)
+ *   X402_FACILITATOR (cdp | x402org, default cdp)  CDP_API_KEY_ID  CDP_API_KEY_SECRET  TOOLS_PUBLIC_URL (default TOOLS_REALM)
  */
 import { serve } from '@hono/node-server';
 import { hexToBytes } from '@picocash/crypto';
@@ -29,8 +31,21 @@ if (env.DATABASE_URL) {
   log('acceptor replay state in Postgres');
 }
 
+const x402 = env.X402_PAY_TO
+  ? {
+      network: (env.X402_NETWORK ?? 'eip155:8453') as 'eip155:8453' | 'eip155:84532',
+      payTo: env.X402_PAY_TO,
+      facilitator: (env.X402_FACILITATOR ?? 'cdp') as 'cdp' | 'x402org',
+      publicUrl: env.TOOLS_PUBLIC_URL ?? realm,
+      ...(env.CDP_API_KEY_ID && env.CDP_API_KEY_SECRET ? { cdp: { apiKeyId: env.CDP_API_KEY_ID, apiKeySecret: env.CDP_API_KEY_SECRET } } : {}),
+    }
+  : undefined;
+if (x402 && x402.facilitator === 'cdp' && !x402.cdp) throw new Error('X402_FACILITATOR=cdp needs CDP_API_KEY_ID and CDP_API_KEY_SECRET');
+if (x402) log(`x402 on ${x402.network} via ${x402.facilitator}, payTo ${x402.payTo}`);
+
 const { lockPubkey, keyset, app } = await createToolsApp({
   ...(acceptorStore ? { acceptorStore } : {}),
+  ...(x402 ? { x402 } : {}),
   mintUrl: (env.PICOCASH_MINT_URL ?? 'https://mint.picocash.dev').replace(/\/$/, ''),
   realm,
   secretKey: need('MPP_SECRET_KEY'),

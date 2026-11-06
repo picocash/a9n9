@@ -15,6 +15,7 @@ import { PicocashAcceptor, type AcceptorStore } from '@picocash/mppx-method';
 import { charge, toBaseUnits } from '@picocash/mppx-method/mppx';
 import { p2pkPublicKey } from '@picocash/crypto';
 import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelRequest, reservesRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
+import { createX402, decodeSettlement, type X402Options } from './x402.js';
 
 export interface ToolsOptions {
   mintUrl: string;
@@ -24,6 +25,8 @@ export interface ToolsOptions {
   vendorKeys: { PARALLEL_API_KEY?: string; BRAVE_API_KEY?: string; EXA_API_KEY?: string; TAVILY_API_KEY?: string; XAI_API_KEY?: string; RESERVES_URL?: string };
   inbox?: { url: string; secret: string };
   acceptorStore?: AcceptorStore;
+  /** Sell the same routes over x402 (USDC on Base) as well as MPP/picocash. */
+  x402?: X402Options;
   fetchImpl?: typeof fetch;
   decimals?: number;
   log?: (m: string) => void;
@@ -54,7 +57,47 @@ export async function createToolsApp(opts: ToolsOptions) {
   }
 
   const available = (t: Tool) => Boolean((opts.vendorKeys as Record<string, string | undefined>)[t.requiresEnv]);
-  const app = new Hono();
+  type Vars = { paidVia?: 'x402'; tool?: string };
+  const app = new Hono<{ Variables: Vars }>();
+  const x402 = opts.x402 ? createX402(opts.x402) : undefined;
+  const x402Stats = { settled: 0, failed: 0 };
+
+  if (x402) {
+    // Ledger, outermost: a PAYMENT-RESPONSE on the way out is a settlement (or a settlement failure) to record.
+    app.use('*', async (c, next) => {
+      await next();
+      const s = decodeSettlement(c.res.headers.get('payment-response'));
+      if (!s) return;
+      const tool = CATALOG.find((t) => t.path === c.req.path);
+      const at = new Date().toISOString();
+      if (s.success) {
+        x402Stats.settled++;
+        void report({ id: `x402:income:${s.transaction ?? crypto.randomUUID()}`, type: 'money.income', channel: 'tools', rail: 'x402', network: s.network, payer: s.payer, transaction: s.transaction, tool: tool?.name, amount_usd: tool ? Number(tool.price) : null, currency: 'USDC', payTo: opts.x402!.payTo, at });
+      } else {
+        x402Stats.failed++;
+        log(`x402 settlement failed on ${c.req.path}: ${s.errorReason ?? 'unknown'}${s.transaction ? ` tx ${s.transaction}` : ''}`);
+        void report({ id: `x402:settle-failed:${crypto.randomUUID()}`, type: 'agent.note', channel: 'tools', kind: 'x402.settlement-failed', tool: tool?.name, reason: s.errorReason ?? null, transaction: s.transaction ?? null, payer: s.payer ?? null, at });
+      }
+    });
+    // Protocol switch on paid routes: x402 retry → verify, handler, settle; MPP retry → the existing gate; unpaid → one merged 402.
+    app.use('*', async (c, next) => {
+      if (!x402.paidRoutes.has(`${c.req.method} ${c.req.path}`)) return next();
+      const h = c.req.raw.headers;
+      if (h.has('payment-signature') || h.has('x-payment')) return x402.middleware(c, async () => { c.set('paidVia', 'x402'); await next(); });
+      if (h.get('authorization')?.startsWith('Payment ')) return next();
+      const xres = (await x402.middleware(c, async () => {})) ?? c.res;
+      if (!xres || xres.status !== 402) return xres ?? c.res;
+      const tool = CATALOG.find((t) => t.path === c.req.path);
+      const chargeMw = mppx.charge;
+      const out = new Response(xres.body, { status: 402, headers: new Headers(xres.headers) });
+      if (tool && chargeMw) {
+        const mres = (await chargeMw({ amount: tool.price })(c, async () => {})) ?? c.res;
+        const www = mres?.headers.get('www-authenticate');
+        if (www) out.headers.set('WWW-Authenticate', www);
+      }
+      return out;
+    });
+  }
 
   app.get('/livez', (c) => c.json({ ok: true }));
   app.get('/v1/info', (c) =>
@@ -64,13 +107,32 @@ export async function createToolsApp(opts: ToolsOptions) {
       mint: opts.mintUrl,
       unit: keyset.unit,
       pubkey: lockPubkey,
-      tools: CATALOG.map((t) => ({ name: t.name, path: t.path, price: t.price, description: t.description, available: available(t) })),
+      tools: CATALOG.map((t) => ({ name: t.name, path: t.path, price: t.price, description: t.description, available: available(t), rails: x402 && x402.paidRoutes.has(`POST ${t.path}`) ? ['mpp/picocash', 'x402'] : ['mpp/picocash'] })),
+      rails: x402 ? ['mpp/picocash', 'x402'] : ['mpp/picocash'],
+      ...(x402 ? { x402: { network: opts.x402!.network, payTo: opts.x402!.payTo, asset: x402.asset, facilitator: opts.x402!.facilitator, stats: x402Stats } } : {}),
       stats,
     }),
   );
 
+  if (x402) app.get('/.well-known/x402', (c) => c.json({ version: 2, resources: [...x402.paidRoutes].map((k) => `${opts.x402!.publicUrl.replace(/\/$/, '')}${k.split(' ')[1]}`) }));
+
   // Underpay guard shared by every tool: a presented credential must carry a challenge for THIS tool's price.
-  async function gate(c: Context, tool: Tool, run: () => Promise<Response>): Promise<Response> {
+  async function gate(c: Context<{ Variables: Vars }>, tool: Tool, run: () => Promise<Response>): Promise<Response> {
+    if (c.get('paidVia') === 'x402') {
+      // Verified by the x402 middleware; it settles after this handler returns, and only on a 2xx.
+      const started = Date.now();
+      stats.calls++;
+      let res: Response;
+      try {
+        res = await run();
+      } catch (err) {
+        stats.failed++;
+        res = Response.json({ error: 'vendor call failed', detail: err instanceof Error ? err.message : String(err) }, { status: 502 });
+      }
+      c.res = new Response(res.body, { status: res.status, headers: { 'content-type': res.headers.get('content-type') ?? 'application/json', 'X-Price': tool.price } });
+      void report({ id: `tools:${crypto.randomUUID()}`, type: 'tools.call', channel: 'tools', tool: tool.name, price: tool.price, unit: `usdc:${opts.x402!.network}`, rail: 'x402', vendorStatus: res.status, ms: Date.now() - started, at: new Date().toISOString() });
+      return c.res;
+    }
     const priceBase = toBaseUnits(tool.price, decimals);
     const auth = c.req.header('authorization');
     if (auth?.startsWith('Payment ')) {
@@ -103,7 +165,7 @@ export async function createToolsApp(opts: ToolsOptions) {
       }
       const headers = new Headers({ 'content-type': res.headers.get('content-type') ?? 'application/json', 'X-Picocash-Price': tool.price });
       c.res = new Response(res.body, { status: res.status, headers });
-      void report({ id: `tools:${crypto.randomUUID()}`, type: 'tools.call', channel: 'tools', tool: tool.name, price: tool.price, unit: keyset.unit, vendorStatus: res.status, ms: Date.now() - started, at: new Date().toISOString() });
+      void report({ id: `tools:${crypto.randomUUID()}`, type: 'tools.call', channel: 'tools', tool: tool.name, price: tool.price, unit: keyset.unit, rail: 'mpp', vendorStatus: res.status, ms: Date.now() - started, at: new Date().toISOString() });
     });
     return gated ?? c.res;
   }
@@ -185,5 +247,5 @@ export async function createToolsApp(opts: ToolsOptions) {
       });
     });
   }
-  return { app, acceptor, lockPubkey, keyset, stats };
+  return { app, acceptor, lockPubkey, keyset, stats, x402Stats };
 }

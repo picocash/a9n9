@@ -10,3 +10,9 @@ test('a full refund cancels the credit', async () => { const [s] = await plan([i
 test('a partial refund reduces it; cumulative refunds count once', async () => { const [s] = await plan([inc()], fee, t0); const o = await plan([inc(), s, { type: 'money.refund', id: 'r1', payment_intent: 'pi_1', amount_usd: 2 }, { type: 'money.refund', id: 'r2', payment_intent: 'pi_1', amount_usd: 5 }], fee, t0 + 15 * DAY); assert.equal(o[0].agentCents, Math.floor(753 * 500 / 1000)); });
 test('a dispute freezes the release', async () => { const [s] = await plan([inc()], fee, t0); assert.deepEqual(await plan([inc(), s, { type: 'money.dispute', id: 'd', payment_intent: 'pi_1' }], fee, t0 + 15 * DAY), []); });
 test('non-USD is left alone', async () => { assert.deepEqual(await plan([inc({ amount_usd: null })], fee, t0), []); });
+
+test('x402 income (rail != stripe) is left alone: no settlement, no release', async () => {
+  const x = { id: 'x402:income:0xabc', type: 'money.income', channel: 'tools', rail: 'x402', amount_usd: 0.01, payer: '0xdef', at: new Date(t0).toISOString() };
+  const out = await plan([x], async () => { throw new Error('feeOf must not be called for x402'); }, t0 + 30 * DAY);
+  assert.deepEqual(out, []);
+});

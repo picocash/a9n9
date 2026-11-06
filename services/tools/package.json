@@ -16,12 +16,18 @@
     "@picocash/crypto": "^0.1.0",
     "@picocash/mppx-method": "^0.1.0",
     "@picocash/sdk": "^0.1.0",
-    "hono": "^4.6.14",
+    "@x402/core": "~2.30.0",
+    "@x402/evm": "~2.30.0",
+    "@x402/extensions": "~2.30.0",
+    "@x402/hono": "~2.30.0",
+    "hono": "^4.13.16",
     "mppx": "^0.8.17",
     "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/pg": "^8.23.1",
-    "tsx": "^4.19.0"
+    "@x402/fetch": "~2.30.0",
+    "tsx": "^4.19.0",
+    "viem": "^2.57.16"
   }
 }

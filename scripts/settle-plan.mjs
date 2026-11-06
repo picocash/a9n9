@@ -25,6 +25,7 @@ export async function plan(events, feeOf, now = Date.now()) {
   const out = []; const at = new Date(now).toISOString();
   for (const inc of by('money.income')) {
     if (inc.amount_usd == null) continue; // not USD: left for the operator
+    if (inc.rail && inc.rail !== 'stripe') continue; // x402/MPP income lands in the agent's own wallet on-chain: nothing to split or release
     const key = idOf(inc); const pi = inc.payment_intent;
     const sid = `settlement:${key}`;
     let s = by('money.settlement').find((x) => x.id === sid);
