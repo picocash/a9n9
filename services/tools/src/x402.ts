@@ -28,6 +28,9 @@ export interface X402Options {
 /** Tools sold over x402: everything except video, whose long renders answer 202 and would settle before delivery. */
 export const x402Tools = (tools: Tool[] = CATALOG): Tool[] => tools.filter((t) => t.name !== 'video');
 
+/** Tools that may be sold over x402 on this deployment: x402Tools minus any whose vendor key is missing (an advertised route that answers 503 would be listed in the Bazaar as broken). */
+export const sellable = (vendorKeys: Record<string, string | undefined>, tools: Tool[] = CATALOG): Tool[] => x402Tools(tools).filter((t) => Boolean(vendorKeys[t.requiresEnv]));
+
 /** Example input per tool. The Bazaar health probe replays it unpaid (expects a 402), so keep it cheap and valid. */
 export function discovery(tool: Tool) {
   const json = (input: Record<string, unknown>, inputSchema: Record<string, unknown>, example: unknown) => ({ bodyType: 'json' as const, input, inputSchema, output: { example } });

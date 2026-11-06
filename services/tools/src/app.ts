@@ -15,7 +15,7 @@ import { PicocashAcceptor, type AcceptorStore } from '@picocash/mppx-method';
 import { charge, toBaseUnits } from '@picocash/mppx-method/mppx';
 import { p2pkPublicKey } from '@picocash/crypto';
 import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelRequest, reservesRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
-import { createX402, decodeSettlement, type X402Options } from './x402.js';
+import { createX402, decodeSettlement, type X402Options, sellable } from './x402.js';
 
 export interface ToolsOptions {
   mintUrl: string;
@@ -59,7 +59,7 @@ export async function createToolsApp(opts: ToolsOptions) {
   const available = (t: Tool) => Boolean((opts.vendorKeys as Record<string, string | undefined>)[t.requiresEnv]);
   type Vars = { paidVia?: 'x402'; tool?: string };
   const app = new Hono<{ Variables: Vars }>();
-  const x402 = opts.x402 ? createX402(opts.x402) : undefined;
+  const x402 = opts.x402 ? createX402({ ...opts.x402, tools: sellable(opts.vendorKeys as Record<string, string | undefined>, opts.x402.tools) }) : undefined;
   const x402Stats = { settled: 0, failed: 0 };
 
   if (x402) {

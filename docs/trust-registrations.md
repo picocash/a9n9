@@ -20,7 +20,13 @@ Decision (Arun, 2026-11-05): register with every established trust program whose
 
 Files live in `~/a9n9/agent001/public/well-known/` (mounted read-only into the web container; `WEB_WELLKNOWN_DIR`).
 
-## Needs funding, then scriptable (minutes)
+## ERC-8004: Base done, Tempo waits for funding
+
+**Base (2026-11-06, done).** Arun funded the agent wallet with $2 of ETH and $2 of USDC on Base; `register(string)` on `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` succeeded in tx `0x387056fa644e2d6ee7f1ce6d2540158a382104c3a1f8d19eed293f472a445d52` (block 53990026, 178k gas, under a cent). **agentId 1167546**, owner `0xbC907d1E4DaaEe23eb56dA405F9E24843d30f832`, tokenURI = the registration file. The file now carries `registrations: [{agentId: 1167546, agentRegistry: "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"}]` and `x402Support: true` (the tools service sells over x402 since the same day, see `docs/x402-seller.md`). Explorer: https://erc-8004.quicknode.com (search the id or the owner).
+
+**Tempo (open).** Same contract on Tempo mainnet (chain 4217); `eth_call` of `register` from the agent address succeeds (would be id 668 at the time of the check), but a real send needs a fee token on Tempo. Arun still to send about $2 of USDC.e or pathUSD to the agent address on Tempo; then `cast send … --rpc-url https://rpc.tempo.xyz`, append `{agentId, agentRegistry: "eip155:4217:0x8004…"}` to `registrations`.
+
+### Original plan (kept for the Tempo step)
 
 **ERC-8004 identity registration on Base and Tempo.** Same contract address on both chains: Identity `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`, call `register(string agentURI)` with `https://agent001.a9n9.net/.well-known/agent-registration.json`. Base costs under a cent of ETH; Tempo pays fees in a USD TIP-20 token (re-estimate before sending). Sender: the agent's EVM key `0xbC907d1E4DaaEe23eb56dA405F9E24843d30f832` (same address on Base and Tempo), which holds nothing today.
 
