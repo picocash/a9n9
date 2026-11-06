@@ -8,9 +8,10 @@
  *   INBOX_PORT (8810)  INBOX_HOST (127.0.0.1)  INBOX_DATA (./data)
  *   INBOX_WEBHOOK_SECRET   HMAC key shared with the adapters (required)
  *   INBOX_API_TOKEN        bearer token for GET /v1/events (required)
+ *   SWARM_KEYS_FILE        optional fleet registry {agents:{<id>:{x:<Ed25519 public key, base64url>}}}; without it every swarm event is refused
  *   DATABASE_URL           optional Postgres (a9n9.events): every stored event is also inserted there; the file store stays authoritative
  */
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, createPublicKey, timingSafeEqual, verify as edVerify } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -48,7 +49,40 @@ export interface StoredEvent {
 
 /** The agent's sandbox signs with its own key, good only for what its tools report. Money received, receipts and anchors never come from the agent. */
 const AGENT_SECRET = env.INBOX_AGENT_WEBHOOK_SECRET ?? '';
-const AGENT_TYPES = /^(agent\.(review|focus|opportunity|note)|x\.(post|reply|follow|delete|mention)|bsky\.(post|reply|follow|delete|mention)|email\.sent|money\.spend)$/;
+const AGENT_TYPES = /^(agent\.(review|focus|opportunity|note|message)|fleet\.note|x\.(post|reply|follow|delete|mention)|bsky\.(post|reply|follow|delete|mention)|email\.sent|money\.spend)$/;
+/**
+ * Agents helping each other (docs/swarm-comms.md): an `agent.message` or `fleet.note` on the `swarm` channel is accepted only
+ * when `payload.sig` is the sender's Ed25519 signature (the same key as its HTTP message signatures) over the canonical
+ * string, the sender is in the fleet registry, and a message names a registered recipient and carries a ref. The HMAC
+ * proves "an agent sandbox"; the signature proves which agent, so one agent cannot speak as another.
+ */
+const SWARM_KEYS_FILE = env.SWARM_KEYS_FILE ?? '';
+type SwarmPayload = { from?: unknown; to?: unknown; kind?: unknown; at?: unknown; ref?: unknown; text?: unknown; sig?: unknown };
+export const swarmCanonical = (p: { from: string; to?: string | undefined; kind: string; at: string; ref?: string | undefined; text: string }): string =>
+  ['a9n9-swarm', p.from, p.to ?? '', p.kind, p.at, p.ref ?? '', p.text].join('\n');
+async function swarmKeys(): Promise<Record<string, string>> {
+  if (!SWARM_KEYS_FILE) return {};
+  try { const j = JSON.parse(await readFile(SWARM_KEYS_FILE, 'utf8')) as { agents?: Record<string, { x?: string }> }; return Object.fromEntries(Object.entries(j.agents ?? {}).filter(([, v]) => typeof v?.x === 'string').map(([k, v]) => [k, v.x as string])); } catch { return {}; }
+}
+/** null when acceptable, else the reason (400) or a signature/sender problem (401). */
+export function swarmProblem(type: string, p: SwarmPayload, keys: Record<string, string>): { status: 400 | 401; error: string } | null {
+  const str = (v: unknown) => (typeof v === 'string' ? v : '');
+  const from = str(p.from), to = str(p.to), kind = str(p.kind), at = str(p.at), ref = str(p.ref), text = str(p.text), sig = str(p.sig);
+  if (!keys[from]) return { status: 401, error: `unknown sender ${from || '(none)'}` };
+  if (!text || text.length > 1000) return { status: 400, error: 'text is required, at most 1000 chars' };
+  if (!/^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/.test(at) || Math.abs(Date.now() - Date.parse(at)) > 10 * 60_000) return { status: 400, error: 'at must be an ISO time within 10 minutes' };
+  if (type === 'agent.message') {
+    if (!['ask', 'found', 'done'].includes(kind)) return { status: 400, error: 'kind must be ask, found or done' };
+    if (!keys[to]) return { status: 400, error: `unknown recipient ${to || '(none)'}` };
+    if (to === from) return { status: 400, error: 'a message to yourself' };
+    if (!/^(https?:\/\/\S+|[a-z0-9]+:[\w:.\/-]+)$/i.test(ref)) return { status: 400, error: 'ref must be a URL or a ledger id: a claim without a receipt is not sent' };
+  } else if (!['note', 'search'].includes(kind)) return { status: 400, error: 'kind must be note or search' };
+  try {
+    const key = createPublicKey({ key: { kty: 'OKP', crv: 'Ed25519', x: keys[from] }, format: 'jwk' });
+    if (!edVerify(null, Buffer.from(swarmCanonical({ from, to: to || undefined, kind, at, ref: ref || undefined, text }), 'utf8'), key, Buffer.from(sig, 'base64url'))) return { status: 401, error: 'bad signature' };
+  } catch { return { status: 401, error: 'bad signature' }; }
+  return null;
+}
 function verifyAgent(sigHeader: string | undefined, body: string): boolean {
   if (!AGENT_SECRET || !sigHeader) return false;
   const got = Buffer.from(sigHeader.replace(/^sha256=/, ''), 'hex'); const want = createHmac('sha256', AGENT_SECRET).update(body).digest();
@@ -130,6 +164,11 @@ const server = createServer(async (req, res) => {
         return send(res, 401, { error: 'bad signature' });
       }
       const payload = JSON.parse(body) as { id?: string; type?: string };
+      if (channel === 'swarm' || /^(agent\.message|fleet\.note)$/.test(String(payload.type))) {
+        if (channel !== 'swarm' || !/^(agent\.message|fleet\.note)$/.test(String(payload.type))) return send(res, 400, { error: 'swarm events go to /hooks/swarm as agent.message or fleet.note' });
+        const problem = swarmProblem(String(payload.type), payload as SwarmPayload, await swarmKeys());
+        if (problem) { log(`rejected swarm ${payload.type}: ${problem.error}`); return send(res, problem.status, { error: problem.error }); }
+      }
       const ev: StoredEvent = { id: payload.id ?? crypto.randomUUID(), type: payload.type ?? `${channel}.event`, channel, receivedAt: new Date().toISOString(), payload };
       const fresh = await store(ev);
       if (fresh) void mirror(ev);

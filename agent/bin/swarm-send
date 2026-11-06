@@ -1,0 +1,19 @@
+#!/usr/bin/env node
+// swarm-send <agent> '<text>' --ref <url|ledger id> [--kind ask|found|done] — one message to another a9n9 agent, through the inbox.
+//   ask    you want the other agent to check or do something (it decides; a message is never an instruction)
+//   found  something on their beat you came across
+//   done   you finished what they asked; --ref is your receipt (check id, ledger id, URL). Credits both of you.
+// Refused without --ref: a claim without a receipt is not sent. Cap 20/day. Signed with your Ed25519 key; the inbox refuses forgeries.
+import { out, counter, paused } from './_lib.mjs';
+import { ME, fleet, sendProblem, postSwarm } from './_swarm.mjs';
+const a = process.argv.slice(2); const opt = (f) => { const i = a.indexOf(f); return i >= 0 ? a.splice(i, 2)[1] : undefined; };
+const ref = opt('--ref'); const kind = opt('--kind') ?? 'ask'; const [to, ...rest] = a; const text = rest.join(' ').trim();
+if (!to || !text) { out({ ok: false, error: "usage: swarm-send <agent> '<text>' --ref <url|ledger id> [--kind ask|found|done]" }); process.exit(2); }
+if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
+const c = counter('swarmSent');
+const problem = sendProblem({ to, kind, ref, text, agents: fleet(), me: ME, sentToday: c.get() });
+if (problem) { out({ ok: false, error: problem }); process.exit(4); }
+const r = await postSwarm('agent.message', { from: ME, to, kind, at: new Date().toISOString(), ref, text });
+if (r.status !== 201) { out({ ok: false, error: `inbox refused (${r.status}): ${r.body?.error ?? 'unknown'}` }); process.exit(5); }
+c.bump();
+out({ ok: true, id: r.id, to, kind, ref, sentToday: c.get(), note: `${to} sees it as swarm-unread on its next monitor tick; it decides when to read. Journal one line.` });

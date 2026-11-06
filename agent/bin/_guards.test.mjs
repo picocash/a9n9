@@ -38,4 +38,32 @@ assert.equal(jobTerms({ jobs: [{ id: 'j1', person: 'a', channel: 'bluesky', term
 const tenPaid = Array.from({ length: WORK_FIRST_PAID }, (_, i) => ({ id: `j${i}`, person: `p${i}`, channel: 'email', terms: 'invoice-after', status: 'paid' }));
 assert.equal(jobTerms({ jobs: tenPaid, person: 'new', channel: 'email' }).terms, 'pay-first', 'after ten paid jobs, card first');
 assert.equal(jobTerms({ jobs: tenPaid.slice(0, 9).concat([{ id: 'x', status: 'unpaid', terms: 'invoice-after', person: 'q', channel: 'email' }]), person: 'new', channel: 'email' }).terms, 'invoice-after', 'unpaid jobs do not count');
+
+// Swarm guards (docs/swarm-comms.md): a message needs a known recipient, a known kind and a ref; a search is not repeated within 24 h.
+{
+  const { sendProblem, noteProblem, duplicateSearch, canonical, queryKey } = await import('./_swarm.mjs');
+  const agents = { agent001: { x: 'a' }, agent002: { x: 'b' } };
+  assert.equal(sendProblem({ to: 'agent002', kind: 'ask', ref: 'https://reserves.a9n9.net/#usdc', text: 'verify this', agents }), null);
+  assert.equal(sendProblem({ to: 'agent002', kind: 'done', ref: 'agent:check:1793998557', text: 'checked', agents }), null);
+  assert.match(sendProblem({ to: 'agent009', kind: 'ask', ref: 'agent:check:1', text: 'x', agents }), /unknown agent/);
+  assert.match(sendProblem({ to: 'agent001', kind: 'ask', ref: 'agent:check:1', text: 'x', agents }), /that is you/);
+  assert.match(sendProblem({ to: 'agent002', kind: 'tell', ref: 'agent:check:1', text: 'x', agents }), /kind must be/);
+  assert.match(sendProblem({ to: 'agent002', kind: 'ask', ref: '', text: 'trust me', agents }), /needs --ref/);
+  assert.match(sendProblem({ to: 'agent002', kind: 'ask', ref: 'see above', text: 'x', agents }), /needs --ref/);
+  assert.match(sendProblem({ to: 'agent002', kind: 'ask', ref: 'agent:check:1', text: 'x'.repeat(1001), agents }), /max 1000/);
+  assert.match(sendProblem({ to: 'agent002', kind: 'ask', ref: 'agent:check:1', text: 'x', agents, sentToday: 20 }), /cap reached/);
+  assert.equal(noteProblem({ kind: 'note', text: 'working on x402 replay guard' }), null);
+  assert.match(noteProblem({ kind: 'note', text: 'x', notesToday: 10 }), /cap reached/);
+  assert.equal(noteProblem({ kind: 'search', text: 'x', notesToday: 10 }), null, 'search notes are not capped');
+  assert.match(noteProblem({ kind: 'ask', text: 'x' }), /kind must be/);
+  assert.match(noteProblem({ kind: 'note', text: 'x'.repeat(301) }), /max 300/);
+  const t = new Date('2026-11-06T12:00:00Z').getTime();
+  const log = [{ at: '2026-11-06T10:00:00Z', query: 'Proof of Reserves!' }, { at: '2026-11-04T10:00:00Z', query: 'agent wallet limit' }];
+  assert.equal(duplicateSearch('proof   of reserves', log, t)?.at, '2026-11-06T10:00:00Z', 'case and punctuation do not make a new query');
+  assert.equal(duplicateSearch('agent wallet limit', log, t), null, 'two days old is not a duplicate');
+  assert.equal(duplicateSearch('x402 question', log, t), null);
+  assert.equal(duplicateSearch('proof of reserves', [{ at: '2026-11-06T11:00:00Z', text: 'proof of reserves', from: 'agent002' }], t)?.from, 'agent002', 'the fleet board counts too');
+  assert.equal(queryKey(' Is  x402, live? '), 'is x402 live');
+  assert.equal(canonical({ from: 'agent001', kind: 'note', at: '2026-11-06T12:00:00Z', text: 'hi' }), 'a9n9-swarm\nagent001\n\nnote\n2026-11-06T12:00:00Z\n\nhi', 'canonical string matches the inbox');
+}
 console.log('guards ok');

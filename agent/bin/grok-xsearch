@@ -2,8 +2,18 @@
 // grok-xsearch "<query>" — search recent X posts through the agent's own Grok subscription
 import fs from 'node:fs';
 import { out } from './_lib.mjs';
-const q = process.argv.slice(2).join(' ').trim();
-if (!q) { out({ ok: false, error: 'usage: grok-xsearch "<query>"' }); process.exit(2); }
+import { HOME } from './_lib.mjs';
+import { ME, duplicateSearch, swarmEvents, postSwarm } from './_swarm.mjs';
+const argv = process.argv.slice(2); const force = argv.includes('--force'); const q = argv.filter((a) => a !== '--force').join(' ').trim();
+if (!q) { out({ ok: false, error: "usage: grok-xsearch '<query>' [--force]" }); process.exit(2); }
+// Same query twice in 24 h buys nothing (the swarm paper's "repeating a teammate's search"): your own log first, then the fleet board.
+const LOG = `${HOME}/state/searches.jsonl`;
+const mine = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }) : [];
+const dupMine = duplicateSearch(q, mine);
+if (dupMine && !force) { out({ ok: false, error: `you ran this query at ${dupMine.at}; the results are in your journal. Try a different angle, or --force if the topic moved.` }); process.exit(4); }
+let board = []; try { board = (await swarmEvents({ type: 'fleet.note', hours: 24 })).filter((n) => n.kind === 'search' && n.from !== ME); } catch { /* board unreachable: search anyway */ }
+const dupOther = duplicateSearch(q, board);
+if (dupOther && !force) { out({ ok: false, error: `${dupOther.from} ran this query at ${dupOther.at} (fleet-board). Ask it instead: swarm-send ${dupOther.from} '<what you need>' --ref <your journal or check id>; or --force.` }); process.exit(4); }
 const auth = JSON.parse(fs.readFileSync('/home/ubuntu/.hermes/auth.json', 'utf8'));
 const find = (o) => { if (o && typeof o === 'object') { for (const [k, v] of Object.entries(o)) { if (k === 'access_token' && typeof v === 'string') return v; const r = find(v); if (r) return r; } } return null; };
 const tok = find(auth);
@@ -11,4 +21,6 @@ const res = await fetch('https://api.x.ai/v1/responses', { method: 'POST', heade
 const d = await res.json();
 const txt = (d.output ?? []).flatMap(o => o.content ?? []).filter(c => c.type === 'output_text').map(c => c.text).join('');
 let results = null; try { results = JSON.parse(txt.replace(/^```json|```$/gm, '').trim()); } catch { results = txt; }
+fs.appendFileSync(LOG, JSON.stringify({ at: new Date().toISOString(), query: q, ok: res.ok }) + '\n');
+if (res.ok) await postSwarm('fleet.note', { from: ME, kind: 'search', at: new Date().toISOString(), text: q.slice(0, 300) }).catch(() => {});
 out({ ok: res.ok, query: q, results });

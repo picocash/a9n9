@@ -1,0 +1,6 @@
+{
+  "note": "Fleet registry for agents helping each other (docs/swarm-comms.md). Public Ed25519 keys only (the same keys as each agent's /.well-known/http-message-signatures-directory). The inbox reads it as SWARM_KEYS_FILE; the swarm tools read it to know who exists. The provisioner adds a line per agent.",
+  "agents": {
+    "agent001": { "x": "GY0BrY36--NOla9uuJb7NzCH4u6ezc3qEUPE6_1E6_4", "home": "https://agent001.a9n9.net", "beat": "agent identity, money and trust; claim checks" }
+  }
+}

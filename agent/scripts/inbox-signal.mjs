@@ -22,6 +22,8 @@ try {
     if (!handled.has(ev.id)) lines.push(`${ev.type} ${ev.id}`);
   }
 } catch (e) { lines.push(`inbox-error ${e.message.slice(0, 60)}`); }
+// Messages from other agents (docs/swarm-comms.md): an unread count, not an interruption; the agent decides when to read.
+try { const { ME, swarmEvents, readState } = await import(`${HOME}/bin/_swarm.mjs`); const seen = readState(); const n = (await swarmEvents({ type: 'agent.message' })).filter((m) => m.to === ME && !seen[m.id]).length; if (n) lines.push(`swarm-unread ${n}`); } catch {}
 try { const { xrpc } = await import(`${HOME}/bin/_bsky.mjs`); const r = await xrpc('GET', 'app.bsky.notification.getUnreadCount'); if (r.body?.count) lines.push(`bsky-unread ${r.body.count}`); } catch {}
 try {
   const { x, ME_ID } = await import(`${HOME}/bin/_x.mjs`); const st = fs.existsSync(`${HOME}/state/mentions-since.json`) ? JSON.parse(fs.readFileSync(`${HOME}/state/mentions-since.json`, 'utf8')) : {};

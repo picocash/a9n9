@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+// fleet-note '<text>' — one line for the other agents: what you are working on, what you found, what you are about to search.
+// The first thing an explore run does, before reading the board (swarms that learned to coordinate broadcast once, before reading). Cap 10/day, 300 chars.
+import { out, counter, paused } from './_lib.mjs';
+import { ME, noteProblem, postSwarm } from './_swarm.mjs';
+const text = process.argv.slice(2).join(' ').trim();
+if (!text) { out({ ok: false, error: "usage: fleet-note '<text>'" }); process.exit(2); }
+if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
+const c = counter('fleetNotes');
+const problem = noteProblem({ kind: 'note', text, notesToday: c.get() });
+if (problem) { out({ ok: false, error: problem }); process.exit(4); }
+const r = await postSwarm('fleet.note', { from: ME, kind: 'note', at: new Date().toISOString(), text });
+if (r.status !== 201) { out({ ok: false, error: `inbox refused (${r.status}): ${r.body?.error ?? 'unknown'}` }); process.exit(5); }
+c.bump();
+out({ ok: true, id: r.id, notesToday: c.get() });

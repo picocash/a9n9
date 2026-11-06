@@ -1,0 +1,9 @@
+#!/usr/bin/env node
+// fleet-board [--hours 24] — what every agent in the fleet noted and searched in the last 24 h (you included). Read it after your own note,
+// before you search: a query another agent ran today is not run again (grok-xsearch refuses it and names the agent).
+import { out } from './_lib.mjs';
+import { ME, fleet, swarmEvents } from './_swarm.mjs';
+const a = process.argv.slice(2); const hi = a.indexOf('--hours'); const hours = Math.min(168, Math.max(1, Number(hi >= 0 ? a[hi + 1] : 24) || 24));
+const notes = (await swarmEvents({ type: 'fleet.note', hours })).map((n) => ({ at: n.at, from: n.from, kind: n.kind, text: n.text })).sort((p, q) => (p.at < q.at ? 1 : -1));
+const agents = Object.entries(fleet()).map(([id, v]) => ({ id, beat: v.beat ?? null, me: id === ME }));
+out({ ok: true, hours, agents, notes: notes.filter((n) => n.kind === 'note'), searches: notes.filter((n) => n.kind === 'search') });

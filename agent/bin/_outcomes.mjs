@@ -7,6 +7,7 @@ const ledgerEnv = env('/home/ubuntu/a9n9/secrets/inbox.env');
 const H = { authorization: `Bearer ${ledgerEnv.INBOX_API_TOKEN}` };
 const BSKY_DID = 'did:plc:spw47s5fjotldww3osv7doiq';
 const NOSTR_RELAYS = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net'];
+const ME = 'agent001';
 const ITEM_TYPES = ['bsky.post', 'bsky.reply', 'x.post', 'x.reply', 'nostr.post', 'nostr.reply'];
 
 async function ledgerEvents(since) {
@@ -96,6 +97,15 @@ export async function computeOutcomes({ since, until = new Date().toISOString(),
   // Money in the window (income net of refunds is in `runway`; here only what arrived).
   let incomeUsd = 0; for (const ev of evs.filter((e) => e.type === 'money.income' && inWindow(e.receivedAt))) incomeUsd += Number((await payload(ev)).amount_usd ?? 0);
   const xApiUsd = readJsonl(`${HOME}/state/x-api-usage.jsonl`).filter((u) => inWindow(u.at)).reduce((a, u) => a + Number(u.price ?? 0), 0);
+  // Agents helping each other (docs/swarm-comms.md): what you asked of other agents and finished for them, and the reverse. A `done`
+  // carries a receipt, so an assist given is work another agent could publish; the team outcome is read in the daily review.
+  const swarm = { asksSent: 0, asksReceived: 0, assistsGiven: 0, assistsReceived: 0, notes: 0 };
+  for (const ev of evs.filter((e) => e.channel === 'swarm' && inWindow(e.receivedAt))) {
+    const p = await payload(ev);
+    if (ev.type === 'fleet.note') { if (p.kind === 'note' && p.from === ME) swarm.notes++; continue; }
+    if (p.from === ME && p.kind === 'ask') swarm.asksSent++; if (p.to === ME && p.kind === 'ask') swarm.asksReceived++;
+    if (p.from === ME && p.kind === 'done') swarm.assistsGiven++; if (p.to === ME && p.kind === 'done') swarm.assistsReceived++;
+  }
 
   // Engagement of one item: what other people did with it. A reply or "it helped" is worth more than a like.
   const engagement = (i) => (i.repliesReceived ?? 0) * 3 + (i.quotes ?? 0) * 3 + (i.reposts ?? 0) * 2 + (i.likes ?? 0) + (i.zaps ?? 0) * 3 + (i.helpedYes ?? 0) * 5;
@@ -115,7 +125,8 @@ export async function computeOutcomes({ since, until = new Date().toISOString(),
   metrics.engagementPerItem = metrics.measuredItems ? +(metrics.engagement / metrics.measuredItems).toFixed(3) : 0;
   metrics.people = new Set(items.flatMap((i) => i.people ?? [])).size;
   metrics.helpedYes = helpedYes; metrics.helpedNo = helpedNo; metrics.incomeUsd = +incomeUsd.toFixed(2); metrics.xApiUsd = +xApiUsd.toFixed(3);
+  for (const [k, v] of Object.entries(swarm)) metrics[`swarm.${k}`] = v;
   return { since, until, readX, items, metrics, errors };
 }
 
-export const METRIC_HELP = 'engagement = 3×replies from others + 3×quotes + 2×reposts + likes + 3×zaps + 5×"it helped". Useful keys: engagementPerItem, engagementPerItem.bsky, engagementPerItem.play.<play>, people, repliesReceived, helpedYes, incomeUsd.';
+export const METRIC_HELP = 'engagement = 3×replies from others + 3×quotes + 2×reposts + likes + 3×zaps + 5×"it helped". Useful keys: engagementPerItem, engagementPerItem.bsky, engagementPerItem.play.<play>, people, repliesReceived, helpedYes, incomeUsd, swarm.assistsGiven (work you finished for another agent, with a receipt), swarm.asksSent.';
