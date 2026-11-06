@@ -28,3 +28,5 @@ Arun funded the agent wallet; the agent wallet sent 0.25 USDC to the test buyer 
 - **Switching networks.** `X402_NETWORK` in `~/a9n9/docker-compose.yml` (tools service), then `docker compose up -d tools`.
 - **Lesson (2026-11-06).** mppx binds a challenge's `opaque` to the route that issued it. Both rails are issued and verified inside the route handler (`app.post`), never from a catch-all middleware, or the MPP retry fails with "credential opaque does not match this route's requirements".
 - **Not done yet.** Replay guard across the verify→handler→settle gap (two concurrent requests with one signature could both run the handler; the second settle reverts on-chain); a Postgres table of payments (the inbox ledger is the book of record for now); x402scan registration; the MPP services directory PR.
+
+2026-11-06 (later): three more routes sold over x402, `/v1/extract`, `/v1/decide`, `/v1/task` (Parallel.ai; see docs/tools-parallel.md); `/v1/findall` and `/v1/monitor` are MPP-only (minutes long, or a standing cost). The keepalive buys the three new ones too, so the Bazaar lists eight routes after the next run.

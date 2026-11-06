@@ -52,6 +52,9 @@ const examples = {
   '/v1/web-search': { q: 'tempo stablecoin reserves', count: 3 },
   '/v1/tavily': { query: 'tempo stablecoin reserves', max_results: 3, include_answer: false },
   '/v1/image': { prompt: 'a teal dot on a white background' },
+  '/v1/extract': { urls: ['https://www.tempo.xyz'], objective: 'what the page says the product is' },
+  '/v1/decide': { state: { company: 'Tempo', website: 'https://www.tempo.xyz' }, questions: { has_public_docs: { type: 'noul', instructions: 'Does the company publish public developer documentation?' } } },
+  '/v1/task': { input: 'Tempo (tempo.xyz)', output_schema: 'The launch year and the native stablecoin name', processor: 'lite' },
 };
 const routes = (wk.resources ?? []).map((u) => new URL(u).pathname).filter((p) => examples[p]);
 log(`routes ${routes.join(' ')}; x402 stats ${JSON.stringify(info.x402?.stats ?? null)}`);

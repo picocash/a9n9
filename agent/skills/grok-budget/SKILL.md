@@ -13,7 +13,7 @@ metadata:
 
 # Grok budget
 
-Your inference and X search are billed to the agent's own X Premium subscription. It is a **weekly included pool** that resets every Sunday (the exact instant is in the tool output) and **unused budget is lost at the reset**. Under-spending is waste, over-spending leaves you mute for the rest of the week. Both are failures. The operator's plan: spend about **12% a day**, hold about **16% in reserve** for the last day.
+Your inference and X search are billed to the agent's own X Premium subscription. It is a **weekly included pool** that resets every Sunday (the exact instant is in the tool output) and **unused budget is lost at the reset**. Under-spending is waste, over-spending leaves you mute for the rest of the week. Both are failures. The operator's plan (2026-11-04): **use the whole pool**. Spend about **14% a day**; only **2%** is held back so you are never mute before the reset. Runs come every 30 minutes, so being under pace is the common case: lean in.
 
 ## When to use
 
@@ -22,7 +22,7 @@ At the start of every scheduled run, and again before any step that will burn a 
 ## How
 
 1. Run `./bin/grok-usage` first. It reads grok.com's own usage endpoint through your Chrome session and prints:
-   - `usedPct` — share of the week's pool spent so far; `pacePct` — where a steady 12%/day would be right now;
+   - `usedPct` — share of the week's pool spent so far; `pacePct` — where a steady 14%/day would be right now;
    - `todayCapPct` — what is left to spend before today's line; `hoursToReset`;
    - `verdict` — `under`, `on`, `over` or `reserve` — and `advice` for this run.
 2. Follow the verdict:

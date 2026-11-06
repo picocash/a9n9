@@ -53,3 +53,5 @@ console.log(`paid ${before - sum(held)} base units; ${sum(held)} left as change`
 const first = body.results?.[0];
 const said = body.choices?.[0]?.message?.content;
 console.log('result:', first ? `${first.title} — ${first.url}` : said ? said.slice(0, 200) : JSON.stringify(body).slice(0, 300));
+// Callers that need the whole response (agent/bin/_buy.mjs) ask for it on one line.
+if (process.env.RESULT_JSON) console.log('result-json:', JSON.stringify(body));

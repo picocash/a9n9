@@ -11,9 +11,10 @@ export async function buy(path, body, priceDollars, { timeoutMs = 240_000 } = {}
   const amount = Math.round(Number(priceDollars) * 1_000_000); // base units, 6 decimals
   const out = execFileSync('node', ['/home/ubuntu/source/a9n9/services/tools/scripts/pay-e2e.mjs'], {
     encoding: 'utf8', timeout: timeoutMs,
-    env: { ...process.env, PICOCASH_E2E_PAYER_KEY: PAYER.PICOCASH_E2E_PAYER_KEY, TOOLS_URL: TOOLS, TARGET_URL: `${TOOLS}${path}`, AMOUNT: String(amount), BODY: JSON.stringify(body) },
+    env: { ...process.env, PICOCASH_E2E_PAYER_KEY: PAYER.PICOCASH_E2E_PAYER_KEY, TOOLS_URL: TOOLS, TARGET_URL: `${TOOLS}${path}`, AMOUNT: String(amount), BODY: JSON.stringify(body), RESULT_JSON: '1' },
+    maxBuffer: 16 * 1024 * 1024,
   });
-  const m = out.match(/^result: (.*)$/m); const status = out.match(/response (\d+)/)?.[1];
+  const m = out.match(/^result-json: (.*)$/m) ?? out.match(/^result: (.*)$/m); const status = out.match(/response (\d+)/)?.[1];
   let result = null; try { result = JSON.parse(m?.[1] ?? 'null'); } catch { result = m?.[1] ?? null; }
   await ledger({ id: `money:spend:${Date.now()}`, type: 'money.spend', channel: 'money', what: `tools${path}`, amount_usd: Number(priceDollars), rail: 'picocash (testnet eCash)', status: Number(status), at: new Date().toISOString() });
   return { status: Number(status), result, log: out.split('\n').filter(Boolean).slice(-4) };

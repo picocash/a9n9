@@ -14,7 +14,7 @@ import { Wallet } from '@picocash/sdk';
 import { PicocashAcceptor, type AcceptorStore } from '@picocash/mppx-method';
 import { charge, toBaseUnits } from '@picocash/mppx-method/mppx';
 import { p2pkPublicKey } from '@picocash/crypto';
-import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelRequest, reservesRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
+import { CATALOG, ToolInputError, braveQuery, exaRequest, imageRequest, parallelCost, parallelDecideRequest, parallelExtractRequest, parallelFindAllRequest, parallelMonitorRequest, parallelRequest, parallelTaskRequest, reservesRequest, tavilyRequest, videoRequest, type Tool } from './catalog.js';
 import { createX402, decodeSettlement, type X402Options, sellable } from './x402.js';
 
 export interface ToolsOptions {
@@ -23,6 +23,10 @@ export interface ToolsOptions {
   secretKey: string;
   lockKey: Uint8Array;
   vendorKeys: { PARALLEL_API_KEY?: string; BRAVE_API_KEY?: string; EXA_API_KEY?: string; TAVILY_API_KEY?: string; XAI_API_KEY?: string; RESERVES_URL?: string };
+  /** Vendor spend ceiling per UTC day on Parallel.ai across every buyer (prepaid credits; the Service API balance needs an OAuth token we do not hold). Default $5. */
+  parallelDailyUsd?: number;
+  /** Active Parallel monitors allowed at once (each costs about $0.10 a month on lite). Default 20. */
+  parallelMaxMonitors?: number;
   inbox?: { url: string; secret: string };
   acceptorStore?: AcceptorStore;
   /** Sell the same routes over x402 (USDC on Base) as well as MPP/picocash. */
@@ -61,6 +65,19 @@ export async function createToolsApp(opts: ToolsOptions) {
   const app = new Hono<{ Variables: Vars }>();
   const x402 = opts.x402 ? createX402({ ...opts.x402, tools: sellable(opts.vendorKeys as Record<string, string | undefined>, opts.x402.tools) }) : undefined;
   const x402Stats = { settled: 0, failed: 0 };
+  // Parallel.ai: one key, prepaid credits, several tools. A per-day vendor budget (in-process; resets with the deploy) keeps a buyer
+  // loop or a runaway agent from draining the credits; the spend itself is on every tools.call event in the ledger.
+  const PARALLEL_DAILY = opts.parallelDailyUsd ?? Number(process.env.PARALLEL_DAILY_USD ?? 5);
+  const PARALLEL_MONITORS = opts.parallelMaxMonitors ?? Number(process.env.PARALLEL_MAX_MONITORS ?? 20);
+  const parallelSpend = { day: '', usd: 0 };
+  const parallelBudget = (cost: number): string | null => {
+    const day = new Date().toISOString().slice(0, 10);
+    if (parallelSpend.day !== day) { parallelSpend.day = day; parallelSpend.usd = 0; }
+    if (parallelSpend.usd + cost > PARALLEL_DAILY) return `daily Parallel.ai budget reached ($${parallelSpend.usd.toFixed(3)} of $${PARALLEL_DAILY} used today); try tomorrow`;
+    return null;
+  };
+  const parallel = (path: string, init: RequestInit & { timeoutMs?: number } = {}) => fetchImpl(`https://api.parallel.ai${path}`, { ...init, headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.PARALLEL_API_KEY!, ...((init.headers as Record<string, string>) ?? {}) }, signal: AbortSignal.timeout(init.timeoutMs ?? 45_000) });
+  const PARALLEL_TOOLS = new Set(['search', 'extract', 'decide', 'task', 'findall', 'monitor']);
 
   if (x402) {
     // Ledger, outermost: a PAYMENT-RESPONSE on the way out is a settlement (or a settlement failure) to record.
@@ -152,6 +169,14 @@ export async function createToolsApp(opts: ToolsOptions) {
     return gated ?? c.res;
   }
 
+  // Reading a monitor's events is free (the creation paid for the checks); the id is unguessable.
+  app.get('/v1/monitor/:id/events', async (c) => {
+    const id = c.req.param('id');
+    if (!/^monitor_[a-z0-9]{8,64}$/.test(id) || !opts.vendorKeys.PARALLEL_API_KEY) return c.json({ error: 'unknown monitor' }, 404);
+    const q = new URLSearchParams(); const g = c.req.query('event_group_id'); if (g && /^[\w-]{1,80}$/.test(g)) q.set('event_group_id', g);
+    const res = await parallel(`/v1/monitors/${id}/events${q.size ? `?${q}` : ''}`, { timeoutMs: 20_000 });
+    return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
+  });
   app.get('/v1/video/:id', async (c) => {
     const id = c.req.param('id');
     if (!/^[0-9a-f-]{36}$/.test(id) || !opts.vendorKeys.XAI_API_KEY) return c.json({ error: 'unknown request' }, 404);
@@ -174,6 +199,11 @@ export async function createToolsApp(opts: ToolsOptions) {
       // Validate before charging so a bad request never costs anything.
       try {
         if (tool.name === 'search') parallelRequest(body);
+        else if (tool.name === 'extract') parallelExtractRequest(body);
+        else if (tool.name === 'decide') parallelDecideRequest(body);
+        else if (tool.name === 'task') parallelTaskRequest(body);
+        else if (tool.name === 'findall') parallelFindAllRequest(body);
+        else if (tool.name === 'monitor') parallelMonitorRequest(body);
         else if (tool.name === 'exa') exaRequest(body);
         else if (tool.name === 'tavily') tavilyRequest(body);
         else if (tool.name === 'image') imageRequest(body);
@@ -184,10 +214,49 @@ export async function createToolsApp(opts: ToolsOptions) {
         if (err instanceof ToolInputError) return c.json({ error: err.message }, 400);
         throw err;
       }
+      // Budget before charging: a refused call costs the buyer nothing.
+      let vendorCost = 0;
+      if (PARALLEL_TOOLS.has(tool.name)) {
+        vendorCost = parallelCost(tool.name, body);
+        const over = parallelBudget(vendorCost);
+        if (over) return c.json({ error: over }, 429);
+        if (tool.name === 'monitor') {
+          const active = await parallel('/v1/monitors?status=active&limit=1000', { timeoutMs: 20_000 }).then((r) => r.json()).then((j) => ((j as { monitors?: unknown[] }).monitors ?? []).length).catch(() => 0);
+          if (active >= PARALLEL_MONITORS) return c.json({ error: `monitor limit reached (${active} active of ${PARALLEL_MONITORS}); cancel one in the dashboard first` }, 429);
+        }
+      }
+      const passthrough = async (res: Response) => new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
       const run = async (): Promise<Response> => {
-        if (tool.name === 'search') {
-          const res = await fetchImpl('https://api.parallel.ai/v1beta/search', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.PARALLEL_API_KEY! }, body: JSON.stringify(parallelRequest(body)), signal: AbortSignal.timeout(45_000) });
-          return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
+        if (PARALLEL_TOOLS.has(tool.name)) parallelSpend.usd += vendorCost;
+        if (tool.name === 'search') return passthrough(await parallel('/v1/search', { method: 'POST', body: JSON.stringify(parallelRequest(body)) }));
+        if (tool.name === 'extract') return passthrough(await parallel('/v1/extract', { method: 'POST', body: JSON.stringify(parallelExtractRequest(body)), timeoutMs: 60_000 }));
+        if (tool.name === 'decide') return passthrough(await parallel('/v1/decisions', { method: 'POST', body: JSON.stringify(parallelDecideRequest(body)), timeoutMs: 90_000 }));
+        if (tool.name === 'task') {
+          const start = await parallel('/v1/tasks/runs', { method: 'POST', body: JSON.stringify(parallelTaskRequest(body)) });
+          const sj = (await start.json().catch(() => ({}))) as { run_id?: string; error?: unknown };
+          if (!start.ok || !sj.run_id) return Response.json({ error: 'task failed to start', detail: sj.error ?? null }, { status: 502 });
+          const res = await parallel(`/v1/tasks/runs/${sj.run_id}/result?timeout=120`, { timeoutMs: 130_000 });
+          if (res.status === 408) return Response.json({ status: 'pending', run_id: sj.run_id, note: 'still running after 2 minutes; the vendor keeps the run but this service does not poll it. Use processor lite or base, or a narrower input.' }, { status: 202 });
+          return passthrough(res);
+        }
+        if (tool.name === 'findall') {
+          const start = await parallel('/v1beta/findall/runs', { method: 'POST', body: JSON.stringify(parallelFindAllRequest(body)) });
+          const sj = (await start.json().catch(() => ({}))) as { findall_id?: string; error?: unknown };
+          if (!start.ok || !sj.findall_id) return Response.json({ error: 'findall failed to start', detail: sj.error ?? null }, { status: 502 });
+          const deadline = Date.now() + 240_000;
+          while (Date.now() < deadline) {
+            await new Promise((r) => setTimeout(r, 6000));
+            const st = (await parallel(`/v1beta/findall/runs/${sj.findall_id}`, { timeoutMs: 20_000 }).then((r) => r.json()).catch(() => ({}))) as { status?: { is_active?: boolean; status?: string } };
+            if (st.status && st.status.is_active === false) break;
+          }
+          const res = await parallel(`/v1beta/findall/runs/${sj.findall_id}/result`, { timeoutMs: 30_000 });
+          const rj = (await res.json().catch(() => ({}))) as { run?: { status?: { is_active?: boolean } }; candidates?: unknown[] };
+          return Response.json({ ...rj, note: rj.run?.status?.is_active ? 'still running after 4 minutes: this is a snapshot; candidates may still be generated' : undefined }, { status: res.ok ? 200 : res.status });
+        }
+        if (tool.name === 'monitor') {
+          const res = await parallel('/v1/monitors', { method: 'POST', body: JSON.stringify(parallelMonitorRequest(body)) });
+          const j = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+          return Response.json(res.ok ? { ...j, events_url: `/v1/monitor/${String(j.monitor_id)}/events`, note: 'runs once now, then on its frequency; read events free at events_url (add ?event_group_id= from a webhook or read the latest)' } : j, { status: res.ok ? 200 : res.status });
         }
         if (tool.name === 'exa') {
           const res = await fetchImpl('https://api.exa.ai/search', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.EXA_API_KEY! }, body: JSON.stringify(exaRequest(body)), signal: AbortSignal.timeout(30_000) });
@@ -229,7 +298,10 @@ export async function createToolsApp(opts: ToolsOptions) {
       };
       // Protocol switch, in the route's own context (mppx scopes a challenge to the route that issued it):
       // x402 retry → verify, handler, settle; MPP retry → the gate below; unpaid → one merged 402 with both rails.
-      if (x402 && x402.paidRoutes.has(`POST ${tool.path}`)) {
+      // The x402 challenge names the public resource URL; a buyer reaching the service by its LAN address (the agent's own
+      // picocash client, pay-e2e) gets the MPP-only 402, or its client refuses a resource that is not the URL it called.
+      const publicHost = x402 ? new URL(opts.x402!.publicUrl).host : '';
+      if (x402 && x402.paidRoutes.has(`POST ${tool.path}`) && (c.req.header('host') ?? '') === publicHost) {
         const h = c.req.raw.headers;
         if (h.has('payment-signature') || h.has('x-payment')) {
           const r = await x402.middleware(c, async () => { c.set('paidVia', 'x402'); c.res = await gate(c, tool, run); });

@@ -1,6 +1,6 @@
 ---
 name: a9n9-daily-review
-description: The nightly evidence review: MVR progress from the ledger, the three-day focus rule, runway and spend, memory consolidation, and tomorrow's three concrete moves. No posting.
+description: "The nightly evidence review: MVR progress from the ledger, the three-day focus rule, runway and spend, memory consolidation, and tomorrow's three concrete moves. No posting."
 version: 1.0.0
 author: a9n9 (agent 001 runtime)
 license: Apache-2.0

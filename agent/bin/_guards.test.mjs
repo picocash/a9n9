@@ -66,4 +66,36 @@ assert.equal(jobTerms({ jobs: tenPaid.slice(0, 9).concat([{ id: 'x', status: 'un
   assert.equal(queryKey(' Is  x402, live? '), 'is x402 live');
   assert.equal(canonical({ from: 'agent001', kind: 'note', at: '2026-11-06T12:00:00Z', text: 'hi' }), 'a9n9-swarm\nagent001\n\nnote\n2026-11-06T12:00:00Z\n\nhi', 'canonical string matches the inbox');
 }
+// Parallel tool (docs/tools-parallel.md): argument shapes and the daily budget.
+{
+  const { parseArgs, budget } = await import('./_parallel.mjs');
+  let p = parseArgs(['search', 'x402', 'facilitators', '--queries', 'x402 facilitator list|coinbase x402', '--max', '99', '--domains', '.gov, docs.cdp.coinbase.com', '--after', '2026-01-01', '--mode', 'fast']);
+  assert.deepEqual(p.body, { objective: 'x402 facilitators', queries: ['x402 facilitator list', 'coinbase x402'], max_results: 20, mode: 'fast', include_domains: ['.gov', 'docs.cdp.coinbase.com'], after_date: '2026-01-01' });
+  assert.equal(p.path, '/v1/search');
+  assert.match(parseArgs(['search']).error, /objective/);
+  p = parseArgs(['extract', 'https://a.example/p', 'notaurl', '--objective', 'the fee', '--full']);
+  assert.deepEqual(p.body, { urls: ['https://a.example/p'], objective: 'the fee', full_content: true });
+  assert.match(parseArgs(['extract', 'nope']).error, /URL/);
+  p = parseArgs(['decide', '--state', '{"company":"Tempo"}', '--ask', 'docs=Tempo publishes public developer docs', '--choice', 'tier=Which tier?', '--options', 'a=when a|b=when b', '--score', 'lvl=How complete?', '--levels', 'none|some|all']);
+  assert.deepEqual(p.body, { state: { company: 'Tempo' }, questions: { docs: { type: 'noul', instructions: 'Tempo publishes public developer docs' }, tier: { type: 'choice', instructions: 'Which tier?', criteria: { a: 'when a', b: 'when b' } }, lvl: { type: 'score', instructions: 'How complete?', criteria: ['none', 'some', 'all'] } } });
+  assert.match(parseArgs(['decide', '--ask', 'q=x']).error, /--state/);
+  assert.match(parseArgs(['decide', '--state', '{"a":1}']).error, /at least one/);
+  p = parseArgs(['task', 'Tempo', '(tempo.xyz)', '--schema', 'launch year', '--processor', 'ultra']);
+  assert.deepEqual(p.body, { input: 'Tempo (tempo.xyz)', output_schema: 'launch year', processor: 'base' });
+  assert.match(parseArgs(['task', 'x']).error, /--schema/);
+  p = parseArgs(['findall', 'US stablecoin issuers', '--match', 'chartered=holds a US charter', '--match', 'bad', '--generator', 'base', '--limit', '5']);
+  assert.deepEqual(p.body, { objective: 'US stablecoin issuers', entity_type: 'companies', match_conditions: [{ name: 'chartered', description: 'holds a US charter' }], generator: 'base', match_limit: 5 });
+  assert.match(parseArgs(['findall', 'x']).error, /--match/);
+  p = parseArgs(['monitor', 'new reserve attestations', '--weekly', '--label', 'attest']);
+  assert.deepEqual(p.body, { query: 'new reserve attestations', frequency: '1w', label: 'attest' });
+  assert.equal(parseArgs(['events', 'monitor_abcdefgh12']).id, 'monitor_abcdefgh12');
+  assert.match(parseArgs(['events', 'x']).error, /monitor id/);
+  assert.match(parseArgs(['bogus']).error, /usage/);
+  const t = new Date('2026-11-06T12:00:00Z');
+  const log = [{ at: '2026-11-06T01:00:00Z', usd: 1.2 }, { at: '2026-11-05T23:00:00Z', usd: 5 }];
+  assert.equal(budget(log, '0.0100', 1.5, t).ok, true, 'yesterday does not count');
+  assert.equal(budget(log, '0.5000', 1.5, t).ok, false);
+  assert.equal(budget(log, '0.3000', 1.5, t).ok, true, 'exactly at the cap is allowed');
+  assert.equal(budget([], '1.2000', 1.5, t).left, 1.5);
+}
 console.log('guards ok');

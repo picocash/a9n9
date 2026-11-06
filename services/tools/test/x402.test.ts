@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG, braveQuery, exaRequest, imageRequest, parallelRequest, reservesRequest, tavilyRequest } from '../src/catalog.js';
+import { CATALOG, parallelDecideRequest, parallelExtractRequest, parallelTaskRequest, braveQuery, exaRequest, imageRequest, parallelRequest, reservesRequest, tavilyRequest } from '../src/catalog.js';
 import { buildRoutes, decodeSettlement, discovery, sellable, x402Tools } from '../src/x402.js';
 
 const opts = { network: 'eip155:8453' as const, payTo: '0xbC907d1E4DaaEe23eb56dA405F9E24843d30f832', facilitator: 'cdp' as const, publicUrl: 'https://tools.a9n9.net/' };
@@ -24,13 +24,14 @@ describe('x402 routes', () => {
     const sold = sellable(keys).map((t) => t.name);
     expect(sold).not.toContain('web-search');
     expect(sold).not.toContain('video');
-    expect(sold.sort()).toEqual(['exa', 'image', 'reserves', 'search', 'tavily']);
+    expect(sold).not.toContain('findall'); expect(sold).not.toContain('monitor');
+    expect(sold.sort()).toEqual(['decide', 'exa', 'extract', 'image', 'reserves', 'search', 'task', 'tavily']);
     const routes = buildRoutes({ ...opts, tools: sellable(keys) });
     expect(Object.keys(routes)).not.toContain('POST /v1/web-search');
     expect(sellable({ ...keys, BRAVE_API_KEY: 'b' }).map((t) => t.name)).toContain('web-search');
   });
   it('discovery examples are valid inputs for the tool they advertise (the Bazaar probe replays them)', () => {
-    const check: Record<string, (b: Record<string, unknown>) => unknown> = { exa: exaRequest, search: parallelRequest, 'web-search': braveQuery, tavily: tavilyRequest, reserves: reservesRequest, image: imageRequest };
+    const check: Record<string, (b: Record<string, unknown>) => unknown> = { exa: exaRequest, search: parallelRequest, 'web-search': braveQuery, tavily: tavilyRequest, reserves: reservesRequest, image: imageRequest, extract: parallelExtractRequest, decide: parallelDecideRequest, task: parallelTaskRequest };
     for (const tool of x402Tools(CATALOG)) {
       const d = discovery(tool);
       expect(d.bodyType).toBe('json');

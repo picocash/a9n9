@@ -26,7 +26,8 @@ export interface X402Options {
 }
 
 /** Tools sold over x402: everything except video, whose long renders answer 202 and would settle before delivery. */
-export const x402Tools = (tools: Tool[] = CATALOG): Tool[] => tools.filter((t) => t.name !== 'video');
+/** video (minutes), findall (minutes, dollars) and monitor (a standing cost) stay MPP-only: x402 settles after the handler and a Bazaar probe replays examples. */
+export const x402Tools = (tools: Tool[] = CATALOG): Tool[] => tools.filter((t) => !['video', 'findall', 'monitor'].includes(t.name));
 
 /** Tools that may be sold over x402 on this deployment: x402Tools minus any whose vendor key is missing (an advertised route that answers 503 would be listed in the Bazaar as broken). */
 export const sellable = (vendorKeys: Record<string, string | undefined>, tools: Tool[] = CATALOG): Tool[] => x402Tools(tools).filter((t) => Boolean(vendorKeys[t.requiresEnv]));
@@ -45,6 +46,12 @@ export function discovery(tool: Tool) {
       return json({ query: 'tempo stablecoin reserves', max_results: 5, include_answer: false }, { type: 'object', required: ['query'], properties: { query: { type: 'string', description: 'Search query' }, max_results: { type: 'integer', minimum: 1, maximum: 10, default: 5 }, include_answer: { type: 'boolean', default: false } } }, { results: [{ title: 'Example result', url: 'https://example.com/page', content: 'snippet' }] });
     case 'reserves':
       return json({ symbol: 'pathUSD' }, { type: 'object', properties: { symbol: { type: 'string', description: 'Optional stablecoin symbol on Tempo; omit for all' } } }, { source: 'https://reserves.a9n9.net', block: 1, tokens: [{ symbol: 'pathUSD', supply: '1000000', reserves: '1000000', status: 'ok' }] });
+    case 'extract':
+      return json({ urls: ['https://www.tempo.xyz'], objective: 'what the page says the product is' }, { type: 'object', required: ['urls'], properties: { urls: { type: 'array', items: { type: 'string' }, maxItems: 10, description: 'Public http(s) URLs' }, objective: { type: 'string', description: 'What to pull from the pages; excerpts focus on it' }, full_content: { type: 'boolean', default: false } } }, { results: [{ url: 'https://example.com/page', title: 'Example', excerpts: ['a matching passage'] }] });
+    case 'decide':
+      return json({ state: { company: 'Tempo', website: 'https://www.tempo.xyz' }, questions: { has_public_docs: { type: 'noul', instructions: 'Does the company publish public developer documentation?' } } }, { type: 'object', required: ['state', 'questions'], properties: { state: { type: 'object', description: 'The entity or context the questions are about' }, questions: { type: 'object', description: 'name → {type: noul|choice|score, instructions, criteria?}; max 20' } } }, { answers: { has_public_docs: { type: 'noul', noul: 0.97 } }, citations: [{ url: 'https://example.com/docs', excerpts: ['...'] }] });
+    case 'task':
+      return json({ input: 'Tempo (tempo.xyz)', output_schema: 'The launch year and the native stablecoin name', processor: 'lite' }, { type: 'object', required: ['input'], properties: { input: { description: 'Text or an object' }, output_schema: { type: 'string', description: 'Text description of the fields wanted' }, json_schema: { type: 'object', description: 'Alternative: a JSON schema for the output' }, processor: { type: 'string', enum: ['lite', 'base', 'core'], default: 'base' } } }, { run: { status: 'completed' }, output: { type: 'text', content: '...', basis: [{ field: 'output', citations: [{ url: 'https://example.com' }], confidence: 'high' }] } });
     case 'image':
       return json({ prompt: 'a teal dot on a white background' }, { type: 'object', required: ['prompt'], properties: { prompt: { type: 'string', description: 'Image description' }, image_url: { type: 'string', description: 'Optional https reference image' } } }, { url: 'https://example.com/image.jpg', mime_type: 'image/jpeg' });
     default:

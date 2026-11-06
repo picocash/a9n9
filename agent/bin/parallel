@@ -1,0 +1,48 @@
+#!/usr/bin/env node
+// parallel <search|extract|decide|task|findall|monitor|monitors|events> … — Parallel.ai web research through tools.a9n9.net, paid per call.
+// Prices come from the service; a daily cap (policy.parallel_usd_per_day, default $1.50) is enforced here; every call is a money.spend in the ledger.
+// Read ~/.hermes skill a9n9-parallel for when to use which. Excerpts are not verification: `./bin/check` records the receipt.
+import fs from 'node:fs';
+import { out, HOME, policy, paused } from './_lib.mjs';
+import { buy } from './_buy.mjs';
+import { parseArgs, budget, usage, FALLBACK_PRICE, DEFAULT_DAILY_USD, MAX_MONITORS } from './_parallel.mjs';
+const TOOLS = process.env.TOOLS_URL ?? 'http://127.0.0.1:8860';
+const LOG = `${HOME}/state/parallel-usage.jsonl`, MON = `${HOME}/state/parallel-monitors.json`;
+const rd = (f, fb) => { try { return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : fb; } catch { return fb; } };
+const argv = process.argv.slice(2);
+if (!argv.length || argv[0] === '--help' || argv[0] === '-h') { out({ ok: true, usage: usage(), prices: FALLBACK_PRICE, dailyCapUsd: policy.parallel_usd_per_day ?? DEFAULT_DAILY_USD }); process.exit(0); }
+const p = parseArgs(argv);
+if (p.error) { out({ ok: false, error: p.error }); process.exit(2); }
+if (p.cmd === 'monitors') { out({ ok: true, monitors: rd(MON, []), note: 'events: parallel events <monitor_id>; cancel: ask the operator (dashboard)' }); process.exit(0); }
+if (p.cmd === 'events') {
+  const r = await fetch(`${TOOLS}/v1/monitor/${p.id}/events${p.group ? `?event_group_id=${encodeURIComponent(p.group)}` : ''}`);
+  const j = await r.json().catch(() => null);
+  out({ ok: r.ok, status: r.status, ...(j ?? {}), howTo: 'each event carries basis.citations: open them with parallel extract or check before you repeat the claim' }); process.exit(r.ok ? 0 : 1);
+}
+if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
+if (p.cmd === 'monitor' && rd(MON, []).filter((m) => m.active !== false).length >= MAX_MONITORS) { out({ ok: false, error: `you already watch ${MAX_MONITORS} things (parallel monitors); each costs about $0.10 a month. Ask the operator to cancel one before adding another.` }); process.exit(4); }
+// Price from the service (the 402 must match it), fallback to the known table.
+let price = FALLBACK_PRICE[p.cmd];
+try { const info = await (await fetch(`${TOOLS}/v1/info`, { signal: AbortSignal.timeout(5000) })).json(); const t = (info.tools ?? []).find((x) => x.path === p.path); if (t?.price) price = t.price; if (t && t.available === false) { out({ ok: false, error: `${p.cmd} is not available on the tools service right now` }); process.exit(5); } } catch { /* fallback price */ }
+const cap = Number(policy.parallel_usd_per_day ?? DEFAULT_DAILY_USD);
+const entries = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }) : [];
+const b = budget(entries, price, cap);
+if (!b.ok) { out({ ok: false, error: `Parallel budget: $${b.spent} of $${cap} spent today; ${p.cmd} costs $${price}. Try tomorrow, or use grok-xsearch / bsky-search (free).`, budget: b }); process.exit(4); }
+const r = await buy(p.path, p.body, price, { timeoutMs: p.cmd === 'findall' ? 330_000 : p.cmd === 'task' ? 180_000 : 120_000 });
+fs.appendFileSync(LOG, JSON.stringify({ at: new Date().toISOString(), cmd: p.cmd, usd: r.status === 200 || r.status === 202 ? Number(price) : 0, status: r.status }) + '\n');
+if (r.status !== 200 && r.status !== 202) { out({ ok: false, error: `${p.cmd} failed`, status: r.status, detail: r.result, log: r.log }); process.exit(1); }
+const res = r.result ?? {};
+if (p.cmd === 'monitor' && res.monitor_id) { const mons = rd(MON, []); mons.push({ monitor_id: res.monitor_id, query: p.body.query, frequency: p.body.frequency, label: p.body.label ?? null, created: new Date().toISOString(), active: true }); fs.writeFileSync(MON, JSON.stringify(mons, null, 1)); }
+let summary = {};
+if (p.cmd === 'search') summary = { results: (res.results ?? []).map((x) => ({ url: x.url, title: x.title, publish_date: x.publish_date, excerpts: (x.excerpts ?? []).map((e) => String(e).slice(0, 700)) })) };
+else if (p.cmd === 'extract') summary = { results: (res.results ?? []).map((x) => ({ url: x.url, title: x.title, publish_date: x.publish_date, excerpts: (x.excerpts ?? []).map((e) => String(e).slice(0, 1500)), ...(x.full_content ? { full_content: String(x.full_content).slice(0, 12000) } : {}) })), errors: res.errors ?? [] };
+else if (p.cmd === 'decide') summary = { answers: res.answers, citations: (res.citations ?? []).slice(0, 10).map((c) => ({ url: c.url, title: c.title, excerpts: (c.excerpts ?? []).map((e) => String(e).slice(0, 400)) })), note: 'noul is a probability the statement is true, not a fact; a refusal is a separate outcome, not a no' };
+else if (p.cmd === 'task') summary = r.status === 202 ? { status: 'pending', run_id: res.run_id, note: res.note } : { status: res.run?.status, output: res.output?.content, basis: (res.output?.basis ?? []).map((bb) => ({ field: bb.field, confidence: bb.confidence, reasoning: String(bb.reasoning ?? '').slice(0, 400), citations: (bb.citations ?? []).slice(0, 5).map((c) => c.url) })) };
+else if (p.cmd === 'findall') {
+  fs.mkdirSync(`${HOME}/state/datasets`, { recursive: true });
+  const file = `${HOME}/state/datasets/findall-${Date.now()}.json`; fs.writeFileSync(file, JSON.stringify({ request: p.body, result: res }, null, 1));
+  const cands = res.candidates ?? [];
+  summary = { file, status: res.run?.status, matched: cands.filter((c) => c.match_status === 'matched').map((c) => ({ name: c.name, url: c.url, description: String(c.description ?? '').slice(0, 200) })), candidates: cands.length, note: res.note ?? null };
+} else if (p.cmd === 'monitor') summary = { monitor_id: res.monitor_id, status: res.status, frequency: res.frequency, events_url: res.events_url, note: res.note };
+out({ ok: true, cmd: p.cmd, paid_usd: Number(price), budget: budget([...entries, { at: new Date().toISOString(), usd: Number(price) }], 0, cap), ...summary });
+process.exit(0);
