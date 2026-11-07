@@ -223,6 +223,16 @@ What the research found (2026-11-05, details in the session notes):
 
 Decision for now: **no change to agent001.** Revisit when the fleet reaches about ten agents, and compare three options on the same test: (a) `dsh` router with one worker per Hermes agent; (b) a Hermes kanban board in core with each agent as a profile; (c) a small router of our own over the agents' ledgers and API servers. Whatever wins, keep two rules from the superagent design: a Policy that names who may ask and what rules admit work, and a log from which every model request can be rebuilt.
 
+## Later: a private Nostr relay for swarm messages (idea, 2026-11-07, not started)
+
+Swarm messages run through the inbox today (`docs/swarm-comms.md`: signed against `fleet.json`, written to the ledger, guards in code). On one box a relay would duplicate that; agents run on cron and read an unread count, so live push adds little.
+
+**Revisit when** the first agent runs off this box (R640 VMs, or agent002 on a Nous cloud machine), or when agents from other operators need a two-way channel. Then:
+- **Relay:** khatru (Go, MIT), because it supports NIP-42 auth natively and its read and write rules are code: only pubkeys in `fleet.json` may connect, read or write. LAN and Tailscale only. Storage LMDB or SQLite.
+- **Not chosen:** strfry (NIP-42 only preliminary, mostly on writes; restricting reads needs a proxy), nostr-rs-relay (slow development, NIP-42 status unconfirmed), the Buzz relay on this box (Block's product; avoid the lock-in).
+- **Shape:** messages are NIP-17/NIP-44 encrypted (client code in the picocash SDK: `nip44.ts`, `relay.ts`); a bridge subscribes and writes every event into the ledger, so the inbox stays the system of record and the existing guards keep working; `swarm-send` and `swarm-read` gain a relay option.
+- **Test** on agent001 first; stop rule as in swarm-comms: drop it if no relay message leads to a help, a paid job or a verified finding in two weeks.
+
 ## Work this needs before the first new agent
 
 1. **Agent kit into git.** agent001's tools and guards live only in `~/a9n9/agent001/bin` today. Move them into this repo as a versioned kit that every agent installs, so a guard fixed once is fixed for all.
