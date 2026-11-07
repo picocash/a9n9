@@ -128,6 +128,39 @@ export function topicGuard(text, network) {
   return () => { const n = d.day === day ? (d.networks ?? []) : []; fs.writeFileSync(f, JSON.stringify({ day, networks: [...n, network] })); };
 }
 
+/** Affiliate guard (FTC rules + program terms). An affiliate link may go out only for an approved program in affiliates.json,
+ * with the words "affiliate link" within 120 characters of it, never with an offer to pass the commission back to the buyer
+ * (most programs ban rebates), and at most policy.affiliate_posts_per_day (default 2) per UTC day across all networks.
+ * affiliateProblem is pure (tested); affiliateGuard exits 2/4 on a problem and counts the post only when it really went out. */
+export const AFFILIATE_PATTERN = /[?&](ref|via|aff|affiliate|fpr|tap_a|partner|referral|refcode|utm_source=affiliate)=|\b(try\.elevenlabs\.io|firecrawl\.link|partnerstack\.com|tapfiliate\.com|firstpromoter\.com|awin1\.com|shareasale\.com|amzn\.to|hasoffers\.com|go2cloud\.org)\b/i;
+export const REBATE = /\b(cash ?back|rebates?|kickback|refund (you|your)|(pay|give|send) you (back|the commission|my cut|our cut|the cut)|split (the|my|our) (commission|cut)|share (the|my|our) commission)\b/i;
+const normUrl = (u) => u.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/[.,;:!?)\]]+$/, '').replace(/([?&])utm_[a-z]+=[^&]*/gi, '$1').replace(/[?&]+$/, '').replace(/\?&+/, '?').replace(/\/(\?|$)/, '$1').toLowerCase();
+export function affiliatePrograms() { try { return JSON.parse(fs.readFileSync(`${HOME}/affiliates.json`, 'utf8')).programs ?? {}; } catch { return {}; } }
+export function affiliateProblem(text, programs, usedToday = 0, cap = 2) {
+  const approved = Object.entries(programs).map(([id, p]) => [id, normUrl(p.link)]);
+  const found = [];
+  for (const m of text.matchAll(/(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/[^\s"'<>]*)?/gi)) {
+    const raw = m[0]; if (!raw.includes('/') && !raw.includes('?') && !approved.some(([, a]) => a === normUrl(raw))) continue;
+    const n = normUrl(raw); const hit = approved.find(([, a]) => n === a || n.startsWith(a + '/') || n.startsWith(a + '&') || (a.includes('?') && n.startsWith(a)));
+    if (hit) found.push({ id: hit[0], at: m.index, len: raw.length });
+    else if (AFFILIATE_PATTERN.test(raw)) return { code: 2, error: `"${raw}" looks like an affiliate or referral link that is not in your approved list. Only links from bin/affiliate may be posted. Nothing was published.` };
+  }
+  if (!found.length) return null;
+  if (REBATE.test(text)) return { code: 2, error: 'the text offers to pass a commission or cash back to the buyer. The programs forbid rebates. Recommend the product on its merits and mention only the discount the program itself gives (bin/affiliate shows it). Nothing was published.' };
+  for (const f of found) { const win = text.slice(Math.max(0, f.at - 120), f.at + f.len + 120);
+    if (!/\baffiliate link\b/i.test(win)) return { code: 2, error: `the ${f.id} link has no disclosure next to it. Write "affiliate link" right beside it, e.g. "(affiliate link: a9n9 earns a commission if you buy)". A profile note is not enough. Nothing was published.` }; }
+  if (usedToday >= cap) return { code: 4, error: `affiliate links are capped at ${cap} posts a day across all networks and ${usedToday} went out today. Post useful work without a link, or journal this for tomorrow.` };
+  return { programs: [...new Set(found.map((f) => f.id))] };
+}
+export function affiliateGuard(text) {
+  const c = counter('affiliate'); const cap = policy.affiliate_posts_per_day ?? 2;
+  const r = affiliateProblem(text, affiliatePrograms(), c.get(), cap);
+  if (!r) return null;
+  if (r.error) { out({ ok: false, error: r.error }); process.exit(r.code); }
+  process.on('exit', (code) => { if (code === 0) { counter('affiliate').bump(); fs.appendFileSync(`${HOME}/state/affiliate-posts.jsonl`, JSON.stringify({ at: new Date().toISOString(), tool: process.argv[1].split('/').pop(), programs: r.programs, text: text.slice(0, 300) }) + '\n'); } });
+  return r.programs;
+}
+
 /** Claim guard: a public post saying something was verified, confirmed or tested must name a recent `check` receipt (--check <id>). Prompts are not controls. The receipt id is logged on the post so anyone can compare the claim with what was observed. Negated uses ("not verified") pass. */
 export const CLAIM = /(?<!\bnot |\bnever |n't |\bun)\b(verified|confirmed|confirms|proven|proved|independently checked|i checked|i tested|we checked|we tested)\b/i;
 export const CHECK_MAX_AGE_MS = 12 * 3600_000;
@@ -153,6 +186,7 @@ export const REPEAT_MAX = 0.45, REPEAT_WINDOW_MS = 48 * 3600_000;
 export function claimGuard(text) {
   if (/^-{1,2}[a-z][\w-]*$/i.test(text.trim())) { out({ ok: false, error: `"${text.trim()}" looks like a flag, not a post: nothing was published. Run the tool with no arguments to see its usage.` }); process.exit(2); }
   let clearCorrection = () => {};
+  affiliateGuard(text);
   // Internal plumbing (tool names, flags, search parameters, file paths) means nothing to readers and leaks how the agent works.
   const internal = text.match(/\.\/bin\/|\bbin\/[a-z]|\b(bsky-delete|bsky-follow|bsky-mentions|bsky-post|bsky-profile|bsky-reply|bsky-search|email-send|grok-usage|grok-xsearch|inbox-recent|ledger-log|nostr-delete|nostr-dm|nostr-post|nostr-reply|publish-record|reserves-brief|sign-test|x-delete|x-follow|x-mentions|x-post|x-reply|x-stats)\b|\bisQuestion\b|--(play|check|file)\b|\bstate\/[a-z-]+\.json/i);
   if (internal) { out({ ok: false, error: `the text mentions your internal tooling ("${internal[0]}"). Readers cannot use it. Nothing was published. Say what you found or how a person could do it themselves, in plain words.` }); process.exit(2); }

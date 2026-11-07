@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Guard tests for _lib.mjs: experiment slot reservation and ticket staleness. Exits 1 on any failure.
 import assert from 'node:assert/strict';
-import { reservePlan, ticketStatus, paceAllowed, jobTerms, WORK_FIRST_PAID } from './_lib.mjs';
+import { reservePlan, ticketStatus, paceAllowed, jobTerms, WORK_FIRST_PAID, affiliateProblem } from './_lib.mjs';
 const now = new Date('2026-11-06T12:00:00Z');
 const exps = [
   { id: 'a', startedAt: '2026-11-04T00:00:00Z', endsAt: '2026-11-11T00:00:00Z', metric: 'engagementPerItem.play.digest', change: 'one digest a day on Bluesky and Nostr' },
@@ -98,4 +98,18 @@ assert.equal(jobTerms({ jobs: tenPaid.slice(0, 9).concat([{ id: 'x', status: 'un
   assert.equal(budget(log, '0.3000', 1.5, t).ok, true, 'exactly at the cap is allowed');
   assert.equal(budget([], '1.2000', 1.5, t).left, 1.5);
 }
+// affiliate guard
+const AP = { novita: { link: 'https://novita.ai/?ref=mjvknwmo&utm_source=affiliate' }, firecrawl: { link: 'https://firecrawl.link/agent001' }, elevenlabs: { link: 'https://try.elevenlabs.io/n0p18v26b5bh' } };
+assert.equal(affiliateProblem('no links here, just firecrawl.dev talk', AP), null);
+assert.equal(affiliateProblem('see https://docs.firecrawl.dev/api for details', AP), null);
+let a = affiliateProblem('Try https://firecrawl.link/agent001 for crawling', AP); assert.equal(a.code, 2, 'link without disclosure is refused');
+a = affiliateProblem('Firecrawl turns pages into LLM text: https://firecrawl.link/agent001 (affiliate link: a9n9 earns a commission if you buy)', AP); assert.deepEqual(a.programs, ['firecrawl']);
+a = affiliateProblem('GPU APIs: novita.ai/?ref=mjvknwmo (affiliate link)', AP); assert.deepEqual(a.programs, ['novita'], 'bare host and dropped utm still match');
+a = affiliateProblem('Affiliate link: https://novita.ai/?ref=mjvknwmo&utm_source=affiliate.', AP); assert.deepEqual(a.programs, ['novita'], 'trailing period');
+a = affiliateProblem('https://try.elevenlabs.io/n0p18v26b5bh (affiliate link) and I will give you back the commission', AP); assert.equal(a.code, 2, 'rebate offer refused');
+a = affiliateProblem('https://try.elevenlabs.io/n0p18v26b5bh (affiliate link) plus 20% cashback from me', AP); assert.equal(a.code, 2, 'cashback refused');
+a = affiliateProblem('Use https://example.com/signup?ref=abc123 (affiliate link)', AP); assert.equal(a.code, 2, 'unapproved referral link refused');
+a = affiliateProblem('https://firecrawl.link/someoneelse (affiliate link)', AP); assert.equal(a.code, 2, 'someone else\'s firecrawl link refused');
+a = affiliateProblem('https://firecrawl.link/agent001 (affiliate link)', AP, 2, 2); assert.equal(a.code, 4, 'daily cap');
+a = affiliateProblem('https://firecrawl.link/agent001 ' + 'x'.repeat(200) + ' affiliate link', AP); assert.equal(a.code, 2, 'disclosure must be near the link');
 console.log('guards ok');

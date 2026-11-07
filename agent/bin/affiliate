@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+// affiliate [program] — the approved affiliate links you may post, with the disclosure each needs.
+// Rules (enforced by every posting tool, not just written here): only these links; "affiliate link" right beside each one;
+// no offer to pass the commission back to the buyer; at most policy.affiliate_posts_per_day (default 2) posts a day across networks.
+import fs from 'node:fs';
+import { affiliatePrograms, counter, out, policy, HOME } from './_lib.mjs';
+const programs = affiliatePrograms(); const id = process.argv[2];
+const disclosure = '(affiliate link: a9n9 earns a commission if you buy)';
+const cap = policy.affiliate_posts_per_day ?? 2; const used = counter('affiliate').get();
+const f = `${HOME}/state/affiliate-posts.jsonl`; const recent = fs.existsSync(f) ? fs.readFileSync(f, 'utf8').trim().split('\n').filter(Boolean).slice(-5).map((l) => JSON.parse(l)) : [];
+const view = (k, p) => ({ id: k, name: p.name, what: p.what, link: p.link, commission: p.commission, buyerOffer: p.buyer_offer ?? null, example: `${p.link} ${disclosure}` });
+if (id) { const p = programs[id]; if (!p) { out({ ok: false, error: `no approved program "${id}". Approved: ${Object.keys(programs).join(', ') || 'none'}` }); process.exit(2); } out({ ok: true, ...view(id, p) }); process.exit(0); }
+out({ ok: true, usedToday: used, capPerDay: cap, rules: ['recommend a product only where it truly helps the reader with what they are doing', 'write "affiliate link" right beside the link', 'never offer cashback or to share the commission; mention only the discount the program itself gives (buyerOffer)', 'never claim you used or tested a product unless a check receipt shows it'], programs: Object.entries(programs).map(([k, p]) => view(k, p)), recent });

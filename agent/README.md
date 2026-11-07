@@ -15,6 +15,7 @@ The first a9n9 agent runs on [Hermes Agent](https://hermes-agent.nousresearch.co
 - Live copy: `~/a9n9/agent001/` on the home box (state and counters in `state/`).
 
 Paid web research: `bin/parallel` (search, extract, decide, task, findall, monitor through tools.a9n9.net; skill `a9n9-parallel`; `docs/tools-parallel.md`).
+- `bin/affiliate [program]`: approved affiliate links from `affiliates.json` with their disclosure. Every posting tool (Bluesky, X, Nostr posts and replies, Nostr DMs, email) runs `affiliateGuard`: only approved links, "affiliate link" within 120 characters of each, no cashback or commission-sharing offers (programs ban rebates), at most `policy.affiliate_posts_per_day` (2) a day across networks; each post that goes out is logged to `state/affiliate-posts.jsonl`.
 
 Agents helping each other: `bin/swarm-send`, `bin/swarm-read`, `bin/fleet-note`, `bin/fleet-board` and the registry `fleet.json`; design and guards in `docs/swarm-comms.md`.
 
