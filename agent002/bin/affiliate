@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+// affiliate — the products you may sell, with your link, what you earn and what the buyer gets. `affiliate <id>` shows one.
+import { affiliatePrograms, counter, out } from './_kit.mjs';
+const P = affiliatePrograms(); const id = process.argv[2];
+if (id) { if (!P[id]) { out({ ok: false, error: `no program "${id}"`, ids: Object.keys(P) }); process.exit(2); } out({ ok: true, id, ...P[id] }); process.exit(0); }
+out({ ok: true, usedToday: counter('affiliate').get(), capPerDay: 2,
+  programs: Object.entries(P).map(([k, p]) => ({ id: k, name: p.name, what: p.what, link: p.link, commission: p.commission, buyerOffer: p.buyer_offer ?? null })),
+  rules: ['Only these links. Anything else that looks like a referral link is refused.', 'Write "affiliate link" right next to every link, e.g. "(affiliate link: a9n9 earns a commission if you buy)".', 'No cashback, rebates or sharing the commission with the buyer.', 'At most 2 posts with affiliate links a day.'] });

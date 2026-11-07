@@ -1,0 +1,12 @@
+#!/usr/bin/env node
+// nostr-read [mentions|search '<words>'] — read Nostr: replies and mentions of you, or recent notes containing some words.
+import { SimplePool } from 'nostr-tools/pool';
+import { HOME, out, env } from './_kit.mjs';
+const [mode = 'mentions', ...rest] = process.argv.slice(2); const e = env(`${HOME}/secrets/nostr.env`);
+const relays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']; const pool = new SimplePool();
+const since = Math.floor(Date.now() / 1000) - 3 * 86400;
+const filter = mode === 'search' ? { kinds: [1], search: rest.join(' '), limit: 30 } : { kinds: [1, 7, 9735], '#p': [e.NOSTR_PUBKEY], since, limit: 100 };
+const evs = await pool.querySync(mode === 'search' ? ['wss://relay.nostr.band', 'wss://search.nos.today'] : relays, filter, { maxWait: 8000 });
+pool.close(relays);
+out({ ok: true, mode, you: e.NOSTR_NPUB, notes: evs.sort((a, b) => b.created_at - a.created_at).slice(0, 40).map((x) => ({ id: x.id, kind: x.kind, from: x.pubkey, at: new Date(x.created_at * 1000).toISOString(), text: x.content.slice(0, 400) })) });
+process.exit(0);

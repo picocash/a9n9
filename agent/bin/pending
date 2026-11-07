@@ -26,6 +26,8 @@ for (const ev of list.events) {
   if (handled.has(ev.id) || dismissed[ev.id]) continue;
   const p = (await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json()).payload ?? {};
   const from = String(p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? '');
+  // Mail to another fleet agent's address (agent002@…) is that agent's, not yours.
+  if (ev.type === 'email.received') { const rcpt = JSON.stringify([p.envelope?.to, p.to]); if (/agent0(0[2-9]|[1-9]\d)@a9n9\.net/i.test(rcpt) && !/agent001@a9n9\.net/i.test(rcpt)) continue; }
   if (AFFILIATE.test(from) || AUTOMATED.test(`${from} ${p.subject ?? ''} ${String(p.text ?? '').slice(0, 160)}`)) continue;
   // Bots, spam and solicitors on Nostr and Bluesky are dismissed by the tool, with the reason in the ledger, so they never wake you.
   if (/^(nostr|bsky)\./.test(ev.type)) {

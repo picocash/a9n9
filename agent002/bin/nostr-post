@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+// nostr-post '<text>' [--reply-to <event id hex|note1…> --to <npub|hex>] — publish a note as agent002 on Nostr (your only public channel).
+// Guards in code: affiliate rules (bin/affiliate), 8 notes a day, no repeat of the same point within 48 h, nothing while paused.
+import fs from 'node:fs';
+import { finalizeEvent, nip19 } from 'nostr-tools';
+import { Relay } from 'nostr-tools/relay';
+import { affiliateProblem } from './_affiliate.mjs';
+import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap } from './_kit.mjs';
+const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const replyTo = take('--reply-to'); const to = take('--to'); const text = argv.join(' ').trim();
+if (!text || /^-/.test(text)) { out({ ok: false, error: "usage: nostr-post '<text>' [--reply-to <event id> --to <npub>]" }); process.exit(2); }
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
+if (text.length > 1200) { out({ ok: false, error: 'keep a note under 1200 characters' }); process.exit(2); }
+const notes = counter('notes'); if (notes.get() >= 8) { out({ ok: false, error: '8 notes a day is the limit; journal the idea for tomorrow' }); process.exit(4); }
+const aff = counter('affiliate'); const r = affiliateProblem(text, affiliatePrograms(), aff.get(), 2);
+if (r?.error) { out({ ok: false, error: r.error }); process.exit(r.code); }
+const pf = `${STATE}/published.jsonl`; const prev = readJsonl(pf).filter((x) => Date.now() - Date.parse(x.at) < 48 * 3600_000).find((x) => overlap(text, x.text) >= 0.6);
+if (prev) { out({ ok: false, error: `this repeats your note from ${prev.at}: "${prev.text.slice(0, 120)}". Say something new.` }); process.exit(4); }
+const e = env(`${HOME}/secrets/nostr.env`); const sk = nip19.decode(e.NOSTR_NSEC).data;
+const hex = (s) => (s && /^(note1|npub1)/.test(s) ? Buffer.from(nip19.decode(s).data).toString('hex') : s);
+const tags = []; if (replyTo) { tags.push(['e', hex(replyTo), '', 'reply']); if (to) tags.push(['p', hex(to)]); }
+const ev = finalizeEvent({ kind: 1, created_at: Math.floor(Date.now() / 1000), tags, content: text }, sk);
+const relays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.primal.net']; const okAt = [];
+const limit = (pr, ms) => Promise.race([pr, new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
+await Promise.all(relays.map(async (u) => { let rl; try { rl = await limit(Relay.connect(u), 6000); await limit(rl.publish(ev), 8000); okAt.push(u); } catch {} finally { try { rl?.close(); } catch {} } }));
+if (!okAt.length) { out({ ok: false, error: 'no relay accepted the note' }); process.exit(1); }
+notes.bump(); if (r?.programs) { aff.bump(); append(`${STATE}/affiliate-posts.jsonl`, { at: new Date().toISOString(), programs: r.programs, id: ev.id, text: text.slice(0, 300) }); }
+append(pf, { at: new Date().toISOString(), id: ev.id, text, replyTo: replyTo ?? null, affiliate: r?.programs ?? null });
+out({ ok: true, id: ev.id, url: `https://njump.me/${ev.id}`, relays: okAt, notesToday: notes.get(), affiliateToday: aff.get() });
+process.exit(0);

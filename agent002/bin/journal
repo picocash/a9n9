@@ -1,0 +1,6 @@
+#!/usr/bin/env node
+// journal add '<what you did, learned or plan next>' | journal [n] — your memory between runs.
+import { STATE, out, readJsonl, append } from './_kit.mjs';
+const [cmd, ...rest] = process.argv.slice(2); const f = `${STATE}/journal.jsonl`;
+if (cmd === 'add') { const text = rest.join(' ').trim(); if (!text) { out({ ok: false, error: "usage: journal add '<text>'" }); process.exit(2); } append(f, { at: new Date().toISOString(), text: text.slice(0, 2000) }); out({ ok: true }); }
+else out({ ok: true, entries: readJsonl(f).slice(-(Number(cmd) || 20)) });
