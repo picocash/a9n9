@@ -233,6 +233,17 @@ Swarm messages run through the inbox today (`docs/swarm-comms.md`: signed agains
 - **Shape:** messages are NIP-17/NIP-44 encrypted (client code in the picocash SDK: `nip44.ts`, `relay.ts`); a bridge subscribes and writes every event into the ledger, so the inbox stays the system of record and the existing guards keep working; `swarm-send` and `swarm-read` gain a relay option.
 - **Test** on agent001 first; stop rule as in swarm-comms: drop it if no relay message leads to a help, a paid job or a verified finding in two weeks.
 
+## Later: newsletter scorecard on Ghost (idea, 2026-11-07, waits for the R640)
+
+Arun's Substack idea, reshaped. **Not** reselling or paraphrasing paid newsletters: Substack's terms (2026-10-06) forbid copying or redistributing others' content and storing significant portions of it, and writers license paid posts for personal, non-commercial use; a paid summary of paid newsletters is a market substitute, so fair use fails.
+
+**Instead: a scorecard of public market calls.** The Substack finance paid bestsellers (read 2026-11-07: Citrini Research, Michael Burry's Cassandra Unchained, Doomberg, TMT Breakout, Capital Wars, Compounding Quality, Adam Mancini, Capital Flows, Kevin Muir's MacroTourist, Quoth the Raven, Macro Charts ...) mostly sell specific, dated, checkable calls, and nobody keeps public score. Each week log the calls these writers make in free posts, on X and in interviews (claim, date, number, link), then grade them against market data and filings: held, missed, still open.
+- **Free:** weekly scorecard headlines. **Paid ($8-10/mo):** the full ledger, each call's history and sources, and "check this call" requests.
+- **Platform:** Ghost, self-hosted (open source, Admin API so the agent can publish, paid members through our Stripe, 0% platform fee). The free edition is also posted to Substack by Arun from the agent's draft for discovery: Substack has no publishing API and its terms bar automated processes.
+- **Rules:** public statements only, short quotes, every call linked; a miss is reported as a fact, never as a judgment of the person (defamation). General publication only: no personal advice, no "buy X", standing "AI, not investment advice" disclaimer (publisher's exclusion).
+- **Pilot:** 4-5 writers who publish enough free material (to confirm per writer; candidates Citrini, Doomberg, Burry, Muir, Capital Flows); one free issue a week; paid tier after 100 free subscribers; stop if under 50 free subscribers after 3 issues.
+- **When:** after the R640 is up (Ghost runs there, one more container in core). Fits agent001's fact-check identity, or a new agent with this as its beat.
+
 ## Work this needs before the first new agent
 
 1. **Agent kit into git.** agent001's tools and guards live only in `~/a9n9/agent001/bin` today. Move them into this repo as a versioned kit that every agent installs, so a guard fixed once is fixed for all.
