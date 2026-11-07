@@ -1,0 +1,34 @@
+#!/usr/bin/env node
+// devto-post --title '<title>' --tags 'a,b,c' --file <markdown file> — publish one article on dev.to as agent002.
+// DEV rules (dev.to/guidelines-for-ai-assisted-articles-on-dev): AI-written articles are allowed if disclosed; articles whose main
+// purpose is promotion or backlinks get accounts suspended; no AI-generated comments (so this kit has no comment tool).
+// Guards in code: 1 article a day, 600+ words, at most 1 affiliate link (with "affiliate link" beside it), disclosure appended and
+// the #abotwrotethis tag added, no repeat of a title or topic within 14 days, nothing while paused.
+import fs from 'node:fs';
+import { affiliateProblem } from './_affiliate.mjs';
+import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap } from './_kit.mjs';
+const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const title = take('--title'); const tagArg = take('--tags') ?? ''; const file = take('--file');
+if (!title || !file) { out({ ok: false, error: "usage: devto-post --title '<title>' --tags 'tag1,tag2,tag3' --file <path to markdown>" }); process.exit(2); }
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
+if (!fs.existsSync(`${HOME}/secrets/devto.env`)) { out({ ok: false, error: 'dev.to is not set up yet (no API key). Write the article to your workspace and journal it; the operator will tell you when posting works.' }); process.exit(4); }
+const body = fs.readFileSync(file, 'utf8').trim();
+const words = body.split(/\s+/).filter(Boolean).length;
+if (words < 600) { out({ ok: false, error: `${words} words: a DEV article must teach something real, at least 600 words` }); process.exit(2); }
+const day = counter('devto'); if (day.get() >= 1) { out({ ok: false, error: 'one dev.to article a day; save this for tomorrow' }); process.exit(4); }
+const progs = affiliatePrograms(); const aff = counter('affiliate');
+const r = affiliateProblem(body, progs, aff.get(), 2); if (r?.error) { out({ ok: false, error: r.error }); process.exit(r.code); }
+const links = Object.values(progs).map((x) => x.link.replace(/^https?:\/\//, '').split('?')[0]).reduce((n, l) => n + (body.split(l).length - 1), 0);
+if (links > 1) { out({ ok: false, error: `${links} affiliate links: DEV suspends promotional articles. Use at most one affiliate link per article and make the article useful without it.` }); process.exit(2); }
+const pf = `${STATE}/devto.jsonl`; const prev = readJsonl(pf).filter((x) => Date.now() - Date.parse(x.at) < 14 * 86400_000).find((x) => overlap(title, x.title) >= 0.6 || overlap(body.slice(0, 1500), x.start ?? '') >= 0.6);
+if (prev) { out({ ok: false, error: `too close to your article "${prev.title}" from ${prev.at}. Write about something else.` }); process.exit(4); }
+const tags = [...new Set(['abotwrotethis', ...tagArg.split(',').map((t) => t.trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean)])].slice(0, 4);
+const disclosure = `\n\n---\n*This article was written by agent002, an autonomous AI agent run by [a9n9](https://a9n9.net) (Visybl Inc), not a person.${r?.programs ? ' It contains an affiliate link, marked as such: a9n9 earns a commission if you buy through it.' : ''}*`;
+const e = env(`${HOME}/secrets/devto.env`);
+const res = await fetch('https://dev.to/api/articles', { method: 'POST', headers: { 'content-type': 'application/json', 'api-key': e.DEVTO_API_KEY, accept: 'application/vnd.forem.api-v1+json' }, body: JSON.stringify({ article: { title, body_markdown: body + disclosure, published: true, tags } }) });
+const j = await res.json().catch(() => ({}));
+if (!res.ok) { out({ ok: false, status: res.status, error: j.error ?? j }); process.exit(1); }
+day.bump(); if (r?.programs) { aff.bump(); append(`${STATE}/affiliate-posts.jsonl`, { at: new Date().toISOString(), channel: 'devto', programs: r.programs, url: j.url, title }); }
+append(pf, { at: new Date().toISOString(), id: j.id, url: j.url, title, tags, words, affiliate: r?.programs ?? null, start: body.slice(0, 1500) });
+out({ ok: true, url: j.url, id: j.id, tags, words, affiliate: r?.programs ?? null });
+process.exit(0);

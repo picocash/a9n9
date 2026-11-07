@@ -8,4 +8,5 @@ cp "$SRC/SOUL.md" "$DST/SOUL.md"; cp "$REPO/agent/affiliates.json" "$DST/affilia
 printf '{"type":"module"}\n' > "$DST/package.json"
 for m in nostr-tools @noble @scure; do rm -rf "$DST/node_modules/$m"; cp -r "$REPO/node_modules/$m" "$DST/node_modules/"; done
 install -m 600 "$HOME/a9n9/secrets/agent002-nostr.env" "$DST/secrets/nostr.env"
+for k in devto reddit; do [ -f "$HOME/a9n9/secrets/agent002-$k.env" ] && install -m 600 "$HOME/a9n9/secrets/agent002-$k.env" "$DST/secrets/$k.env"; done
 echo "deployed to $DST"
