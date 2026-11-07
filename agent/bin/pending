@@ -4,6 +4,7 @@
 //   pending dismiss <id> '<why>'  mark one as needing no reply (spam, the operator's own test, duplicate); the reason goes to the ledger
 import fs from 'node:fs';
 import { env, out, clean, HOME, ledger } from './_lib.mjs';
+import { checkPerson } from './_people.mjs';
 const DIS = `${HOME}/state/dismissed.json`; const dismissed = fs.existsSync(DIS) ? JSON.parse(fs.readFileSync(DIS, 'utf8')) : {};
 const [cmd, id, ...rest] = process.argv.slice(2);
 if (cmd === 'dismiss') {
@@ -26,6 +27,16 @@ for (const ev of list.events) {
   const p = (await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json()).payload ?? {};
   const from = String(p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? '');
   if (AFFILIATE.test(from) || AUTOMATED.test(`${from} ${p.subject ?? ''} ${String(p.text ?? '').slice(0, 160)}`)) continue;
+  // Bots, spam and solicitors on Nostr and Bluesky are dismissed by the tool, with the reason in the ledger, so they never wake you.
+  if (/^(nostr|bsky)\./.test(ev.type)) {
+    const text = String(p.text ?? '');
+    const v = await checkPerson(p.fromNpub ?? from, ev.type.split('.')[0], text).catch(() => ({ kind: 'person' }));
+    if (v.kind !== 'person') {
+      const why = `auto: ${v.kind} (${v.why})`; dismissed[ev.id] = { at: new Date().toISOString(), why, auto: true }; fs.writeFileSync(DIS, JSON.stringify(dismissed, null, 1));
+      await ledger({ id: `agent:dismiss:${Date.now()}:${ev.id.slice(-8)}`, type: 'agent.note', channel: 'agent', kind: 'inbox.dismissed', ref: ev.id, why, at: new Date().toISOString() });
+      continue;
+    }
+  }
   items.push({ id: ev.id, type: ev.type, at: ev.receivedAt, from: from || null, fromNpub: p.fromNpub ?? null, subject: p.subject ?? null, text: clean(String(p.text ?? p.body ?? p.transcript ?? '')).slice(0, 1200), url: p.url ?? null, eventId: p.eventId ?? null });
 }
 out({ ok: true, pending: items, howTo: 'answer each in its channel (x-reply / email-send --in-reply-to <id> / nostr-reply <eventId> <fromNpub> / nostr-dm <fromNpub> / bsky-reply), then tickets open <person> <channel> <want> --ref <id>; for spam or the operator’s own tests: pending dismiss <id> <why>' });

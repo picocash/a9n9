@@ -6,6 +6,7 @@
 //   tickets close <id> '<outcome>'       (helped, no reply, declined, handed to operator)
 import fs from 'node:fs';
 import { out, HOME, ledger, ticketStatus } from './_lib.mjs';
+import { checkPerson } from './_people.mjs';
 const F = `${HOME}/state/tickets.json`;
 const read = () => fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { seq: 0, tickets: [] };
 const save = (d) => fs.writeFileSync(F, JSON.stringify(d, null, 1));
@@ -17,6 +18,9 @@ if (cmd === 'open') {
   if (!person || !channel || !want) { out({ ok: false, error: "usage: tickets open <person> <channel> '<what they want>' [--ref <id>]" }); process.exit(2); }
   const dup = d.tickets.find((t) => t.status === 'open' && t.person === person && t.channel === channel);
   if (dup) { out({ ok: true, existing: dup }); process.exit(0); }
+  // Bots, spam and solicitors do not get tickets (week 1: the only open ticket was a Nostr bot). Checked in code, not by judgement.
+  const v = await checkPerson(person, channel, want).catch(() => ({ kind: 'person', why: 'lookup failed' }));
+  if (v.kind !== 'person') { out({ ok: false, error: `not a person (${v.kind}: ${v.why}); no ticket. Dismiss the message instead: pending dismiss <id> '${v.kind}'`, verdict: v }); process.exit(2); }
   const t = { id: `t${++d.seq}`, person, channel, want, ref, opened: now, exchanged: now, status: 'open', touched: now, notes: [] }; d.tickets.push(t); save(d);
   await ledger({ id: `agent:ticket:${t.id}:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'ticket.open', ticket: t.id, channelUsed: channel, at: now });
   out({ ok: true, ticket: t });

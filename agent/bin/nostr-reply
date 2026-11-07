@@ -1,11 +1,20 @@
 #!/usr/bin/env node
 // nostr-reply <event id or note1…> <author npub or hex> '<text>' — reply to a Nostr note that mentioned you (kind 1 with e/p tags). Caps shared with nostr-post (4/day).
+// Only notes that tag you, and only from people: bots, spam and solicitors are refused (_people.mjs). Nostr gets no cold replies (2026-11-07).
 import { claimGuard, env, enforce, out } from './_lib.mjs';
+import { checkPerson, nostrEvent } from './_people.mjs';
 const [target, author, ...rest] = process.argv.slice(2); const text = rest.join(' ').trim().replace(/\s*Did this help\?.*$/is, '');
 if (!target || !author || !text) { out({ ok: false, error: "usage: nostr-reply <event id|note1…> <author npub|hex> '<text>'" }); process.exit(2); }
 claimGuard(text);
-const c = enforce('nostr', 4, text);
 const e = env('/home/ubuntu/a9n9/secrets/nostr.env');
+if (!/^correction\b/i.test(text)) {
+  const ev = await nostrEvent(target).catch(() => null);
+  if (!ev) { out({ ok: false, error: 'could not find that note on the relays; nothing was sent' }); process.exit(1); }
+  if (e.NOSTR_PUBKEY && !(ev.tags ?? []).some((t) => t[0] === 'p' && t[1] === e.NOSTR_PUBKEY)) { out({ ok: false, error: 'that note does not mention you: on Nostr you answer only people who wrote to you. Nothing was sent.' }); process.exit(2); }
+  const v = await checkPerson(ev.pubkey, 'nostr', ev.content).catch(() => ({ kind: 'person' }));
+  if (v.kind !== 'person') { out({ ok: false, error: `the author is not a person (${v.kind}: ${v.why}); do not answer. Dismiss it: pending dismiss <id> '${v.kind}'`, verdict: v }); process.exit(2); }
+}
+const c = enforce('nostr', 4, text);
 const res = await fetch('http://127.0.0.1:8830/v1/notes', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.NOSTR_API_TOKEN}` }, body: JSON.stringify({ text: `${text}\n\nDid this help? https://agent001.a9n9.net/h/${encodeURIComponent('nostr:' + target.replace(/^nostr:/, ''))}`, replyTo: target.replace(/^nostr:/, ''), replyToPubkey: author }) });
 const j = await res.json().catch(() => ({})); if (res.ok) c.bump();
 out({ ok: res.ok, ...j, nostrToday: c.get() });

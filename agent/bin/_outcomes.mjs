@@ -2,6 +2,7 @@
 // Used by `outcomes` (report) and `experiment` (baseline and result), so both read the same numbers.
 import fs from 'node:fs';
 import { env, HOME } from './_lib.mjs';
+import { judge, nostrProfiles, bskyProfiles } from './_people.mjs';
 
 const ledgerEnv = env('/home/ubuntu/a9n9/secrets/inbox.env');
 const H = { authorization: `Bearer ${ledgerEnv.INBOX_API_TOKEN}` };
@@ -33,8 +34,12 @@ async function bskyMetrics(items) {
   for (const [n, it] of items.entries()) {
     if (!it.repliesReceived) { it.people = []; continue; }
     const t = await (await fetch(`https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?depth=1&parentHeight=0&uri=${encodeURIComponent(uris[n])}`)).json();
-    it.people = [...new Set((t.thread?.replies ?? []).filter((r) => r.post?.author?.did !== BSKY_DID).map((r) => r.post?.author?.handle).filter(Boolean))];
-    it.repliesReceived = (t.thread?.replies ?? []).filter((r) => r.post?.author?.did !== BSKY_DID).length;
+    const others = (t.thread?.replies ?? []).filter((r) => r.post?.author?.did && r.post.author.did !== BSKY_DID);
+    const profs = await bskyProfiles([...new Set(others.map((r) => r.post.author.did))]);
+    const real = []; it.filtered = [];
+    for (const r of others) { const v = judge({ net: 'bsky', profile: profs.get(r.post.author.did), text: r.post.record?.text ?? '' }); if (v.kind === 'person') real.push(r); else it.filtered.push({ who: r.post.author.handle, ...v }); }
+    it.people = [...new Set(real.map((r) => r.post.author.handle))];
+    it.repliesReceived = real.length;
   }
 }
 
@@ -48,9 +53,15 @@ async function nostrMetrics(items, ownPubkey) {
     ws.onmessage = (m) => { try { const d = JSON.parse(m.data); if (d[0] === 'EVENT') seen.set(d[2].id, d[2]); if (d[0] === 'EOSE') { clearTimeout(timer); done(); } } catch {} };
     ws.onerror = () => { clearTimeout(timer); done(); };
   })));
-  for (const it of items) Object.assign(it, { likes: 0, repliesReceived: 0, reposts: 0, zaps: 0, people: [] });
+  for (const it of items) Object.assign(it, { likes: 0, repliesReceived: 0, reposts: 0, zaps: 0, people: [], filtered: [] });
+  const profs = await nostrProfiles([...new Set([...seen.values()].map((e) => e.pubkey).filter((p) => p !== ownPubkey))]);
+  // A pubkey that sent spam once is spam for all its events (a solicitor's like is part of the pitch).
+  const spamKeys = new Set([...seen.values()].filter((e) => e.kind === 1 && judge({ net: 'nostr', profile: profs.get(e.pubkey), text: e.content }).kind !== 'person').map((e) => e.pubkey));
   for (const ev of seen.values()) {
     if (ev.pubkey === ownPubkey) continue;
+    const v0 = judge({ net: 'nostr', profile: profs.get(ev.pubkey), text: ev.kind === 1 ? ev.content : '' });
+    const v = v0.kind === 'person' && spamKeys.has(ev.pubkey) ? { kind: 'spam', why: 'same account sent spam' } : v0;
+    if (v.kind !== 'person') { const ref0 = (ev.tags ?? []).filter((t) => t[0] === 'e').map((t) => t[1]).find((id) => ids.includes(id)); items.find((i) => i.eventId === ref0)?.filtered.push({ who: profs.get(ev.pubkey)?.name || ev.pubkey.slice(0, 12), ...v }); continue; }
     const ref = (ev.tags ?? []).filter((t) => t[0] === 'e').map((t) => t[1]).find((id) => ids.includes(id)); const it = items.find((i) => i.eventId === ref); if (!it) continue;
     if (ev.kind === 7) it.likes++; else if (ev.kind === 6) it.reposts++; else if (ev.kind === 9735) it.zaps++; else it.repliesReceived++;
     if (!it.people.includes(ev.pubkey)) it.people.push(ev.pubkey);
@@ -107,7 +118,8 @@ export async function computeOutcomes({ since, until = new Date().toISOString(),
     if (p.from === ME && p.kind === 'done') swarm.assistsGiven++; if (p.to === ME && p.kind === 'done') swarm.assistsReceived++;
   }
 
-  // Engagement of one item: what other people did with it. A reply or "it helped" is worth more than a like.
+  // Engagement of one item: what other people did with it. Only accounts `_people.mjs` judges a person count; bots, spam,
+  // solicitors and brand-new accounts land in `item.filtered` and `filtered.<net>` instead (Bluesky likes are counts only, not filtered). A reply or "it helped" is worth more than a like.
   const engagement = (i) => (i.repliesReceived ?? 0) * 3 + (i.quotes ?? 0) * 3 + (i.reposts ?? 0) * 2 + (i.likes ?? 0) + (i.zaps ?? 0) * 3 + (i.helpedYes ?? 0) * 5;
   for (const i of items) i.engagement = engagement(i);
   const metrics = {};
@@ -116,6 +128,7 @@ export async function computeOutcomes({ since, until = new Date().toISOString(),
     const measured = i.net !== 'x' || readX;
     add(`items.${i.net}`, 1); add(`items.${i.net}.${i.kind}`, 1);
     if (!measured) continue;
+    add(`filtered.${i.net}`, (i.filtered ?? []).length);
     add(`engagement.${i.net}`, i.engagement); add(`repliesReceived.${i.net}`, i.repliesReceived ?? 0); add(`likes.${i.net}`, i.likes ?? 0);
     add('engagement', i.engagement); add('measuredItems', 1); add('repliesReceived', i.repliesReceived ?? 0);
     if (i.play) { add(`items.play.${i.play}`, 1); add(`engagement.play.${i.play}`, i.engagement); }
@@ -129,4 +142,4 @@ export async function computeOutcomes({ since, until = new Date().toISOString(),
   return { since, until, readX, items, metrics, errors };
 }
 
-export const METRIC_HELP = 'engagement = 3×replies from others + 3×quotes + 2×reposts + likes + 3×zaps + 5×"it helped". Useful keys: engagementPerItem, engagementPerItem.bsky, engagementPerItem.play.<play>, people, repliesReceived, helpedYes, incomeUsd, swarm.assistsGiven (work you finished for another agent, with a receipt), swarm.asksSent.';
+export const METRIC_HELP = 'engagement (people only: bots, spam, solicitors and new accounts are excluded and counted in filtered.<net>) = 3×replies from others + 3×quotes + 2×reposts + likes + 3×zaps + 5×"it helped". Useful keys: engagementPerItem, engagementPerItem.bsky, engagementPerItem.play.<play>, people, repliesReceived, helpedYes, incomeUsd, swarm.assistsGiven (work you finished for another agent, with a receipt), swarm.asksSent.';

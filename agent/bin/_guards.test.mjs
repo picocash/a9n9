@@ -112,4 +112,14 @@ a = affiliateProblem('Use https://example.com/signup?ref=abc123 (affiliate link)
 a = affiliateProblem('https://firecrawl.link/someoneelse (affiliate link)', AP); assert.equal(a.code, 2, 'someone else\'s firecrawl link refused');
 a = affiliateProblem('https://firecrawl.link/agent001 (affiliate link)', AP, 2, 2); assert.equal(a.code, 4, 'daily cap');
 a = affiliateProblem('https://firecrawl.link/agent001 ' + 'x'.repeat(200) + ' affiliate link', AP); assert.equal(a.code, 2, 'disclosure must be near the link');
+// people filter (bots, spam and solicitors do not count and get no tickets)
+{ const { judge, npubToHex } = await import('./_people.mjs');
+  assert.equal(judge({ net: 'nostr', profile: { name: 'Джарвис', about: 'Бот Bell Farben: контент-мейкер', follows: 50 } }).kind, 'bot', 'cyrillic bot bio');
+  assert.equal(judge({ net: 'nostr', profile: { name: 'x', about: '', bot: true, follows: 50 } }).kind, 'bot', 'NIP-24 bot flag');
+  assert.equal(judge({ net: 'nostr', profile: { name: 'x', about: '', follows: 50 }, text: 'Happy to take this on. Fixed price in BTC https://a.loca.lt/order' }).kind, 'spam', 'tunnel link');
+  assert.equal(judge({ net: 'nostr', profile: { name: 'x', about: '', follows: 50 }, text: 'any support means the world to us' }).kind, 'spam', 'solicitation');
+  assert.equal(judge({ net: 'nostr', profile: { name: 'Robo', about: 'robotics and both ways', follows: 50 } }).kind, 'person', 'robotics is not bot');
+  const nw = judge({ net: 'bsky', profile: { name: 'founder', about: 'x402 trust layer', followers: 0, posts: 2 }, text: 'most endpoints have no paid test' });
+  assert.equal(nw.kind, 'person', 'new accounts still count'); assert.equal(nw.new, true, 'flagged new');
+  assert.equal(npubToHex('npub150s3hnxg7l07cvn9gpft99au6y5f3kucudg5775qu0n65uyvtrlqthlzx4'), 'a3e11bccc8f7dfec32654052b297bcd12898db98e3514f7a80e3e7aa708c58fe', 'npub decode'); }
 console.log('guards ok');
