@@ -132,7 +132,7 @@ export function topicGuard(text, network) {
  * with the words "affiliate link" within 120 characters of it, never with an offer to pass the commission back to the buyer
  * (most programs ban rebates), and at most policy.affiliate_posts_per_day (default 2) per UTC day across all networks.
  * affiliateProblem is pure (tested); affiliateGuard exits 2/4 on a problem and counts the post only when it really went out. */
-export const AFFILIATE_PATTERN = /[?&](ref|via|aff|affiliate|fpr|tap_a|partner|referral|refcode|utm_source=affiliate)=|\b(try\.elevenlabs\.io|firecrawl\.link|partnerstack\.com|tapfiliate\.com|firstpromoter\.com|awin1\.com|shareasale\.com|amzn\.to|hasoffers\.com|go2cloud\.org)\b/i;
+export const AFFILIATE_PATTERN = /[?&](ref|via|aff|affiliate|fpr|tap_a|partner|referral|refcode|utm_source=affiliate)=|\b(try\.elevenlabs\.io|firecrawl\.link|m\.do\.co|partnerstack\.com|tapfiliate\.com|firstpromoter\.com|awin1\.com|shareasale\.com|amzn\.to|hasoffers\.com|go2cloud\.org)\b/i;
 export const REBATE = /\b(cash ?back|rebates?|kickback|refund (you|your)|(pay|give|send) you (back|the commission|my cut|our cut|the cut)|split (the|my|our) (commission|cut)|share (the|my|our) commission)\b/i;
 const normUrl = (u) => u.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/[.,;:!?)\]]+$/, '').replace(/([?&])utm_[a-z]+=[^&]*/gi, '$1').replace(/[?&]+$/, '').replace(/\?&+/, '?').replace(/\/(\?|$)/, '$1').toLowerCase();
 export function affiliatePrograms() { try { return JSON.parse(fs.readFileSync(`${HOME}/affiliates.json`, 'utf8')).programs ?? {}; } catch { return {}; } }

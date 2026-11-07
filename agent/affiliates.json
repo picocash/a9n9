@@ -1,35 +1,45 @@
 {
-  "_note": "Approved affiliate programs. The agent may post these links only with an 'affiliate link' disclosure beside them (FTC). Rebates or credits to buyers are not allowed unless the program approved it in writing.",
-  "programs": {
-    "novita": {
-      "name": "Novita AI",
-      "what": "LLM APIs, GPU instances, serverless GPUs",
-      "link": "https://novita.ai/?ref=mjvknwmo&utm_source=affiliate",
-      "commission": "10% of the referred customer's spend for 180 days",
-      "cookie_days": 60,
-      "network": "Tapfiliate",
-      "approved": "2026-11-06",
-      "buyer_offer": null
-    },
-    "firecrawl": {
-      "name": "Firecrawl",
-      "what": "Web crawling and web-to-LLM data API",
-      "link": "https://firecrawl.link/agent001",
-      "commission": "15% of each sale for the customer's lifetime",
-      "cookie_days": null,
-      "network": "Dub",
-      "approved": "2026-11-06",
-      "buyer_offer": "New users get 10% off their first purchase"
-    },
-    "elevenlabs": {
-      "name": "ElevenLabs",
-      "what": "AI voice, speech generation and voice-agent tools",
-      "link": "https://try.elevenlabs.io/n0p18v26b5bh",
-      "commission": "22% of each customer transaction for 12 months (11% on business tier)",
-      "cookie_days": null,
-      "network": "PartnerStack",
-      "approved": "2026-11-06",
-      "buyer_offer": null
-    }
+ "_note": "Approved affiliate programs. The agent may post these links only with an 'affiliate link' disclosure beside them (FTC). Rebates or credits to buyers are not allowed unless the program approved it in writing.",
+ "programs": {
+  "novita": {
+   "name": "Novita AI",
+   "what": "LLM APIs, GPU instances, serverless GPUs",
+   "link": "https://novita.ai/?ref=mjvknwmo&utm_source=affiliate",
+   "commission": "10% of the referred customer's spend for 180 days",
+   "cookie_days": 60,
+   "network": "Tapfiliate",
+   "approved": "2026-11-06",
+   "buyer_offer": null
+  },
+  "firecrawl": {
+   "name": "Firecrawl",
+   "what": "Web crawling and web-to-LLM data API",
+   "link": "https://firecrawl.link/agent001",
+   "commission": "15% of each sale for the customer's lifetime",
+   "cookie_days": null,
+   "network": "Dub",
+   "approved": "2026-11-06",
+   "buyer_offer": "New users get 10% off their first purchase"
+  },
+  "elevenlabs": {
+   "name": "ElevenLabs",
+   "what": "AI voice, speech generation and voice-agent tools",
+   "link": "https://try.elevenlabs.io/n0p18v26b5bh",
+   "commission": "22% of each customer transaction for 12 months (11% on business tier)",
+   "cookie_days": null,
+   "network": "PartnerStack",
+   "approved": "2026-11-06",
+   "buyer_offer": null
+  },
+  "digitalocean": {
+   "name": "DigitalOcean",
+   "what": "Cloud hosting: droplets, managed databases, serverless inference",
+   "link": "https://m.do.co/c/5050ec0d76ba",
+   "commission": "$25 of DigitalOcean credit (not cash) once the referred customer has paid their first $25",
+   "cookie_days": null,
+   "network": "DigitalOcean referral program",
+   "approved": "2026-11-07",
+   "buyer_offer": null
   }
+ }
 }
