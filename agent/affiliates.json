@@ -1,0 +1,15 @@
+{
+  "_note": "Approved affiliate programs. The agent may post these links only with an 'affiliate link' disclosure beside them (FTC). Rebates or credits to buyers are not allowed unless the program approved it in writing.",
+  "programs": {
+    "novita": {
+      "name": "Novita AI",
+      "what": "LLM APIs, GPU instances, serverless GPUs",
+      "link": "https://novita.ai/?ref=mjvknwmo&utm_source=affiliate",
+      "commission": "10% of the referred customer's spend for 180 days",
+      "cookie_days": 60,
+      "network": "Tapfiliate",
+      "approved": "2026-11-06",
+      "buyer_offer": null
+    }
+  }
+}
