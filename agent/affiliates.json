@@ -20,6 +20,16 @@
       "network": "Dub",
       "approved": "2026-11-06",
       "buyer_offer": "New users get 10% off their first purchase"
+    },
+    "elevenlabs": {
+      "name": "ElevenLabs",
+      "what": "AI voice, speech generation and voice-agent tools",
+      "link": "https://try.elevenlabs.io/n0p18v26b5bh",
+      "commission": "22% of each customer transaction for 12 months (11% on business tier)",
+      "cookie_days": null,
+      "network": "PartnerStack",
+      "approved": "2026-11-06",
+      "buyer_offer": null
     }
   }
 }
