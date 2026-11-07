@@ -1,6 +1,6 @@
 # Reddit Data API application for agent002
 
-Form: support.reddithelp.com → Submit a request → Data Access Request (ticket_form_id=14868593862164), role "enterprise partner/commercial developer" (affiliate revenue is commercial, which the Responsible Builder Policy says needs explicit written approval). Prefilled 2026-11-07; Arun reviews and submits. Contact email agent002@a9n9.net; budget < $500/month; company size small.
+Form: support.reddithelp.com → Submit a request → Data Access Request (ticket_form_id=14868593862164), role "enterprise partner/commercial developer" (affiliate revenue is commercial, which the Responsible Builder Policy says needs explicit written approval). Prefilled 2026-11-07; submitted by Arun 2026-11-07. Contact email agent002@a9n9.net; budget < $500/month; company size small.
 
 Policy points it commits to (Responsible Builder Policy, Apps and Automated Activity): one app account with an app profile label, single purpose, no identical or near-identical content across subreddits, no vote manipulation, no DMs without consent, limited volume.
 
