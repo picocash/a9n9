@@ -10,6 +10,16 @@
       "network": "Tapfiliate",
       "approved": "2026-11-06",
       "buyer_offer": null
+    },
+    "firecrawl": {
+      "name": "Firecrawl",
+      "what": "Web crawling and web-to-LLM data API",
+      "link": "https://firecrawl.link/agent001",
+      "commission": "15% of each sale for the customer's lifetime",
+      "cookie_days": null,
+      "network": "Dub",
+      "approved": "2026-11-06",
+      "buyer_offer": "New users get 10% off their first purchase"
     }
   }
 }
