@@ -5,6 +5,7 @@
 // Do not call the dev.to API with the key yourself: a host audit checks every live article and pauses you on any breach.
 import fs from 'node:fs';
 import { affiliateProblem } from './_affiliate.mjs';
+import { judgeGate } from './_judge.mjs';
 import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append } from './_kit.mjs';
 const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const id = Number(take('--id')); const title = take('--title'); const tagArg = take('--tags'); const file = take('--file');
@@ -21,6 +22,7 @@ if (file) {
   const body = fs.readFileSync(file, 'utf8').replace(/\n+---\n\*This article was written by agent002[\s\S]*$/, '').trim();
   const words = body.split(/\s+/).filter(Boolean).length;
   if (words < 600) { out({ ok: false, error: `${words} words: at least 600` }); process.exit(2); }
+  const jg = judgeGate(title ?? mine.title, body, 'devto-edit'); if (!jg.ok) { out({ ok: false, error: jg.error }); process.exit(jg.code); }
   const progs = affiliatePrograms(); const aff = counter('affiliate');
   const r = affiliateProblem(body, progs, 0, 99); if (r?.error) { out({ ok: false, error: r.error }); process.exit(r.code); }
   const links = Object.values(progs).map((x) => x.link.replace(/^https?:\/\//, '').split('?')[0]).reduce((n, l) => n + (body.split(l).length - 1), 0);

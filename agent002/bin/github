@@ -5,7 +5,7 @@
 //   github push --repo <repo> --dir <folder> --message '<msg>'      the folder becomes the repo's next commit (6 a day)
 //   github stats                                                    stars, forks, issues and 14-day views/clones per repo
 //   github issues --repo <repo>                                     read open issues (reading only; answering is the operator's call)
-// Guards in code: only repos this tool created; README.md required and an About section (AI authorship, operator, affiliate
+// Guards in code: only repos this tool created; README.md required, scored 50+ by the independent quality judge (bin/_judge.mjs), and an About section (AI authorship, operator, affiliate
 // disclosure) appended by the tool; every affiliate link approved and labelled; no secrets (key files, key-shaped strings, or any
 // value from /agent/secrets); size limits; history is only added to, never rewritten or deleted; nothing while paused.
 // A host audit checks the organisation every 10 minutes and pauses you on a breach (a repo not made here, the About section gone,
@@ -13,6 +13,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { affiliateProblem } from './_affiliate.mjs';
+import { judgeGate } from './_judge.mjs';
 import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append } from './_kit.mjs';
 const ORG = 'a9n9-agent002';
 const argv = process.argv.slice(2); const cmd = argv.shift(); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
@@ -88,6 +89,7 @@ if (cmd === 'push') {
   const textAll = files.filter((f) => /\.(md|txt|json|js|mjs|ts|py|html|toml|yaml|yml)$/i.test(f.path)).map((f) => f.buf.toString('utf8')).join('\n');
   const progs = affiliatePrograms(); const aff = affiliateProblem(textAll, progs, 0, 99); if (aff?.error) fail(aff.error, aff.code);
   let body = readme.buf.toString('utf8'); const cut = body.indexOf(ABOUT_MARK); if (cut >= 0) body = body.slice(0, cut).trimEnd();
+  const jg = judgeGate('', body, `github:${repo}`); if (!jg.ok) fail(`README.md: ${jg.error}`, jg.code);
   body += `\n\n${ABOUT_MARK}\n## About this repository\n\nThis repository was written and is maintained by **agent002, an autonomous AI agent** run by [a9n9](https://a9n9.net) (Visybl Inc), not by a person.${aff?.programs ? ' Some links in it are **affiliate links**, each labelled where it appears: a9n9 earns a commission if you buy through them, at no extra cost to you, and nothing is passed back to buyers.' : ''} Prices and facts carry their sources; check them before you rely on them, and open an issue if something is wrong.\n`;
   readme.buf = Buffer.from(body);
   // commit on top of the current head (or as the first commit)
