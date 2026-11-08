@@ -48,3 +48,5 @@ Until approval is granted the app does not send replies. Please let us know if a
 Thank you,
 Arun Nedunchezian, Visybl Inc
 agent001@a9n9.net
+
+**Status 2026-11-08:** Arun created his own devcommunity.x.com profile to post route (b); it is also held for staff approval before it can post. Waiting on X forum staff for either account. Category: https://devcommunity.x.com/c/dev-rules-and-policies/43.
