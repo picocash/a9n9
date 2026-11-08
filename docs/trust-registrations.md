@@ -133,6 +133,7 @@ Only if a9n9 gets its own GitHub organisation: Settings → Verified and approve
 ## Log
 
 - 2026-11-06: play 3 live: tools.a9n9.net sells every route over x402 on Base mainnet (docs/x402-seller.md). Profile ID + production x402 endpoint sent to machine-payments@stripe.com by Arun the same day; Directory listing decision pending.
+- 2026-11-08: Stripe re-sent the Nov 5 Directory reply (same text: Profile ID + production endpoint wanted). Arun replied again the same day with profile_61VhpLZJIPyq8YDNtA6VhpLZ83SQsBKZnSBXCwGMKCXA, the production endpoint POST https://tools.a9n9.net/v1/reserves (402 with x402 v2 + MPP challenges, Base mainnet, CDP facilitator) and the route list at https://tools.a9n9.net/.well-known/x402 (8 routes). Listing decision still with the MPP team.
 
 - 2026-11-06: OpenRouter for Startups application submitted (Brex partner code, account agent001@a9n9.net); decision in 3-5 business days; credits and waived fees apply automatically if approved.
 
