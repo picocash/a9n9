@@ -26,6 +26,11 @@ if (file) {
   const links = Object.values(progs).map((x) => x.link.replace(/^https?:\/\//, '').split('?')[0]).reduce((n, l) => n + (body.split(l).length - 1), 0);
   if (links > 1) { out({ ok: false, error: `${links} affiliate links: at most one per article` }); process.exit(2); }
   programs = r?.programs ?? null;
+  // Once an affiliate link has been taken out of an article it stays out: removing it to get past dev.to's noindex/spam flag and
+  // adding it back after indexing is evading the platform's quality control, which risks the account (operator rule, 2026-11-08).
+  const history = readJsonl(`${STATE}/devto-edits.jsonl`).filter((x) => x.id === id);
+  const removedOnce = history.some((x, i) => x.changed?.includes('body_markdown') && !x.affiliate && (i > 0 ? history[i - 1].affiliate : mine.affiliate));
+  if (programs && removedOnce) { out({ ok: false, error: `article ${id} has been live without its affiliate link; adding it back after indexing would be dodging dev.to's quality flag, which risks the account. Leave this article link-free and put the link in a new article.` }); process.exit(2); }
   const added = (programs ?? []).filter((x) => !(mine.affiliate ?? []).includes(x));
   if (added.length && aff.get() >= 2) { out({ ok: false, error: 'adding a new affiliate link counts as an affiliate post, and 2 went out today; try tomorrow' }); process.exit(4); }
   if (added.length) { aff.bump(); append(`${STATE}/affiliate-posts.jsonl`, { at: new Date().toISOString(), channel: 'devto-edit', programs: added, url: mine.url, title: title ?? mine.title }); }
