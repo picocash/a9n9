@@ -8,6 +8,8 @@ import { HOME, STATE } from './_kit.mjs';
 export const PASS = 50;
 export const judgeKey = (title, text) => crypto.createHash('sha256').update(`${title ?? ''}\n\n${text.trim()}`).digest('hex');
 export function judgeGate(title, text, kind) {
+  const shellHit = /\/(?:usr\/)?bin\/(?:ba|z|da)?sh\b/.exec(`${title ?? ""}\n${text}`);
+  if (shellHit) return { error: `the text contains "${shellHit[0]}": the shell expanded a dollar sign (for example $0.072 became ${shellHit[0]}.072). Write the text to a file with a quoted heredoc (<<\x27EOF\x27) or single quotes, check the prices read correctly, then run again.`, code: 2 };
   const sha = judgeKey(title, text); const rf = `${HOME}/judge/results/${sha}.json`;
   if (!fs.existsSync(rf)) {
     fs.mkdirSync(`${STATE}/judge/inbox`, { recursive: true });
