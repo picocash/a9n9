@@ -1,0 +1,82 @@
+{
+ "model": "grok-4.20-0309-non-reasoning",
+ "n": 78,
+ "tiers": {
+  "hit": 19,
+  "mid": 30,
+  "zero": 29
+ },
+ "byKey": {
+  "pull": {
+   "spearman_vs_reactions": 0.383,
+   "auc_hit_vs_zero": 0.816,
+   "auc_mid_vs_zero": 0.787,
+   "auc_hit_vs_mid": 0.492
+  },
+  "hook": {
+   "spearman_vs_reactions": 0.411,
+   "auc_hit_vs_zero": 0.819,
+   "auc_mid_vs_zero": 0.789,
+   "auc_hit_vs_mid": 0.525
+  },
+  "novelty": {
+   "spearman_vs_reactions": 0.335,
+   "auc_hit_vs_zero": 0.747,
+   "auc_mid_vs_zero": 0.774,
+   "auc_hit_vs_mid": 0.427
+  },
+  "specificity": {
+   "spearman_vs_reactions": 0.294,
+   "auc_hit_vs_zero": 0.701,
+   "auc_mid_vs_zero": 0.714,
+   "auc_hit_vs_mid": 0.444
+  },
+  "stakes": {
+   "spearman_vs_reactions": 0.274,
+   "auc_hit_vs_zero": 0.702,
+   "auc_mid_vs_zero": 0.703,
+   "auc_hit_vs_mid": 0.498
+  },
+  "voice": {
+   "spearman_vs_reactions": 0.444,
+   "auc_hit_vs_zero": 0.838,
+   "auc_mid_vs_zero": 0.792,
+   "auc_hit_vs_mid": 0.54
+  },
+  "usefulness": {
+   "spearman_vs_reactions": 0.308,
+   "auc_hit_vs_zero": 0.728,
+   "auc_mid_vs_zero": 0.721,
+   "auc_hit_vs_mid": 0.475
+  },
+  "shareability": {
+   "spearman_vs_reactions": 0.409,
+   "auc_hit_vs_zero": 0.825,
+   "auc_mid_vs_zero": 0.783,
+   "auc_hit_vs_mid": 0.529
+  }
+ },
+ "meanPull": {
+  "hit": 63.5,
+  "mid": 62.7,
+  "zero": 39.2
+ },
+ "pairwise_hit_vs_zero": {
+  "pairs": 19,
+  "voteAccuracy": 0.684,
+  "bothOrdersAgreeRight": 9,
+  "bothOrdersAgreeWrong": 2,
+  "split": 8
+ },
+ "pairwise_mid_vs_zero": {
+  "pairs": 30,
+  "voteAccuracy": 0.75,
+  "bothOrdersAgreeRight": 17,
+  "bothOrdersAgreeWrong": 2,
+  "split": 11
+ },
+ "tokens": {
+  "in": 636698,
+  "out": 16496
+ }
+}
