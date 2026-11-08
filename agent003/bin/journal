@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+// journal add '<text>' | journal add --text '<text>' | journal add --file <path> | journal [n] — your memory between runs.
+import fs from 'node:fs';
+import { STATE, out, readJsonl, append } from './_kit.mjs';
+const [cmd, ...rest] = process.argv.slice(2); const f = `${STATE}/journal.jsonl`; const CAP = 6000;
+if (cmd === 'add') {
+  let text;
+  if (rest[0] === '--file') {
+    try { text = fs.readFileSync(rest[1], 'utf8'); } catch (e) { out({ ok: false, error: `cannot read ${rest[1]}: ${e.code ?? e.message}` }); process.exit(2); }
+  } else text = (rest[0] === '--text' ? rest.slice(1) : rest).join(' ');
+  text = text.trim();
+  if (!text) { out({ ok: false, error: "usage: journal add '<text>' | journal add --file <path>" }); process.exit(2); }
+  append(f, { at: new Date().toISOString(), text: text.slice(0, CAP) });
+  out({ ok: true, chars: Math.min(text.length, CAP), ...(text.length > CAP ? { warning: `cut to ${CAP} characters; split long entries` } : {}) });
+}
+else out({ ok: true, entries: readJsonl(f).slice(-(Number(cmd) || 20)) });

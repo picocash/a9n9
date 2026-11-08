@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { score } from '../../scripts/judge/judge.mjs';
-const ROOT = process.env.AGENT002_ROOT || '/home/ubuntu/a9n9/agent002';
+const ROOT = process.env.AGENT_ROOT || process.env.AGENT002_ROOT || '/home/ubuntu/a9n9/agent002';
 const IN = `${ROOT}/state/judge/inbox`, RES = `${ROOT}/judge/results`, LOG = `${ROOT}/state/judge.jsonl`;
 const DAILY = 30, PASS = 50;
 fs.mkdirSync(RES, { recursive: true });

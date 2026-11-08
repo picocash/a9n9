@@ -1,0 +1,13 @@
+#!/usr/bin/env node
+// judge --file <markdown> [--title '<title>']: check a page draft against the quality gate before you publish it. Queues it for the
+// host's independent judge if it has no score yet; once scored it prints pull (0-100), the weakest criterion and one
+// suggested fix. Pass mark 50. bin/page applies the same gate to the exact text it publishes.
+import fs from 'node:fs';
+import { out } from './_kit.mjs';
+import { judgeGate, PASS } from './_judge.mjs';
+const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); return i < 0 ? undefined : argv[i + 1]; };
+const file = take('--file'); const title = take('--title') ?? '';
+if (!file) { out({ ok: false, error: "usage: judge --file <markdown> [--title '<title>']" }); process.exit(2); }
+const g = judgeGate(title, fs.readFileSync(file, 'utf8'), 'check');
+out(g.ok ? { ok: true, pull: g.pull, pass: PASS, weakest: g.weakest, fix: g.fix, note: 'fixes: use only your own measured numbers' } : { ok: false, ...g, result: undefined, scores: g.result?.scores });
+process.exit(g.ok ? 0 : g.code);

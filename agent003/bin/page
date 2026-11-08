@@ -1,0 +1,27 @@
+#!/usr/bin/env node
+// page --slug <slug> --title '<title>' --description '<50-170 chars>' --file <markdown>: publish or update one guide on
+// https://agent003.a9n9.net/<slug>. You cannot write to the site yourself: this tool checks the page, needs a pass from the
+// independent quality judge for this exact text, and queues it; the host re-checks everything and puts it live within about
+// 5 minutes (state/site.jsonl says when, state/site-rejected.jsonl says why not).
+// Rules in code (bin/_rules.mjs): 600+ words, prices only with "checked YYYY-MM-DD", every travel-brand link labelled
+// "(affiliate link)", at most 6; no first-person travel experiences; no cashback; no raw HTML. 2 new pages and 4 updates a day.
+import fs from 'node:fs';
+import { STATE, out, counter, paused, readJsonl, overlap } from './_kit.mjs';
+import { judgeGate } from './_judge.mjs';
+import { checkPage } from './_rules.mjs';
+const argv = process.argv.slice(2); const get = (f) => { const i = argv.indexOf(f); return i < 0 ? undefined : argv[i + 1]; };
+const slug = get('--slug'), title = get('--title'), description = get('--description'), file = get('--file');
+if (!slug || !title || !description || !file) { out({ ok: false, error: "usage: page --slug <slug> --title '<title>' --description '<50-170 chars>' --file <markdown>" }); process.exit(2); }
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
+let markdown; try { markdown = fs.readFileSync(file, 'utf8').trim(); } catch (e) { out({ ok: false, error: `cannot read ${file}: ${e.code}` }); process.exit(2); }
+const bad = checkPage({ slug, title, description, markdown }); if (bad) { out({ ok: false, error: bad.error }); process.exit(bad.code); }
+const live = readJsonl(`${STATE}/site.jsonl`); const isUpdate = live.some((x) => x.slug === slug);
+if (!isUpdate) {
+  const near = live.filter((x) => x.op === 'new').find((x) => overlap(title, x.title) >= 0.7); if (near) { out({ ok: false, error: `too close to your page "${near.title}" (/${near.slug}). Update that page instead (same --slug).` }); process.exit(4); }
+}
+const c = counter(isUpdate ? 'page-update' : 'page-new'); if (c.get() >= (isUpdate ? 4 : 2)) { out({ ok: false, error: isUpdate ? '4 page updates today; batch your changes' : '2 new pages today; save this one for tomorrow' }); process.exit(4); }
+const jg = judgeGate(title, markdown, `page:${slug}`); if (!jg.ok) { out({ ok: false, error: jg.error }); process.exit(jg.code); }
+fs.mkdirSync(`${STATE}/publish`, { recursive: true });
+fs.writeFileSync(`${STATE}/publish/${slug}.json`, JSON.stringify({ at: new Date().toISOString(), slug, title, description, markdown, sha: jg.sha, update: isUpdate }));
+c.bump();
+out({ ok: true, queued: slug, url: `https://agent003.a9n9.net/${slug}`, pull: jg.pull, note: 'the host puts it live within about 5 minutes; check state/site.jsonl' });

@@ -1,0 +1,36 @@
+#!/usr/bin/env node
+// fares: dated flight prices from the Travelpayouts / Aviasales Data API (cached prices that Aviasales users found in the last
+// 2-7 days; not live quotes). Every result says when it was fetched; pages must show that date.
+//   fares dates --from NYC --to LIS [--depart 2026-12] [--return 2026-12] [--oneway] [--direct] [--currency usd] [--limit 30]
+//   fares calendar --from NYC --to LIS --month 2026-12 [--currency usd]     cheapest fare for each departure day of a month
+// Each row carries a ready affiliate link with your marker and the label to print beside it. At most 300 calls a day.
+import fs from 'node:fs';
+import { HOME, STATE, out, env, counter, append } from './_kit.mjs';
+const MARKER = '597751';
+const argv = process.argv.slice(2); const cmd = argv[0];
+const get = (f) => { const i = argv.indexOf(f); return i < 0 ? undefined : argv[i + 1]; }; const has = (f) => argv.includes(f);
+if (!['dates', 'calendar'].includes(cmd)) { out({ ok: false, error: 'usage: fares dates --from IATA --to IATA [--depart YYYY-MM[-DD]] [--return YYYY-MM[-DD]] [--oneway] [--direct] | fares calendar --from IATA --to IATA --month YYYY-MM' }); process.exit(2); }
+const from = (get('--from') ?? '').toUpperCase(), to = (get('--to') ?? '').toUpperCase();
+if (!/^[A-Z]{3}$/.test(from) || !/^[A-Z]{3}$/.test(to)) { out({ ok: false, error: '--from and --to must be 3-letter IATA city or airport codes (e.g. NYC, LIS)' }); process.exit(2); }
+if (!fs.existsSync(`${HOME}/secrets/travelpayouts.env`)) { out({ ok: false, error: 'Travelpayouts API token not set up yet. Plan pages without live fares and journal it; the operator will tell you when fares work.' }); process.exit(4); }
+const day = counter('fares'); if (day.get() >= 300) { out({ ok: false, error: '300 fare calls today; work with what you have fetched (state/fares.jsonl)' }); process.exit(4); }
+const token = env(`${HOME}/secrets/travelpayouts.env`).TRAVELPAYOUTS_TOKEN; const currency = (get('--currency') ?? 'usd').toLowerCase();
+let url;
+if (cmd === 'dates') {
+  const q = new URLSearchParams({ origin: from, destination: to, currency, sorting: 'price', limit: String(Math.min(Number(get('--limit') ?? 30), 100)), one_way: has('--oneway') ? 'true' : 'false', direct: has('--direct') ? 'true' : 'false' });
+  if (get('--depart')) q.set('departure_at', get('--depart')); if (get('--return') && !has('--oneway')) q.set('return_at', get('--return'));
+  url = `https://api.travelpayouts.com/aviasales/v3/prices_for_dates?${q}`;
+} else {
+  const month = get('--month'); if (!/^\d{4}-\d{2}$/.test(month ?? '')) { out({ ok: false, error: '--month YYYY-MM is required for calendar' }); process.exit(2); }
+  url = `https://api.travelpayouts.com/aviasales/v3/grouped_prices?${new URLSearchParams({ origin: from, destination: to, currency, group_by: 'departure_at', departure_at: month })}`;
+}
+const res = await fetch(url, { headers: { 'X-Access-Token': token, 'Accept-Encoding': 'gzip' } }); day.bump();
+const j = await res.json().catch(() => ({}));
+if (!res.ok || j.success === false) { out({ ok: false, status: res.status, error: j.error ?? j.message ?? 'Data API error' }); process.exit(1); }
+const fetchedAt = new Date().toISOString();
+const rows = (Array.isArray(j.data) ? j.data : Object.values(j.data ?? {})).map((r) => ({
+  depart: r.departure_at, return: r.return_at ?? null, price: r.price ?? r.value, currency, airline: r.airline, flightNumber: r.flight_number, transfers: r.transfers ?? r.number_of_changes, durationMin: r.duration ?? r.duration_to ?? null,
+  link: r.link ? `https://www.aviasales.com${r.link}${r.link.includes('?') ? '&' : '?'}marker=${MARKER}` : null, linkLabel: '(affiliate link)',
+}));
+append(`${STATE}/fares.jsonl`, { at: fetchedAt, cmd, from, to, args: argv.slice(1).join(' '), n: rows.length, cheapest: rows.reduce((m, r) => (m == null || r.price < m ? r.price : m), null) });
+out({ ok: true, fetchedAt, source: 'Aviasales Data API via Travelpayouts (cached prices found by Aviasales users in the last 2-7 days; not a live quote)', from, to, currency, rows });
