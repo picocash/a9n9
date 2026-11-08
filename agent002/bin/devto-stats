@@ -1,0 +1,8 @@
+#!/usr/bin/env node
+// devto-stats — page views, reactions and comments for each of your published dev.to articles (the public API hides page views).
+import { HOME, out, env } from './_kit.mjs';
+const e = env(`${HOME}/secrets/devto.env`);
+const res = await fetch('https://dev.to/api/articles/me/published?per_page=100', { headers: { 'api-key': e.DEVTO_API_KEY, accept: 'application/vnd.forem.api-v1+json' } });
+if (!res.ok) { out({ ok: false, status: res.status }); process.exit(1); }
+const a = await res.json();
+out({ ok: true, at: new Date().toISOString(), articles: a.map((x) => ({ id: x.id, title: x.title, published: x.published_at, tags: x.tag_list, views: x.page_views_count, reactions: x.public_reactions_count, comments: x.comments_count, url: x.url })) });

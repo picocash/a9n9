@@ -1,0 +1,39 @@
+#!/usr/bin/env node
+// devto-edit --id <article id> [--title '<title>'] [--tags 'a,b,c'] [--file <markdown file>] — change one of YOUR published dev.to articles.
+// Same guards as devto-post: only articles you published with devto-post, #abotwrotethis kept, disclosure re-appended, 600+ words,
+// at most 1 affiliate link (disclosed), and a newly added link counts as an affiliate post for today. At most 4 edits a day.
+// Do not call the dev.to API with the key yourself: a host audit checks every live article and pauses you on any breach.
+import fs from 'node:fs';
+import { affiliateProblem } from './_affiliate.mjs';
+import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append } from './_kit.mjs';
+const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const id = Number(take('--id')); const title = take('--title'); const tagArg = take('--tags'); const file = take('--file');
+if (!id || (!title && !tagArg && !file)) { out({ ok: false, error: "usage: devto-edit --id <id> [--title '<title>'] [--tags 'a,b,c'] [--file <markdown>]" }); process.exit(2); }
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
+const mine = readJsonl(`${STATE}/devto.jsonl`).find((x) => x.id === id);
+if (!mine) { out({ ok: false, error: `article ${id} was not published with devto-post; you can only edit your own articles` }); process.exit(2); }
+const edits = counter('devto-edit'); if (edits.get() >= 4) { out({ ok: false, error: 'at most 4 article edits a day; batch your changes' }); process.exit(4); }
+const article = {};
+if (title) article.title = title;
+if (tagArg !== undefined) article.tags = [...new Set(['abotwrotethis', ...tagArg.split(',').map((t) => t.trim().toLowerCase().replace(/[^a-z0-9]/g, '')).filter(Boolean)])].slice(0, 4);
+let programs = null;
+if (file) {
+  const body = fs.readFileSync(file, 'utf8').replace(/\n+---\n\*This article was written by agent002[\s\S]*$/, '').trim();
+  const words = body.split(/\s+/).filter(Boolean).length;
+  if (words < 600) { out({ ok: false, error: `${words} words: at least 600` }); process.exit(2); }
+  const progs = affiliatePrograms(); const aff = counter('affiliate');
+  const r = affiliateProblem(body, progs, 0, 99); if (r?.error) { out({ ok: false, error: r.error }); process.exit(r.code); }
+  const links = Object.values(progs).map((x) => x.link.replace(/^https?:\/\//, '').split('?')[0]).reduce((n, l) => n + (body.split(l).length - 1), 0);
+  if (links > 1) { out({ ok: false, error: `${links} affiliate links: at most one per article` }); process.exit(2); }
+  programs = r?.programs ?? null;
+  const added = (programs ?? []).filter((x) => !(mine.affiliate ?? []).includes(x));
+  if (added.length && aff.get() >= 2) { out({ ok: false, error: 'adding a new affiliate link counts as an affiliate post, and 2 went out today; try tomorrow' }); process.exit(4); }
+  if (added.length) { aff.bump(); append(`${STATE}/affiliate-posts.jsonl`, { at: new Date().toISOString(), channel: 'devto-edit', programs: added, url: mine.url, title: title ?? mine.title }); }
+  article.body_markdown = body + `\n\n---\n*This article was written by agent002, an autonomous AI agent run by [a9n9](https://a9n9.net) (Visybl Inc), not a person.${programs ? ' It contains an affiliate link, marked as such: a9n9 earns a commission if you buy through it.' : ''}*`;
+}
+const e = env(`${HOME}/secrets/devto.env`);
+const res = await fetch(`https://dev.to/api/articles/${id}`, { method: 'PUT', headers: { 'content-type': 'application/json', 'api-key': e.DEVTO_API_KEY, accept: 'application/vnd.forem.api-v1+json' }, body: JSON.stringify({ article }) });
+const j = await res.json().catch(() => ({}));
+if (!res.ok) { out({ ok: false, status: res.status, error: j.error ?? j }); process.exit(1); }
+edits.bump(); append(`${STATE}/devto-edits.jsonl`, { at: new Date().toISOString(), id, changed: Object.keys(article), tags: j.tag_list, affiliate: programs });
+out({ ok: true, id, url: j.url, tags: j.tag_list, changed: Object.keys(article) });
