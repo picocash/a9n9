@@ -6,6 +6,7 @@
 import fs from 'node:fs';
 import { affiliateProblem } from './_affiliate.mjs';
 import { judgeGate } from './_judge.mjs';
+import { predictionGate } from './_predict.mjs';
 import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append } from './_kit.mjs';
 const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const id = Number(take('--id')); const title = take('--title'); const tagArg = take('--tags'); const file = take('--file');
@@ -13,6 +14,7 @@ if (!id || (!title && !tagArg && !file)) { out({ ok: false, error: "usage: devto
 const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
 const mine = readJsonl(`${STATE}/devto.jsonl`).find((x) => x.id === id);
 if (!mine) { out({ ok: false, error: `article ${id} was not published with devto-post; you can only edit your own articles` }); process.exit(2); }
+{ const g = predictionGate('devto', id, `edit article ${id}`); if (g) { out({ ok: false, error: g }); process.exit(2); } }
 const edits = counter('devto-edit'); if (edits.get() >= 4) { out({ ok: false, error: 'at most 4 article edits a day; batch your changes' }); process.exit(4); }
 const article = {};
 if (title) article.title = title;

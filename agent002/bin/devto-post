@@ -7,6 +7,7 @@
 import fs from 'node:fs';
 import { affiliateProblem } from './_affiliate.mjs';
 import { judgeGate } from './_judge.mjs';
+import { unpredicted } from './_predict.mjs';
 import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap } from './_kit.mjs';
 const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const title = take('--title'); const tagArg = take('--tags') ?? ''; const file = take('--file');
@@ -17,6 +18,7 @@ const body = fs.readFileSync(file, 'utf8').trim();
 const words = body.split(/\s+/).filter(Boolean).length;
 if (words < 600) { out({ ok: false, error: `${words} words: a DEV article must teach something real, at least 600 words` }); process.exit(2); }
 const day = counter('devto'); if (day.get() >= 1) { out({ ok: false, error: 'one dev.to article a day; save this for tomorrow' }); process.exit(4); }
+{ const u = unpredicted('devto', readJsonl(`${STATE}/devto.jsonl`).map((x) => ({ subject: x.id, at: x.at }))); if (u.length) { out({ ok: false, error: `articles with no prediction yet: ${u.join(', ')}. Before a new article, write down what each existing one should reach and by when (predict add --metric devto.views --subject <id> ...; predict metrics). Then run this again.` }); process.exit(2); } }
 const progs = affiliatePrograms(); const aff = counter('affiliate');
 const r = affiliateProblem(body, progs, aff.get(), 2); if (r?.error) { out({ ok: false, error: r.error }); process.exit(r.code); }
 const links = Object.values(progs).map((x) => x.link.replace(/^https?:\/\//, '').split('?')[0]).reduce((n, l) => n + (body.split(l).length - 1), 0);

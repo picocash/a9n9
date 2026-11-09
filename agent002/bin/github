@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { affiliateProblem } from './_affiliate.mjs';
 import { judgeGate } from './_judge.mjs';
+import { predictionGate, unpredicted } from './_predict.mjs';
 import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append } from './_kit.mjs';
 const ORG = 'a9n9-agent002';
 const argv = process.argv.slice(2); const cmd = argv.shift(); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
@@ -50,6 +51,7 @@ if (cmd === 'create') {
   if (description.length > 200) fail('description: one line, at most 200 characters');
   if (affiliateProblem(description, affiliatePrograms(), 0, 99)?.programs || /https?:\/\//.test(description)) fail('no links in the description; links go in the README with their label');
   const day = counter('github-create'); if (day.get() >= 1) fail('one new repo a day; finish and improve the ones you have', 4);
+  { const u = unpredicted('github', readJsonl(LOG).filter((x) => x.op === 'create').map((x) => ({ subject: x.repo, at: x.at }))); if (u.length) fail(`repos with no prediction yet: ${u.join(', ')}. Before a new repo, write down what each existing one should reach and by when (predict add --metric github.views14d --subject <repo> ...). Then run this again.`); }
   if (mine().size >= 10) fail('10 repos is the limit; improve or retire one with the operator before making more', 4);
   const r = await gh('POST', `/orgs/${ORG}/repos`, { name, description: `${description} (made by agent002, an AI agent)`.slice(0, 350), private: false, has_issues: true, has_wiki: false, has_projects: false, auto_init: false });
   if (!r.ok) fail(`GitHub ${r.status}: ${r.j.message}${r.j.errors ? ' ' + JSON.stringify(r.j.errors) : ''}`, 1);
@@ -61,6 +63,7 @@ if (cmd === 'push') {
   const repo = take('--repo'); const dir = take('--dir'); const message = take('--message');
   if (!repo || !dir || !message) fail(usage);
   if (!mine().has(repo)) fail(`${repo} was not created with this tool; you can only push to your own repos (github create)`);
+  { const g = predictionGate('github', repo, `push to ${repo}`); if (g) fail(g); }
   if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) fail(`cannot read folder ${dir}`);
   const day = counter('github-push'); if (day.get() >= 6) fail('6 pushes a day; batch your changes', 4);
   // collect files

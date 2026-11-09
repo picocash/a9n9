@@ -1,0 +1,43 @@
+#!/usr/bin/env node
+// predict — write down what you expect a change to do, before you make it; the host settles it later with its own measurement.
+//   predict add --metric <metric> --subject <article id | repo> --at-least <number> --by <YYYY-MM-DD> --chance <0.05-0.95>
+//               --change '<what you are about to do>' --because '<why you expect it>'
+//   predict list        your open predictions, the settled ones and your calibration (hit rate and Brier score; lower Brier is better)
+//   predict metrics     what can be predicted
+// Rules in code: 2 to 30 days ahead; at most 6 new a day and 25 open; the host takes the baseline when it files the prediction and
+// the final reading on the date, so neither number comes from you. devto-edit and github push refuse a subject with no prediction
+// in the last 7 days, and devto-post / github create refuse while one of your articles or repos has never had one.
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import { out, today, readJsonl, STATE } from './_kit.mjs';
+import { METRICS, INBOX, ledger } from './_predict.mjs';
+const argv = process.argv.slice(2); const cmd = argv.shift(); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const fail = (error, code = 2) => { out({ ok: false, error }); process.exit(code); };
+if (cmd === 'metrics') { out({ ok: true, metrics: METRICS }); process.exit(0); }
+if (cmd === 'list') {
+  const l = ledger(); let s = null; try { s = JSON.parse(fs.readFileSync(`${process.env.AGENT_HOME || '/agent'}/predictions/summary.json`, 'utf8')); } catch {}
+  out({ ok: true, calibration: s, queued: l.queued.map((p) => ({ metric: p.metric, subject: p.subject, atLeast: p.atLeast, by: p.by, note: 'the host files it within a few minutes' })),
+    open: l.open.map((p) => ({ id: p.id, metric: p.metric, subject: p.subject, baseline: p.baseline, atLeast: p.atLeast, chance: p.chance, by: p.by, change: p.change })),
+    settled: l.settled.sort((a, b) => (b.settledAt > a.settledAt ? 1 : -1)).slice(0, 15).map((p) => ({ id: p.id, metric: p.metric, subject: p.subject, baseline: p.baseline, atLeast: p.atLeast, actual: p.actual, chance: p.chance, hit: p.hit, change: p.change })),
+    rejected: l.rejected.slice(-5).map((p) => ({ metric: p.metric, subject: p.subject, reason: p.reason })) }); process.exit(0);
+}
+if (cmd !== 'add') fail("usage: predict add --metric <m> --subject <id|repo> --at-least <n> --by <YYYY-MM-DD> --chance <p> --change '<what>' --because '<why>' | predict list | predict metrics");
+const metric = take('--metric'), subject = take('--subject'), atLeast = Number(take('--at-least')), by = take('--by'), chance = Number(take('--chance')), change = take('--change'), because = take('--because');
+if (!METRICS[metric]) fail(`unknown metric ${metric}; predict metrics lists them`);
+if (!subject) fail('--subject is required (article id or repo name)');
+if (metric.startsWith('devto.') && !readJsonl(`${STATE}/devto.jsonl`).some((x) => String(x.id) === String(subject))) fail(`article ${subject} is not one you published with devto-post`);
+if (metric.startsWith('github.') && !readJsonl(`${STATE}/github.jsonl`).some((x) => x.op === 'create' && x.repo === subject)) fail(`repo ${subject} was not created with github create`);
+if (!Number.isFinite(atLeast) || atLeast < 0) fail('--at-least must be a number (the value you expect the metric to reach by the date)');
+if (!/^\d{4}-\d{2}-\d{2}$/.test(by ?? '')) fail('--by must be a date, YYYY-MM-DD (UTC)');
+const days = (Date.parse(`${by}T23:59:59Z`) - Date.now()) / 864e5; if (days < 2 || days > 31) fail(`--by is ${days.toFixed(1)} days away: pick 2 to 30 days, long enough for the change to show`);
+if (!(chance >= 0.05 && chance <= 0.95)) fail('--chance is your honest probability that it reaches --at-least, between 0.05 and 0.95');
+if (!change || change.length < 15) fail("--change: say what you are about to do (at least 15 characters)");
+if (!because || because.length < 15) fail("--because: say why you expect it (at least 15 characters)");
+const l = ledger(); const t = today();
+if ([...l.queued, ...l.open, ...l.settled, ...l.rejected].filter((p) => (p.filedAt ?? '').startsWith(t)).length >= 6) fail('6 predictions a day; predict the changes that matter', 4);
+if (l.open.length + l.queued.length >= 25) fail('25 open predictions; wait for some to settle', 4);
+fs.mkdirSync(INBOX, { recursive: true });
+const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+const p = { id, filedAt: new Date().toISOString(), metric, subject: String(subject), atLeast, by, chance, change: change.slice(0, 400), because: because.slice(0, 600) };
+fs.writeFileSync(`${INBOX}/${id}.json`, JSON.stringify(p, null, 1));
+out({ ok: true, queued: id, note: 'the host takes the baseline and files it within a few minutes; it counts for the publishing tools now. predict list shows it.' });
