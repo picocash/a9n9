@@ -17,6 +17,7 @@ try {
   const day = new Date().toISOString().slice(0, 10);
   const done = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').split('\n').filter((l) => l.includes(`"at":"${day}`)).length : 0;
   let left = DAILY - done;
+  const status = () => fs.writeFileSync(`${ROOT}/judge/status.json`, JSON.stringify({ at: new Date().toISOString(), day, used: DAILY - left, cap: DAILY, queued: fs.readdirSync(IN).filter((f) => /^[0-9a-f]{64}\.json$/.test(f)).length, resetsAt: `${new Date(Date.parse(day) + 864e5).toISOString()}` }));
   for (const f of fs.readdirSync(IN).filter((f) => /^[0-9a-f]{64}\.json$/.test(f)).sort()) {
     if (left <= 0) break;
     const sha = f.slice(0, 64); const p = `${IN}/${f}`;
@@ -29,4 +30,5 @@ try {
     fs.writeFileSync(`${RES}/${sha}.json`, JSON.stringify(r, null, 1)); fs.rmSync(p); left--;
     fs.appendFileSync(LOG, JSON.stringify({ at: r.at, sha, kind: r.kind, title: r.title, pull: r.pull, pass: r.pass, weakest: r.weakest }) + '\n');
   }
+  status();
 } finally { fs.rmSync(lock, { force: true }); }

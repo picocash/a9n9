@@ -15,7 +15,9 @@ export function judgeGate(title, text, kind) {
     fs.mkdirSync(`${STATE}/judge/inbox`, { recursive: true });
     const q = `${STATE}/judge/inbox/${sha}.json`;
     if (!fs.existsSync(q)) fs.writeFileSync(q, JSON.stringify({ at: new Date().toISOString(), kind, title: title ?? '', text: text.trim() }));
-    return { error: `queued for the quality judge (${sha.slice(0, 12)}). An independent judge on the host scores this exact text within about 5 minutes; run the same command again then. Any change to the text needs a new score. Use /agent/bin/judge to check a draft before you publish.`, code: 4, sha };
+    let st = null; try { st = JSON.parse(fs.readFileSync(`${HOME}/judge/status.json`, "utf8")); } catch {}
+    const wait = st && st.used >= st.cap ? `The judge is running but has used today's ${st.cap} scores; ${st.queued} drafts wait and scoring resumes at ${st.resetsAt} (oldest queued first, so delete superseded drafts from /agent/state/judge/inbox).` : "An independent judge on the host scores this exact text within about 5 minutes; run the same command again then.";
+    return { error: `queued for the quality judge (${sha.slice(0, 12)}). ${wait} Any change to the text needs a new score. Use /agent/bin/judge to check a draft before you publish.`, code: 4, sha };
   }
   const r = JSON.parse(fs.readFileSync(rf, 'utf8'));
   if (r.error) return { error: `the judge could not score this text: ${r.error}. Try again in a few minutes.`, code: 1, sha };
