@@ -1,0 +1,26 @@
+#!/usr/bin/env node
+// goals — the goal ladder the operator set (goals.json "ladder", read-only), each rung with its current value from the host's KPI
+// facts (/agent/kpi) and the prediction ledger, and whether you are on pace. Plan top-down: today's work should move a weekly number,
+// which moves a monthly one, which moves the top goal. Every prediction names its rung (predict add --goal <id>).
+import fs from 'node:fs';
+import { HOME, out } from './_lib.mjs';
+const G = JSON.parse(fs.readFileSync(`${HOME}/goals.json`, 'utf8'));
+const F = `${HOME}/kpi/facts.jsonl`; const rows = fs.existsSync(F) ? fs.readFileSync(F, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [];
+const facts = rows.filter((r) => r.t === 'fact');
+const S = `${HOME}/predictions/settled`; const settled = fs.existsSync(S) ? fs.readdirSync(S).map((f) => JSON.parse(fs.readFileSync(`${S}/${f}`, 'utf8'))) : [];
+const latest = (m) => facts.filter((f) => f.metric === m).at(-1);
+const atOrBefore = (m, t) => [...facts].reverse().find((f) => f.metric === m && Date.parse(f.at) <= t) ?? facts.find((f) => f.metric === m);
+function value(g) {
+  if (g.metric === 'predictions.settled7d') { const s = settled.filter((p) => Date.now() - Date.parse(p.settledAt) < 7 * 864e5); const hr = s.length ? s.filter((p) => p.hit).length / s.length : null; const mc = s.length ? s.reduce((n, p) => n + p.chance, 0) / s.length : null; return { value: s.length, hitRate: hr, meanChance: mc }; }
+  if (g.metric === 'checks') return { value: rows.filter((r) => r.t === 'gap' && Date.now() - Date.parse(r.at) < 864e5).length };
+  const now = latest(g.metric); if (!now) return { value: null };
+  if (g.mode === 'gain') { const start = Date.now() - parseInt(g.window) * 864e5; const b = atOrBefore(g.metric, start); return { value: now.value - b.value, from: b.at, to: now.at, partial: Date.parse(b.at) > start }; }
+  return { value: now.value, at: now.at, receipt: now.receipt.slice(0, 16) };
+}
+const ladder = (G.ladder ?? []).map((g) => { const v = value(g); let status = 'no data';
+  if (v.value != null) { if (g.metric === 'checks') status = v.value === 0 ? 'ok' : 'failing';
+    else if (v.value >= g.target) status = 'met';
+    else if (g.by && g.since) { const s0 = Date.parse(`${g.since}T00:00:00Z`); const b0 = atOrBefore(g.metric, s0)?.value ?? 0; const done = (Date.now() - s0) / (Date.parse(`${g.by}T23:59:59Z`) - s0); const need = Math.ceil(b0 + (g.target - b0) * done); status = v.value >= need ? 'on pace' : `behind pace (about ${need} by now)`; }
+    else status = 'not yet'; }
+  return { level: g.level, id: g.id, goal: g.goal, by: g.by, target: g.target, ...v, status }; });
+out({ ok: true, note: G.ladder_note, ladder });

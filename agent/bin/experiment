@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import { out, HOME, paused, ledger } from './_lib.mjs';
 import { computeOutcomes, METRIC_HELP } from './_outcomes.mjs';
+import { predictionGate } from './_predict.mjs';
 const F = `${HOME}/state/experiments.json`; const MAX_OPEN = 2;
 const load = () => (fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : []);
 const save = (l) => fs.writeFileSync(F, JSON.stringify(l, null, 1));
@@ -19,6 +20,7 @@ const all = load();
 if (cmd === 'list' || !cmd) { out({ ok: true, open: all.filter((e) => !e.closedAt), closed: all.filter((e) => e.closedAt).slice(-10), usage }); process.exit(0); }
 if (paused()) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
 if (cmd === 'start') {
+  { const g = predictionGate('start an experiment'); if (g) { out({ ok: false, error: g }); process.exit(2); } }
   const metric = flag(a, '--metric'); const days = Number(flag(a, '--days')); const change = (flag(a, '--change') ?? '').trim(); const hypothesis = a.join(' ').trim();
   if (!metric || !/^[a-zA-Z.:_-]{3,60}$/.test(metric)) { out({ ok: false, error: `--metric is required. ${METRIC_HELP}`, usage }); process.exit(2); }
   if (!(days >= 2 && days <= 7)) { out({ ok: false, error: '--days must be 2 to 7: long enough to see a change, short enough to learn this week.', usage }); process.exit(2); }

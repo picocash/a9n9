@@ -2,10 +2,12 @@
 // focus [show] | focus set '<focus>' '<reasoning>' — the one declared focus and the evidence behind it. A change is written to the ledger (agent.focus).
 import fs from 'node:fs';
 import { out, HOME, ledger } from './_lib.mjs';
+import { predictionGate } from './_predict.mjs';
 const F = `${HOME}/state/focus.json`;
 const read = () => fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { focus: null, since: null, exploration: 0.5, history: [] };
 const [cmd, ...rest] = process.argv.slice(2);
 if (cmd === 'set') {
+  { const g = predictionGate('change your focus'); if (g) { out({ ok: false, error: g }); process.exit(2); } }
   const [focus, reasoning] = rest;
   if (!focus || !reasoning) { out({ ok: false, error: "usage: focus set '<focus>' '<reasoning with the three days of evidence>'" }); process.exit(2); }
   const st = read(); const now = new Date().toISOString();

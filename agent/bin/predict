@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+// predict — write down what you expect a change to do before you make it; the host settles it from its own KPI readings.
+//   predict add --goal <rung id> --metric <metric> --at-least <number> --by <YYYY-MM-DD> --chance <0.05-0.95> --change '<what>' --because '<why>'
+//   predict list      open and settled predictions and your calibration (hit rate vs stated chances, Brier score; lower is better)
+//   predict metrics   what can be predicted (all measured by the host in /agent/kpi)
+// Rules in code: 2 to 30 days ahead; at most 6 a day and 25 open; the baseline and the result are host KPI readings, not yours.
+// experiment start and focus set refuse unless you filed a prediction in the last 24 h.
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import { out, HOME } from './_lib.mjs';
+import { METRICS, INBOX, LEDGER, ledgerFiles } from './_predict.mjs';
+const argv = process.argv.slice(2); const cmd = argv.shift(); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const fail = (error, code = 2) => { out({ ok: false, error }); process.exit(code); };
+if (cmd === 'metrics') { out({ ok: true, metrics: METRICS }); process.exit(0); }
+if (cmd === 'list') {
+  const l = ledgerFiles(); let s = null; try { s = JSON.parse(fs.readFileSync(`${LEDGER}/summary.json`, 'utf8')); } catch {}
+  out({ ok: true, calibration: s, queued: l.queued.map((p) => ({ goal: p.goal, metric: p.metric, atLeast: p.atLeast, by: p.by })),
+    open: l.open.map((p) => ({ id: p.id, goal: p.goal, metric: p.metric, baseline: p.baseline, atLeast: p.atLeast, chance: p.chance, by: p.by, change: p.change })),
+    settled: l.settled.sort((a, b) => (b.settledAt > a.settledAt ? 1 : -1)).slice(0, 15).map((p) => ({ id: p.id, goal: p.goal, metric: p.metric, baseline: p.baseline, atLeast: p.atLeast, actual: p.actual, chance: p.chance, hit: p.hit, change: p.change })),
+    rejected: l.rejected.slice(-5).map((p) => ({ metric: p.metric, reason: p.reason })) }); process.exit(0);
+}
+if (cmd !== 'add') fail("usage: predict add --goal <id> --metric <m> --at-least <n> --by <YYYY-MM-DD> --chance <p> --change '<what>' --because '<why>' | predict list | predict metrics");
+const goal = take('--goal'), metric = take('--metric'), atLeast = Number(take('--at-least')), by = take('--by'), chance = Number(take('--chance')), change = take('--change'), because = take('--because');
+const ids = (JSON.parse(fs.readFileSync(`${HOME}/goals.json`, 'utf8')).ladder ?? []).map((g) => g.id);
+if (!ids.includes(goal)) fail(`--goal must name the rung of your goal ladder this change serves: ${ids.join(', ')} (goals shows them)`);
+if (!METRICS[metric]) fail(`unknown metric ${metric}; predict metrics lists them`);
+if (!Number.isFinite(atLeast) || atLeast < 0) fail('--at-least must be the number you expect the metric to reach by the date');
+if (!/^\d{4}-\d{2}-\d{2}$/.test(by ?? '')) fail('--by must be a date, YYYY-MM-DD (UTC)');
+const days = (Date.parse(`${by}T23:59:59Z`) - Date.now()) / 864e5; if (days < 2 || days > 31) fail(`--by is ${days.toFixed(1)} days away: pick 2 to 30 days`);
+if (!(chance >= 0.05 && chance <= 0.95)) fail('--chance is your honest probability that it reaches --at-least, between 0.05 and 0.95');
+if (!change || change.length < 15) fail('--change: say what you are about to do (15+ characters)');
+if (!because || because.length < 15) fail('--because: say why you expect it (15+ characters)');
+const l = ledgerFiles(); const t = new Date().toISOString().slice(0, 10);
+if ([...l.queued, ...l.open, ...l.settled, ...l.rejected].filter((p) => (p.filedAt ?? '').startsWith(t)).length >= 6) fail('6 predictions a day; predict the changes that matter', 4);
+if (l.open.length + l.queued.length >= 25) fail('25 open predictions; wait for some to settle', 4);
+fs.mkdirSync(INBOX, { recursive: true }); const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
+fs.writeFileSync(`${INBOX}/${id}.json`, JSON.stringify({ id, filedAt: new Date().toISOString(), goal, metric, subject: 'agent001', atLeast, by, chance, change: change.slice(0, 400), because: because.slice(0, 600) }, null, 1));
+out({ ok: true, queued: id, note: 'the host files it with the latest KPI reading as baseline within a few minutes; it counts for experiment and focus now' });
