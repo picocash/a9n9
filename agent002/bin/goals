@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+// goals — the goal ladder the operator set for you (/agent/goals.json, read-only), each rung with its current value computed from
+// the host's KPI facts (/agent/kpi), the prediction ledger and the operator's facts. Plan from the top down: today's work should
+// move a weekly number, which moves the monthly one, which moves the top goal. You cannot change goals or their inputs.
+import fs from 'node:fs';
+import { HOME, out, readJsonl } from './_kit.mjs';
+const G = JSON.parse(fs.readFileSync(`${HOME}/goals.json`, 'utf8'));
+const rows = readJsonl(`${HOME}/kpi/facts.jsonl`); const facts = rows.filter((r) => r.t === 'fact'); const runs = rows.filter((r) => r.t === 'run').map((r) => r.at);
+const owner = readJsonl(`${HOME}/owner-facts.jsonl`);
+const settled = fs.existsSync(`${HOME}/predictions/settled`) ? fs.readdirSync(`${HOME}/predictions/settled`).map((f) => JSON.parse(fs.readFileSync(`${HOME}/predictions/settled/${f}`, 'utf8'))) : [];
+const runAtOrAfter = (t) => runs.find((r) => Date.parse(r) >= t) ?? null; const runAtOrBefore = (t) => [...runs].reverse().find((r) => Date.parse(r) <= t) ?? null;
+const total = (run, m) => facts.filter((f) => f.at === run && f.metric === m).reduce((n, f) => n + f.value, 0);
+const last = runs.at(-1);
+function value(g) {
+  if (g.metric === 'owner.commissions') return { value: owner.filter((f) => f.fact === 'owner.commissions').at(-1)?.value ?? 0 };
+  if (g.metric === 'devto.views.total') {
+    const start = g.since ? Date.parse(`${g.since}T00:00:00Z`) : Date.now() - parseInt(g.window) * 864e5;
+    const from = runAtOrBefore(start) ?? runAtOrAfter(start); if (!from || !last) return { value: null };
+    return { value: total(last, 'devto.views') - total(from, 'devto.views'), from, to: last, partial: Date.parse(from) > start };
+  }
+  if (g.metric === 'github.uniques14d.max') { const f = facts.filter((x) => x.at === last && x.metric === 'github.uniques14d'); const b = f.sort((a, b) => b.value - a.value)[0]; return { value: b?.value ?? 0, repo: b?.subject }; }
+  if (g.metric === 'predictions.settled7d') { const s = settled.filter((p) => Date.now() - Date.parse(p.settledAt) < 7 * 864e5); const hr = s.length ? s.filter((p) => p.hit).length / s.length : null; const mc = s.length ? s.reduce((n, p) => n + p.chance, 0) / s.length : null;
+    return { value: s.length, hitRate: hr, meanChance: mc, calibrated: s.length ? Math.abs(hr - mc) <= 0.2 : null }; }
+  if (g.metric === 'checks') { const gaps = rows.filter((r) => r.t === 'gap' && Date.now() - Date.parse(r.at) < 864e5).length; return { value: gaps, kpiGaps24h: gaps }; }
+  return { value: null };
+}
+const res = G.goals.map((g) => { const v = value(g); let status = 'no data';
+  if (v.value != null) { if (g.metric === 'checks') status = v.value === 0 ? 'ok' : 'failing';
+    else if (v.value >= g.target) status = 'met';
+    else if (g.by && g.since) { const span = Date.parse(`${g.by}T23:59:59Z`) - Date.parse(`${g.since}T00:00:00Z`); const done = (Date.now() - Date.parse(`${g.since}T00:00:00Z`)) / span; status = v.value >= g.target * done ? 'on pace' : `behind pace (need ${Math.ceil(g.target * done)} by now)`; }
+    else status = 'not yet'; }
+  return { level: g.level, id: g.id, goal: g.goal, by: g.by, target: g.target, ...v, status }; });
+out({ ok: true, why: G.why, asOf: last, ladder: res });

@@ -21,7 +21,7 @@ export function predictedRecently(family, subject, days = 7) {
 }
 export function predictionGate(family, subject, verb) {
   if (predictedRecently(family, subject)) return null;
-  return `no prediction for ${family} ${subject} in the last 7 days. Before you ${verb}, write down what you expect it to do: predict add --metric ${family}.<metric> --subject ${subject} --at-least <number> --by <YYYY-MM-DD> --chance <0.05-0.95> --change '<what you are about to do>' --because '<why>' (predict metrics lists the metrics). Then run this again.`;
+  return `no prediction for ${family} ${subject} in the last 7 days. Before you ${verb}, write down what you expect it to do: predict add --goal <goal id> --metric ${family}.<metric> --subject ${subject} --at-least <number> --by <YYYY-MM-DD> --chance <0.05-0.95> --change '<what you are about to do>' --because '<why>' (predict metrics lists the metrics). Then run this again.`;
 }
 // articles or repos older than 2 hours that have never had a prediction filed (rejected ones do not count)
 export function unpredicted(family, subjects) {

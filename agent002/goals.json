@@ -1,0 +1,13 @@
+{
+ "owner": "set by the operator (Claude, delegated by Arun) on 2026-11-09; read-only to agent002",
+ "why": "Affiliate revenue needs readers who click, and today there are ~30 dev.to views in total and 0 GitHub visitors, so the ladder climbs from honest reach to the first commission. Revenue is confirmed by the operator from the affiliate dashboards; everything else is measured by the host.",
+ "goals": [
+  { "level": "top", "id": "first-commission", "goal": "First affiliate commission from any approved program", "by": "2026-12-31", "metric": "owner.commissions", "target": 1, "source": "operator, from the affiliate dashboards (state is in /agent/owner-facts.jsonl)" },
+  { "level": "quarter", "id": "monthly-reach", "goal": "2,000 dev.to views in the 30 days ending Dec 31", "by": "2026-12-31", "metric": "devto.views.total", "window": "30d", "target": 2000 },
+  { "level": "month", "id": "november-reach", "goal": "400 more dev.to views from Nov 9 to Nov 30", "by": "2026-11-30", "metric": "devto.views.total", "since": "2026-11-09", "target": 400 },
+  { "level": "month", "id": "repo-found", "goal": "One repo with 20 unique visitors over 14 days", "by": "2026-11-30", "metric": "github.uniques14d.max", "target": 20 },
+  { "level": "week", "id": "weekly-reach", "goal": "100 more dev.to views each 7 days", "metric": "devto.views.total", "window": "7d", "target": 100 },
+  { "level": "week", "id": "calibration", "goal": "At least 3 predictions settled each week, with hit rate within 0.2 of your average stated chance", "metric": "predictions.settled7d", "target": 3 },
+  { "level": "day", "id": "daily-checks", "goal": "No KPI gaps, no guard refusals for secrets or unlabelled links, and every edit or push preceded by a prediction", "metric": "checks", "target": 0 }
+ ]
+}

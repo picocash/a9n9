@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // predict — write down what you expect a change to do, before you make it; the host settles it later with its own measurement.
-//   predict add --metric <metric> --subject <article id | repo> --at-least <number> --by <YYYY-MM-DD> --chance <0.05-0.95>
+//   predict add --goal <goal id> --metric <metric> --subject <article id | repo> --at-least <number> --by <YYYY-MM-DD> --chance <0.05-0.95>
 //               --change '<what you are about to do>' --because '<why you expect it>'
 //   predict list        your open predictions, the settled ones and your calibration (hit rate and Brier score; lower Brier is better)
 //   predict metrics     what can be predicted
@@ -22,7 +22,8 @@ if (cmd === 'list') {
     rejected: l.rejected.slice(-5).map((p) => ({ metric: p.metric, subject: p.subject, reason: p.reason })) }); process.exit(0);
 }
 if (cmd !== 'add') fail("usage: predict add --metric <m> --subject <id|repo> --at-least <n> --by <YYYY-MM-DD> --chance <p> --change '<what>' --because '<why>' | predict list | predict metrics");
-const metric = take('--metric'), subject = take('--subject'), atLeast = Number(take('--at-least')), by = take('--by'), chance = Number(take('--chance')), change = take('--change'), because = take('--because');
+const goal = take('--goal'); const metric = take('--metric'), subject = take('--subject'), atLeast = Number(take('--at-least')), by = take('--by'), chance = Number(take('--chance')), change = take('--change'), because = take('--because');
+{ const ids = JSON.parse(fs.readFileSync(`${process.env.AGENT_HOME || '/agent'}/goals.json`, 'utf8')).goals.map((g) => g.id); if (!ids.includes(goal)) fail(`--goal must name the rung of your goal ladder this change serves: ${ids.join(', ')} (goals shows them)`); }
 if (!METRICS[metric]) fail(`unknown metric ${metric}; predict metrics lists them`);
 if (!subject) fail('--subject is required (article id or repo name)');
 if (metric.startsWith('devto.') && !readJsonl(`${STATE}/devto.jsonl`).some((x) => String(x.id) === String(subject))) fail(`article ${subject} is not one you published with devto-post`);
@@ -38,6 +39,6 @@ if ([...l.queued, ...l.open, ...l.settled, ...l.rejected].filter((p) => (p.filed
 if (l.open.length + l.queued.length >= 25) fail('25 open predictions; wait for some to settle', 4);
 fs.mkdirSync(INBOX, { recursive: true });
 const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
-const p = { id, filedAt: new Date().toISOString(), metric, subject: String(subject), atLeast, by, chance, change: change.slice(0, 400), because: because.slice(0, 600) };
+const p = { id, filedAt: new Date().toISOString(), goal, metric, subject: String(subject), atLeast, by, chance, change: change.slice(0, 400), because: because.slice(0, 600) };
 fs.writeFileSync(`${INBOX}/${id}.json`, JSON.stringify(p, null, 1));
 out({ ok: true, queued: id, note: 'the host takes the baseline and files it within a few minutes; it counts for the publishing tools now. predict list shows it.' });

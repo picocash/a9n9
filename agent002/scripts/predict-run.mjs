@@ -38,7 +38,7 @@ try {
     try {
       const baseline = await measure(p.metric, p.subject);
       if (baseline == null) throw new Error('no reading');
-      const rec = { id, filedAt: p.filedAt, frozenAt: new Date().toISOString(), metric: p.metric, subject: String(p.subject), baseline, atLeast: Number(p.atLeast), by: p.by, chance: Number(p.chance), change: String(p.change).slice(0, 400), because: String(p.because).slice(0, 600) };
+      const rec = { id, goal: p.goal ?? null, filedAt: p.filedAt, frozenAt: new Date().toISOString(), metric: p.metric, subject: String(p.subject), baseline, atLeast: Number(p.atLeast), by: p.by, chance: Number(p.chance), change: String(p.change).slice(0, 400), because: String(p.because).slice(0, 600) };
       if (rec.atLeast <= baseline) { fs.writeFileSync(`${L}/rejected/${id}.json`, JSON.stringify({ ...rec, reason: `already at ${baseline}, which meets --at-least ${rec.atLeast}: predict a level the change has to earn` }, null, 1)); log({ ev: 'rejected', id, metric: rec.metric, subject: rec.subject, baseline }); }
       else { fs.writeFileSync(`${L}/open/${id}.json`, JSON.stringify(rec, null, 1)); log({ ev: 'filed', id, metric: rec.metric, subject: rec.subject, baseline, atLeast: rec.atLeast, chance: rec.chance, by: rec.by }); }
       fs.rmSync(path);

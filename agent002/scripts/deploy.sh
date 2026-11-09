@@ -4,7 +4,7 @@ set -euo pipefail
 SRC=$(cd "$(dirname "$0")/.." && pwd); REPO=$(cd "$SRC/.." && pwd); DST=${AGENT002_ROOT:-$HOME/a9n9/agent002}
 mkdir -p "$DST/bin" "$DST/state" "$DST/hermes" "$DST/secrets" "$DST/node_modules"
 cp "$SRC"/bin/* "$DST/bin/"; cp "$REPO/agent/bin/_affiliate.mjs" "$DST/bin/"; chmod +x "$DST"/bin/[a-z]*
-cp "$SRC/SOUL.md" "$DST/SOUL.md"; cp "$REPO/agent/affiliates.json" "$DST/affiliates.json"
+cp "$SRC/SOUL.md" "$DST/SOUL.md"; cp "$SRC/goals.json" "$DST/goals.json"; cp "$SRC/owner-facts.jsonl" "$DST/owner-facts.jsonl"; cp "$REPO/agent/affiliates.json" "$DST/affiliates.json"
 printf '{"type":"module"}\n' > "$DST/package.json"
 cp "$SRC/scripts/usage-watch.mjs" "$SRC/scripts/devto-audit.mjs" "$SRC/scripts/github-audit.mjs" "$DST/"
 for m in nostr-tools @noble @scure; do rm -rf "$DST/node_modules/$m"; cp -r "$REPO/node_modules/$m" "$DST/node_modules/"; done
