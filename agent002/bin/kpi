@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+// kpi — your numbers as the host recorded them, with receipts. The host reads dev.to and GitHub every hour with your keys and
+// writes typed facts to /agent/kpi/facts.jsonl (read-only to you); each fact names the saved API response it came from, and the
+// lines are hash-chained. Use these numbers, not your memory, in strategy.md, articles and predictions.
+//   kpi now                                   latest reading of every metric, with when it was read
+//   kpi series --metric <m> --subject <s> [--days 14]   one metric over time, with hourly gaps marked
+//   kpi delta [--hours 24]                    what moved: change in every cumulative metric over the window
+//   kpi verify                                re-check the hash chain and that every receipt file matches its hash
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import { HOME, out } from './_kit.mjs';
+const F = `${HOME}/kpi/facts.jsonl`, RAW = `${HOME}/kpi/raw`;
+const argv = process.argv.slice(2); const cmd = argv.shift(); const take = (f) => { const i = argv.indexOf(f); return i < 0 ? undefined : argv[i + 1]; };
+if (!fs.existsSync(F)) { out({ ok: false, error: 'no KPI facts yet; the host collects hourly' }); process.exit(4); }
+const text = fs.readFileSync(F, 'utf8').trimEnd(); const raw = text.split('\n'); const rows = raw.map((l) => JSON.parse(l));
+const facts = rows.filter((r) => r.t === 'fact'); const runs = rows.filter((r) => r.t === 'run');
+const latest = () => { const m = new Map(); for (const f of facts) m.set(`${f.metric}|${f.subject}`, f); return [...m.values()]; };
+if (cmd === 'now') {
+  const l = latest().filter((f) => f.kind !== 'daily');
+  out({ ok: true, lastRun: runs.at(-1)?.at, gapsLast24h: rows.filter((r) => r.t === 'gap' && Date.now() - Date.parse(r.at) < 864e5).map((g) => ({ at: g.at, source: g.source, reason: g.reason })),
+    readings: l.map((f) => ({ metric: f.metric, subject: f.subject, value: f.value, kind: f.kind, at: f.at, receipt: f.receipt.slice(0, 16) })) }); process.exit(0);
+}
+if (cmd === 'series') {
+  const m = take('--metric'), s = take('--subject'), days = Number(take('--days') ?? 14);
+  if (!m || !s) { out({ ok: false, error: 'usage: kpi series --metric <m> --subject <s> [--days 14]' }); process.exit(2); }
+  const since = Date.now() - days * 864e5; const pts = facts.filter((f) => f.metric === m && f.subject === String(s) && Date.parse(f.at) >= since);
+  const hours = runs.filter((r) => Date.parse(r.at) >= since).map((r) => r.at);
+  const gaps = []; for (let i = 1; i < hours.length; i++) if (Date.parse(hours[i]) - Date.parse(hours[i - 1]) > 2 * 3600e3) gaps.push({ from: hours[i - 1], to: hours[i] });
+  out({ ok: true, metric: m, subject: s, points: pts.map((f) => ({ at: f.at, value: f.value, receipt: f.receipt.slice(0, 16) })), missedCollections: gaps }); process.exit(0);
+}
+if (cmd === 'delta') {
+  const hrs = Number(take('--hours') ?? 24); const cut = Date.now() - hrs * 3600e3; const res = [];
+  const by = new Map(); for (const f of facts.filter((f) => f.kind === 'cumulative')) { const k = `${f.metric}|${f.subject}`; if (!by.has(k)) by.set(k, []); by.get(k).push(f); }
+  for (const [k, arr] of by) { const before = arr.filter((f) => Date.parse(f.at) <= cut).at(-1) ?? arr[0]; const now = arr.at(-1);
+    res.push({ metric: now.metric, subject: now.subject, from: before.value, to: now.value, change: now.value - before.value, fromAt: before.at, toAt: now.at, coversWindow: Date.parse(before.at) <= cut }); }
+  out({ ok: true, hours: hrs, moved: res.filter((r) => r.change !== 0), unchanged: res.filter((r) => r.change === 0).length, note: 'coversWindow false = the first reading is newer than the window start, so the change is partial' }); process.exit(0);
+}
+if (cmd === 'verify') {
+  let prev = 'genesis', bad = null;
+  for (let i = 0; i < raw.length; i++) { if (rows[i].prev !== prev) { bad = { line: i + 1, problem: 'chain broken' }; break; } prev = crypto.createHash('sha256').update(raw[i]).digest('hex'); }
+  const receipts = [...new Set(facts.map((f) => f.receipt))]; const missing = [];
+  for (const h of receipts) { const p = `${RAW}/${h}.json`; if (!fs.existsSync(p) || crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex') !== h) missing.push(h.slice(0, 16)); }
+  out({ ok: !bad && !missing.length, lines: raw.length, chain: bad ?? 'intact', receipts: receipts.length, receiptProblems: missing }); process.exit(bad || missing.length ? 1 : 0);
+}
+out({ ok: false, error: 'usage: kpi now | kpi series --metric <m> --subject <s> [--days 14] | kpi delta [--hours 24] | kpi verify' }); process.exit(2);
