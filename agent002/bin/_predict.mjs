@@ -10,6 +10,10 @@ export const METRICS = {
   'github.stars': 'stars on one of your repos (subject = repo name)',
   'github.views14d': 'page views over the last 14 days on one of your repos, as GitHub reports it (subject = repo name)',
   'github.uniques14d': 'unique visitors over the last 14 days on one of your repos (subject = repo name)',
+  'game.visits': 'visits to the game that arrived through your links, total so far (subject = agent for all your links, or src:<tag> for one tag, e.g. src:bsky-noodles)',
+  'game.started': 'rounds started by visitors from your links, total so far (subject = agent or src:<tag>)',
+  'game.plated': 'rounds finished and scored by visitors from your links, total so far (subject = agent or src:<tag>)',
+  'game.shared': 'finished rounds whose player pressed a share button, from your links, total so far (subject = agent or src:<tag>)',
 };
 export const LEDGER = `${HOME}/predictions`, INBOX = `${STATE}/predictions/inbox`;
 const readDir = (d) => (fs.existsSync(d) ? fs.readdirSync(d).filter((f) => f.endsWith('.json')).map((f) => { try { return JSON.parse(fs.readFileSync(`${d}/${f}`, 'utf8')); } catch { return null; } }).filter(Boolean) : []);

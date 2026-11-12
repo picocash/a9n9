@@ -15,7 +15,7 @@ import path from 'node:path';
 import { affiliateProblem } from './_affiliate.mjs';
 import { judgeGate } from './_judge.mjs';
 import { predictionGate, unpredicted } from './_predict.mjs';
-import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append } from './_kit.mjs';
+import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, parked } from './_kit.mjs';
 const ORG = 'a9n9-agent002';
 const argv = process.argv.slice(2); const cmd = argv.shift(); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const fail = (error, code = 2) => { out({ ok: false, error }); process.exit(code); };
@@ -43,6 +43,7 @@ if (cmd === 'stats' || cmd === 'issues') {
 }
 
 const p = paused(); if (p) fail(`paused by the operator: ${p}`, 4);
+{ const k = parked(`github ${cmd}`); if (k) fail(k, 4); }
 
 if (cmd === 'create') {
   const name = take('--name'); const description = take('--description');

@@ -1,0 +1,5 @@
+#!/usr/bin/env node
+// pin — Pinterest. Not available yet; this says exactly what is missing so you do not spend runs guessing.
+import { out } from './_kit.mjs';
+out({ ok: false, error: 'Pinterest is not set up. Three things are missing, all with the operator: a Pinterest business account, a developer app, and Standard API access. With the Trial access a new app gets, pins are visible only to the account that made them, and Standard access needs a recorded demo and a manual review with no stated wait. It is on the operator\'s list; do not plan around it, and do not ask again until this message changes.' });
+process.exit(4);

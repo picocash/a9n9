@@ -19,6 +19,14 @@ function value(g) {
     return { value: total(last, 'devto.views') - total(from, 'devto.views'), from, to: last, partial: Date.parse(from) > start };
   }
   if (g.metric === 'github.uniques14d.max') { const f = facts.filter((x) => x.at === last && x.metric === 'github.uniques14d'); const b = f.sort((a, b) => b.value - a.value)[0]; return { value: b?.value ?? 0, repo: b?.subject }; }
+  if (g.metric.startsWith('game.')) {
+    const start = g.since ? Date.parse(`${g.since}T00:00:00Z`) : Date.now() - parseInt(g.window) * 864e5; if (!last) return { value: null };
+    const from = runAtOrBefore(start); const one = (run, m, s) => (run ? facts.find((f) => f.at === run && f.metric === m && f.subject === s)?.value ?? 0 : 0);
+    const delta = (m, s) => one(last, m, s) - one(from, m, s);
+    if (!facts.some((f) => f.at === last && f.metric.startsWith('game.'))) return { value: null };
+    if (g.metric === 'game.shareRate') { const plated = delta('game.plated', 'all'), shared = delta('game.shared', 'all'); return { value: plated ? +(100 * shared / plated).toFixed(1) : null, plated, shared, to: last }; }
+    return { value: delta(g.metric, g.subject ?? 'agent'), to: last };
+  }
   if (g.metric === 'predictions.settled7d') { const s = settled.filter((p) => Date.now() - Date.parse(p.settledAt) < 7 * 864e5); const hr = s.length ? s.filter((p) => p.hit).length / s.length : null; const mc = s.length ? s.reduce((n, p) => n + p.chance, 0) / s.length : null;
     return { value: s.length, hitRate: hr, meanChance: mc, calibrated: s.length ? Math.abs(hr - mc) <= 0.2 : null }; }
   if (g.metric === 'checks') { const gaps = rows.filter((r) => r.t === 'gap' && Date.now() - Date.parse(r.at) < 864e5).length; return { value: gaps, kpiGaps24h: gaps }; }

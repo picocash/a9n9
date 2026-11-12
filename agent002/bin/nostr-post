@@ -5,10 +5,11 @@ import fs from 'node:fs';
 import { finalizeEvent, nip19 } from 'nostr-tools';
 import { Relay } from 'nostr-tools/relay';
 import { affiliateProblem } from './_affiliate.mjs';
-import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap } from './_kit.mjs';
+import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap, parked } from './_kit.mjs';
 const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const replyTo = take('--reply-to'); const to = take('--to'); const text = argv.join(' ').trim();
 if (!text || /^-/.test(text)) { out({ ok: false, error: "usage: nostr-post '<text>' [--reply-to <event id> --to <npub>]" }); process.exit(2); }
+{ const k = parked('nostr-post'); if (k) { out({ ok: false, error: k }); process.exit(4); } }
 const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
 if (text.length > 1200) { out({ ok: false, error: 'keep a note under 1200 characters' }); process.exit(2); }
 const notes = counter('notes'); if (notes.get() >= 8) { out({ ok: false, error: '8 notes a day is the limit; journal the idea for tomorrow' }); process.exit(4); }

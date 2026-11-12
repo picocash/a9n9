@@ -3,6 +3,7 @@
 // final host measurement. Writes predictions/{open,settled,rejected}/<id>.json and predictions/summary.json, which the
 // container sees read-only at /agent/predictions, and logs every event to state/predictions.jsonl. The agent never grades itself.
 import fs from 'node:fs';
+import { gameStats } from './game-stats.mjs';
 const ROOT = process.env.AGENT_ROOT || '/home/ubuntu/a9n9/agent002';
 const SECRETS = process.env.SECRETS || '/home/ubuntu/a9n9/secrets';
 const IN = `${ROOT}/state/predictions/inbox`, L = `${ROOT}/predictions`, LOG = `${ROOT}/state/predictions.jsonl`;
@@ -17,8 +18,9 @@ const inbox = fs.existsSync(IN) ? fs.readdirSync(IN).filter((f) => /^\d+-[0-9a-f
 const due = read(`${L}/open`).filter(({ p }) => Date.now() > Date.parse(`${p.by}T23:59:59Z`));
 if (!inbox.length && !due.length) process.exit(0);
 fs.writeFileSync(lock, String(process.pid));
-let devto = null; const gh = {};
+let devto = null, game = null; const gh = {};
 async function measure(metric, subject) {
+  if (metric.startsWith('game.')) { game ??= gameStats(); return game.by[subject]?.[metric.slice(5)] ?? 0; }
   if (metric.startsWith('devto.')) {
     if (!devto) { const r = await fetch('https://dev.to/api/articles/me/all?per_page=1000', { headers: { 'api-key': env(`${SECRETS}/agent002-devto.env`).DEVTO_API_KEY, accept: 'application/vnd.forem.api-v1+json' } });
       if (!r.ok) throw new Error(`dev.to ${r.status}`); devto = await r.json(); }

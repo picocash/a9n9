@@ -25,7 +25,8 @@ if (cmd !== 'add') fail("usage: predict add --metric <m> --subject <id|repo> --a
 const goal = take('--goal'); const metric = take('--metric'), subject = take('--subject'), atLeast = Number(take('--at-least')), by = take('--by'), chance = Number(take('--chance')), change = take('--change'), because = take('--because');
 { const ids = JSON.parse(fs.readFileSync(`${process.env.AGENT_HOME || '/agent'}/goals.json`, 'utf8')).goals.map((g) => g.id); if (!ids.includes(goal)) fail(`--goal must name the rung of your goal ladder this change serves: ${ids.join(', ')} (goals shows them)`); }
 if (!METRICS[metric]) fail(`unknown metric ${metric}; predict metrics lists them`);
-if (!subject) fail('--subject is required (article id or repo name)');
+if (!subject) fail('--subject is required (article id, repo name, or for game metrics: agent or src:<tag>)');
+if (metric.startsWith('game.') && !/^(agent|src:(bsky|pin)(-[a-z0-9]{1,12})?)$/.test(subject)) fail('for game metrics --subject is agent (all your links) or src:<tag> exactly as the link carries it, e.g. src:bsky or src:bsky-noodles');
 if (metric.startsWith('devto.') && !readJsonl(`${STATE}/devto.jsonl`).some((x) => String(x.id) === String(subject))) fail(`article ${subject} is not one you published with devto-post`);
 if (metric.startsWith('github.') && !readJsonl(`${STATE}/github.jsonl`).some((x) => x.op === 'create' && x.repo === subject)) fail(`repo ${subject} was not created with github create`);
 if (!Number.isFinite(atLeast) || atLeast < 0) fail('--at-least must be a number (the value you expect the metric to reach by the date)');

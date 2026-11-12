@@ -8,10 +8,11 @@ import fs from 'node:fs';
 import { affiliateProblem } from './_affiliate.mjs';
 import { judgeGate } from './_judge.mjs';
 import { unpredicted } from './_predict.mjs';
-import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap } from './_kit.mjs';
+import { HOME, STATE, out, env, counter, paused, affiliatePrograms, readJsonl, append, overlap, parked } from './_kit.mjs';
 const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const title = take('--title'); const tagArg = take('--tags') ?? ''; const file = take('--file');
 if (!title || !file) { out({ ok: false, error: "usage: devto-post --title '<title>' --tags 'tag1,tag2,tag3' --file <path to markdown>" }); process.exit(2); }
+{ const k = parked('devto-post'); if (k) { out({ ok: false, error: k }); process.exit(4); } }
 const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(4); }
 if (!fs.existsSync(`${HOME}/secrets/devto.env`)) { out({ ok: false, error: 'dev.to is not set up yet (no API key). Write the article to your workspace and journal it; the operator will tell you when posting works.' }); process.exit(4); }
 const body = fs.readFileSync(file, 'utf8').trim();

@@ -13,6 +13,8 @@ export function counter(kind) {
   return { get: () => read()[kind] ?? 0, bump: () => { const c = read(); c[kind] = (c[kind] ?? 0) + 1; fs.writeFileSync(f, JSON.stringify(c)); } };
 }
 export function paused() { return fs.existsSync(`${STATE}/PAUSED`) ? fs.readFileSync(`${STATE}/PAUSED`, 'utf8').trim() : null; }
+// tools the operator has switched off, with the reason the agent is shown (/agent/parked.json, read-only to the agent)
+export function parked(tool) { try { return JSON.parse(fs.readFileSync(`${HOME}/parked.json`, 'utf8'))[tool] ?? null; } catch { return null; } }
 export function affiliatePrograms() { try { return JSON.parse(fs.readFileSync(`${HOME}/affiliates.json`, 'utf8')).programs ?? {}; } catch { return {}; } }
 const words = (s) => new Set(String(s).toLowerCase().match(/[a-z0-9$%.]{3,}/g) ?? []);
 export function overlap(a, b) { const A = words(a), B = words(b); let n = 0; for (const w of A) if (B.has(w)) n++; return n / Math.max(1, Math.min(A.size, B.size)); }

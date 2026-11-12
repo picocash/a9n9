@@ -1,9 +1,10 @@
-// kpi-collect: host side of agent002's KPI receipts (crontab, hourly). Reads dev.to and GitHub with agent002's own keys and
+// kpi-collect: host side of agent002's KPI receipts (crontab, hourly). Reads dev.to and GitHub with agent002's own keys, and the game's activity log, and
 // records what it read as typed facts. Every API response is saved under kpi/raw/<sha256>.json (the receipt); every fact names
 // its receipt, and each line of kpi/facts.jsonl carries the hash of the line before it, so an edit anywhere breaks the chain.
 // A missed or failed collection is written as a gap, never filled in. The container sees kpi/ read-only at /agent/kpi.
 import fs from 'node:fs';
 import crypto from 'node:crypto';
+import { gameStats } from './game-stats.mjs';
 const ROOT = process.env.AGENT_ROOT || '/home/ubuntu/a9n9/agent002';
 const SECRETS = process.env.SECRETS || '/home/ubuntu/a9n9/secrets';
 const K = `${ROOT}/kpi`, FACTS = `${K}/facts.jsonl`, RAW = `${K}/raw`, ORG = 'a9n9-agent002';
@@ -54,5 +55,12 @@ try {
     } catch (e) { add({ t: 'gap', at, run, source: `github ${r.name} referrers`, reason: e.message }); }
   }
 } catch (e) { add({ t: 'gap', at, run, source: 'github', reason: e.message }); }
+// the game (Beat The Chefs): visits and rounds from its own activity log, for everyone, for the agent's links and per link tag.
+// The receipt is the summary this run computed (the log itself is pruned after 90 days and never leaves the host).
+try {
+  const g = gameStats(); const body = JSON.stringify(g); const receipt = sha(body); if (!fs.existsSync(`${RAW}/${receipt}.json`)) fs.writeFileSync(`${RAW}/${receipt}.json`, body);
+  add({ t: 'receipt', at, run, source: 'game', url: 'apps/cookgame/data/events (summary)', receipt });
+  for (const [subject, v] of Object.entries(g.by)) for (const m of ['visits', 'started', 'plated', 'shared', 'claimed']) fact(receipt, `game.${m}`, subject, v[m], 'cumulative');
+} catch (e) { add({ t: 'gap', at, run, source: 'game', reason: e.message }); }
 add({ t: 'run', at, run, facts: lines.length });
 fs.appendFileSync(FACTS, lines.join('\n') + '\n');
