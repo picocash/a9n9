@@ -262,6 +262,7 @@ Arun's Substack idea, reshaped. **Not** reselling or paraphrasing paid newslette
 1. Install Proxmox on ZFS RAID10 (see Storage) and the management network. Build `agent-template`.
 2. Core VM: move the shared services from the current box. Keep the current box running until probes are green on the new one.
 3. agent002 as the pilot, built only by the provisioner. Fix the provisioner, not the VM.
+   - 2026-11-13: agent002 was moved by hand ahead of the provisioner, onto VM 104 (the Beat The Chefs VM), at Arun's request: same container, state and cron lines, see `agent002/README.md`. It is a lift-and-shift, not the pilot; the pilot is still the first agent the provisioner builds, and agent002 gets its own VM then.
 4. Move agent001 last, with its state, keys and Chrome logins re-done in its own browser profile.
 
 ## Hermes egress and secrets: test results (2026-11-04)
