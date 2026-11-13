@@ -1,6 +1,6 @@
 {
  "name": "Beat The Chefs",
  "lan": "http://10.0.1.43:8910",
- "public": "",
+ "public": "https://beatthechefs.com",
  "note": "set by the operator. `public` is the address players use; while it is empty the posting tools refuse (nothing to link to yet)."
 }
