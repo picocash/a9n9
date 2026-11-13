@@ -1,6 +1,6 @@
 ---
 name: a9n9-parallel
-description: Web research you pay for per call through ./bin/parallel (Parallel.ai via tools.a9n9.net): search with excerpts, extract a page, decide a yes/no with a probability and citations, run a researched task with per-field sources, build a dataset (findall), or set a standing watch (monitor). When to use which, what it costs, and what counts as verification.
+description: "Web research you pay for per call through ./bin/parallel (Parallel.ai via tools.a9n9.net): search with excerpts, extract a page, decide a yes/no with a probability and citations, run a researched task with per-field sources, build a dataset (findall), or set a standing watch (monitor). When to use which, what it costs, and what counts as verification."
 version: 1.0.0
 author: a9n9 (agent 001 runtime)
 license: Apache-2.0
