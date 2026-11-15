@@ -27,5 +27,7 @@ const BANNED = [
 export function bannedProblem(text) { for (const [re, why] of BANNED) { const m = String(text).match(re); if (m) return `"${m[0].trim()}" reads as ${why}`; } return null; }
 // hashtags that drop a post into a feed whose rules it would break (real-food feeds, feeds that exclude AI art)
 export const BLOCKED_TAGS = new Set(['homecooking', 'foodsky', 'recipe', 'recipes', 'foodporn', 'food', 'foodie', 'indiedev', 'indiegame', 'indiegames', 'solodev', 'sologamedev', 'gamedev', 'art', 'pixelart', 'foodphotography']);
+// an unasked reply never goes to someone whose profile or post says they want no AI or bots near them, or who says they are a minor
+export const OPTED_OUT = /\bno[\s-]*(gen(erative)?[\s-]*)?a\.?i\b|\banti[\s-]*(gen(erative)?[\s-]*)?a\.?i\b|#?noai\b|\bno[\s-]*bots?\b|\bai[\s-]*free\b|\b(fuck|hate|ban|stop)\s+(gen(erative)?\s*)?a\.?i\b|\bhuman[\s-]*(made|artist)\b|\bdo ?n[o']t (reply|interact)\b|\bdni\b|\bminors?\b|\b1[0-7]\s?(yo|y\/o|yrs?|years? old)\b/i;
 export const DISCLOSED = /\b(ai agent|bot|automated|software)\b/i;
 export const CARD = { title: 'Beat The Chefs', description: 'A free cooking game in your browser: six minutes at the stove against the house chef. The chefs and judges are invented, and the art and dish photos are AI-generated.' };

@@ -2,7 +2,7 @@
 // enough on their own: this reads the account's PUBLIC feed and profile (no login) and pauses agent002 (state/PAUSED + `hermes cron
 // pause`) on a breach. Breaches: a post or reply that did not go through bsky-post, banned wording (television, real chefs, newspapers,
 // prizes, speaking as a person), an @mention, a link card that is not the game's public address, a hashtag that feeds a real-food or
-// no-AI feed, more than 3 posts or 10 replies in a UTC day, any repost, any follow, or a profile that no longer says it is a bot.
+// no-AI feed, more than 3 posts or 13 replies (10 answers + 3 unasked) in a UTC day, any repost, any follow, or a profile that no longer says it is a bot.
 // Known limits: likes are not visible here; the agent writes its own post log, so the log is checked against the feed, not trusted alone.
 // This pause is not lifted automatically: the operator removes state/PAUSED and resumes the job.
 import fs from 'node:fs';
@@ -36,7 +36,7 @@ for (const f of feed) { const p = f.post; const id = p.uri.split('/').pop();
   if (ext && (!base || !(ext === base || ext.startsWith(`${base}/`)))) problems.push(`${id}: link card points somewhere other than the game`);
   if (rec.embed && !rec.embed.external) problems.push(`${id}: an embed that is not the game's link card`);
 }
-for (const [day, n] of Object.entries(perDay)) { if (n.post > 3) problems.push(`${day}: ${n.post} posts (cap 3)`); if (n.reply > 10) problems.push(`${day}: ${n.reply} replies (cap 10)`); }
+for (const [day, n] of Object.entries(perDay)) { if (n.post > 3) problems.push(`${day}: ${n.post} posts (cap 3)`); if (n.reply > 13) problems.push(`${day}: ${n.reply} replies (cap 10 answers + 3 unasked)`); }
 console.log(JSON.stringify({ at, handle, posts: feed.length, problems }));
 if (problems.length) {
   fs.appendFileSync(`${ST}/bsky-audit.jsonl`, JSON.stringify({ at, problems }) + '\n');

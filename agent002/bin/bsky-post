@@ -2,25 +2,33 @@
 // bsky-post — post on Bluesky from the game's bot account, or answer somebody who wrote to it.
 //   bsky-post '<text>' [--tag <word>]            a post; the tool attaches the game's link card itself (never put a link in the text)
 //   bsky-post '<text>' --reply-to <at-uri> [--card]   answer a post from `bsky-read notifications`; --card adds the link card (when they ask where to play)
+//   bsky-post '<text>' --reach <at-uri> [--card [--tag <word>]]   an UNASKED reply to a public post from `bsky-read search` (operator's decision, 2026-11-15)
 // Rules in code: 3 posts and 10 replies a day; 300 characters; no links, no @mentions, at most 3 hashtags (not the ones that feed
 // real-food or no-AI feeds); nothing about television, real chefs, newspapers, prizes or money; you never speak as a person or as
-// the maker; replies only to people who wrote to the account first, once each; no repeats within 48 hours; a post needs a
+// the maker; --reply-to only to people who wrote to the account first, once each; no repeats within 48 hours; a post needs a
 // prediction (predict add --metric game.visits --subject agent …) from the last 7 days. The account's profile must say it is a bot.
+// --reach: 3 a day, at least an hour apart, one per person EVER; only a top-level English post under 72 hours old that still takes
+// replies; never to an account that is a bot itself, that blocks or mutes this one, that says it wants no AI or bots, or that says it
+// is a minor; the reply's own text must say you are a bot. --card links ?s=bsky-out (or bsky-<tag>).
 // No likes, follows or reposts. A host audit reads the account's public feed and pauses you if anything there breaks these rules.
 import { predictionGate } from './_predict.mjs';
 import { STATE, out, counter, paused, readJsonl, append, overlap } from './_kit.mjs';
-import { publicBase, link, TAG, bannedProblem, BLOCKED_TAGS, DISCLOSED, CARD } from './_game.mjs';
-import { ready, NOT_READY, session, xrpc, graphemes, tagFacets } from './_bsky.mjs';
+import { publicBase, link, TAG, bannedProblem, BLOCKED_TAGS, DISCLOSED, OPTED_OUT, CARD } from './_game.mjs';
+import { ready, NOT_READY, session, xrpc, graphemes, tagFacets, cardThumb } from './_bsky.mjs';
 const argv = process.argv.slice(2); const take = (f) => { const i = argv.indexOf(f); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const flag = (f) => { const i = argv.indexOf(f); if (i < 0) return false; argv.splice(i, 1); return true; };
 const fail = (error, code = 2) => { out({ ok: false, error }); process.exit(code); };
-const replyTo = take('--reply-to'); const tag = take('--tag'); const card = flag('--card'); const text = (argv[0] ?? '').trim();
-if (!text || /^-/.test(text) || argv.length > 1) fail("usage: bsky-post '<text>' [--tag <word>] | bsky-post '<text>' --reply-to <at-uri> [--card]");
+const replyTo = take('--reply-to'); const reach = take('--reach'); const tag = take('--tag'); const card = flag('--card'); const text = (argv[0] ?? '').trim();
+if (!text || /^-/.test(text) || argv.length > 1) fail("usage: bsky-post '<text>' [--tag <word>] | bsky-post '<text>' --reply-to <at-uri> [--card] | bsky-post '<text>' --reach <at-uri> [--card [--tag <word>]]");
+if (replyTo && reach) fail('--reply-to answers someone who wrote to you; --reach is an unasked reply to a post from search. One or the other.');
 { const p = paused(); if (p) fail(`paused by the operator: ${p}`, 4); }
 if (!publicBase()) fail('the game has no public address yet, so there is nothing to link to. Use the run to prepare (strategy, predictions, drafts in your workspace); `game link` tells you when it is live.', 4);
 if (!ready()) fail(NOT_READY, 4);
-if (tag !== undefined && (replyTo || !TAG.test(tag))) fail('--tag is for posts only: one word, lowercase letters and digits, at most 12 (it becomes ?s=bsky-<tag> so you can tell which post sent players)');
-if (replyTo && !/^at:\/\/did:[a-z0-9:.%-]+\/app\.bsky\.feed\.post\/[a-z0-9]+$/i.test(replyTo)) fail('--reply-to takes the uri of a post from `bsky-read notifications`');
+if (tag !== undefined && (replyTo || (reach && !card) || !TAG.test(tag))) fail('--tag is for posts, and for --reach with --card: one word, lowercase letters and digits, at most 12 (it becomes ?s=bsky-<tag> so you can tell which post sent players)');
+const AT_POST = /^at:\/\/did:[a-z0-9:.%-]+\/app\.bsky\.feed\.post\/[a-z0-9]+$/i;
+if (replyTo && !AT_POST.test(replyTo)) fail('--reply-to takes the uri of a post from `bsky-read notifications`');
+if (reach && !AT_POST.test(reach)) fail('--reach takes the uri of a post from `bsky-read search`');
+if (reach && !DISCLOSED.test(text)) fail('an unasked reply must say in its own words that you are a bot (the person did not ask to hear from one). Put it at the start.');
 const n = graphemes(text); if (n > 300) fail(`${n} characters: Bluesky allows 300`);
 if (n < 20) fail('too short to say anything');
 if (/https?:\/\/|www\.|\b[a-z0-9-]{2,}\.(com|net|org|io|dev|app|co|xyz|gg|me|ly|social|games?)\b/i.test(text)) fail('no links or site names in the text: the tool attaches the game\'s card to a post (and to a reply with --card)');
@@ -33,9 +41,14 @@ if (tags.length > 3) fail(`${tags.length} hashtags: at most 3`);
 const LOG = `${STATE}/bsky-posts.jsonl`; const log = readJsonl(LOG);
 { const prev = log.filter((x) => Date.now() - Date.parse(x.at) < 48 * 3600_000).find((x) => overlap(text, x.text) >= 0.6);
   if (prev) fail(`this repeats what you posted at ${prev.at}: "${prev.text.slice(0, 120)}". Say something new.`, 4); }
-const posts = counter('bsky-post'), replies = counter('bsky-reply');
-if (!replyTo && posts.get() >= 3) fail('3 posts a day is the limit; put the idea in your journal for tomorrow', 4);
+const posts = counter('bsky-post'), replies = counter('bsky-reply'), reaches = counter('bsky-reach');
+if (!replyTo && !reach && posts.get() >= 3) fail('3 posts a day is the limit; put the idea in your journal for tomorrow', 4);
 if (replyTo && replies.get() >= 10) fail('10 replies a day is the limit', 4);
+if (reach) {
+  if (reaches.get() >= 3) fail('3 unasked replies a day is the limit', 4);
+  const last = log.filter((x) => x.reach).map((x) => Date.parse(x.at)).sort((a, b) => b - a)[0];
+  if (last && Date.now() - last < 3600_000) fail('the last unasked reply went out less than an hour ago; several in a row reads as spam. Try again next run.', 4);
+}
 if (!replyTo) { const g = predictionGate('game', 'agent', 'post'); if (g) fail(g.replace('game.<metric>', 'game.visits')); }
 try {
   const me = await xrpc('GET', 'app.bsky.actor.getProfile', null, { actor: (await session()).did });
@@ -50,12 +63,36 @@ try {
     if (hit.author?.did === me.s.did) fail('that is your own post');
     if (log.filter((x) => x.replyToDid === hit.author.did && Date.now() - Date.parse(x.at) < 864e5).length >= 3) fail('3 replies to the same person in a day is enough; let them have the last word', 4);
     const parent = { uri: hit.uri, cid: hit.cid }; record.reply = { root: hit.record?.reply?.root ?? parent, parent };
-    if (card) record.embed = { $type: 'app.bsky.embed.external', external: { uri: link('bsky', 'reply'), ...CARD } };
+    if (card) record.embed = { $type: 'app.bsky.embed.external', external: { uri: link('bsky', 'reply'), ...CARD, thumb: await cardThumb(publicBase()) } };
     const r = await xrpc('POST', 'com.atproto.repo.createRecord', { repo: me.s.did, collection: 'app.bsky.feed.post', record });
     replies.bump(); append(LOG, { at: record.createdAt, uri: r.j.uri, cid: r.j.cid, text, replyTo, replyToDid: hit.author.did, tag: card ? 'bsky-reply' : null });
     out({ ok: true, uri: r.j.uri, repliedTo: hit.author.handle, card: !!card, repliesToday: replies.get() }); process.exit(0);
   }
-  const uri = link('bsky', tag); record.embed = { $type: 'app.bsky.embed.external', external: { uri, ...CARD } };
+  if (reach) {
+    if (log.some((x) => x.replyTo === reach)) fail('you already replied to that post', 4);
+    const got = await xrpc('GET', 'app.bsky.feed.getPosts', null, { uris: reach }); const t = (got.j.posts ?? [])[0];
+    if (!t) fail('that post does not exist any more');
+    const no = (why) => fail(`not this one: ${why}. Pick another post from \`bsky-read search\`, or leave it.`, 4);
+    if (t.author?.did === me.s.did) no('it is your own post');
+    if (log.some((x) => x.reach && x.replyToDid === t.author.did)) no('you already sent this person an unasked reply once, and once is the limit for good. If they answered, it is in `bsky-read notifications`');
+    if (t.record?.reply) no('it is a reply inside somebody else\'s conversation; only a post that starts a thread');
+    if (Date.now() - Date.parse(t.record?.createdAt ?? t.indexedAt) > 72 * 3600_000) no('it is more than 72 hours old');
+    if (Array.isArray(t.record?.langs) && t.record.langs.length && !t.record.langs.some((l) => /^en\b/i.test(l))) no('it is not in English');
+    if (t.viewer?.replyDisabled) no('its author has limited who may reply');
+    const v = t.author?.viewer ?? {}; if (v.blockedBy || v.blocking || v.muted || v.blockingByList || v.mutedByList) no('that account blocks this one or is blocked or muted');
+    if ((t.labels ?? []).length || (t.author?.labels ?? []).some((l) => !/^!no-unauthenticated$/.test(l.val))) no('the post or its author carries a moderation label');
+    const them = await xrpc('GET', 'app.bsky.actor.getProfile', null, { actor: t.author.did }); const bio = `${them.j.displayName ?? ''} ${them.j.description ?? ''}`;
+    if (DISCLOSED.test(bio)) no('that account is a bot or automated account itself');
+    const theirTags = (t.record?.facets ?? []).flatMap((f) => f.features ?? []).filter((f) => f.$type === 'app.bsky.richtext.facet#tag').map((f) => String(f.tag).toLowerCase());
+    if (OPTED_OUT.test(bio) || OPTED_OUT.test(t.record?.text ?? '') || theirTags.some((x) => /^no(gen)?ai/.test(x))) no('their profile or post says they do not want AI or bots near them, or that they are a minor. That is respected, always');
+    const parent = { uri: t.uri, cid: t.cid }; record.reply = { root: parent, parent };
+    const out_tag = card ? `bsky-${tag ?? 'out'}` : null;
+    if (card) record.embed = { $type: 'app.bsky.embed.external', external: { uri: link('bsky', tag ?? 'out'), ...CARD, thumb: await cardThumb(publicBase()) } };
+    const r = await xrpc('POST', 'com.atproto.repo.createRecord', { repo: me.s.did, collection: 'app.bsky.feed.post', record });
+    reaches.bump(); append(LOG, { at: record.createdAt, uri: r.j.uri, cid: r.j.cid, text, replyTo: reach, replyToDid: t.author.did, reach: true, tag: out_tag });
+    out({ ok: true, uri: r.j.uri, url: `https://bsky.app/profile/${me.s.handle}/post/${r.j.uri.split('/').pop()}`, reached: t.author.handle, card: !!card, link: card ? link('bsky', tag ?? 'out') : null, unaskedToday: reaches.get(), next: 'if they answer it shows in `bsky-read notifications`; `bsky-read posts` shows likes and replies; note in your journal whether it was welcome' }); process.exit(0);
+  }
+  const uri = link('bsky', tag); record.embed = { $type: 'app.bsky.embed.external', external: { uri, ...CARD, thumb: await cardThumb(publicBase()) } };
   const r = await xrpc('POST', 'com.atproto.repo.createRecord', { repo: me.s.did, collection: 'app.bsky.feed.post', record });
   posts.bump(); append(LOG, { at: record.createdAt, uri: r.j.uri, cid: r.j.cid, text, replyTo: null, tag: tag ? `bsky-${tag}` : 'bsky' });
   out({ ok: true, uri: r.j.uri, url: `https://bsky.app/profile/${me.s.handle}/post/${r.j.uri.split('/').pop()}`, link: uri, postsToday: posts.get(), next: 'visits from this link show up in `game stats` within the hour (subject agent, or src:' + (tag ? `bsky-${tag}` : 'bsky') + ')' });

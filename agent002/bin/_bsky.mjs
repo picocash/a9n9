@@ -26,6 +26,20 @@ export async function xrpc(method, nsid, body, query) {
     throw new Error(`Bluesky ${nsid} ${r.status}: ${j.message ?? j.error ?? ''}`);
   }
 }
+// the picture on the link card: the game's own link-preview image (the one every site shows for beatthechefs.com), uploaded as a blob
+// and cached for 12 hours. A card without it still posts.
+export async function cardThumb(base) {
+  const CF = `${STATE}/bsky-thumb.json`;
+  try { const c = JSON.parse(fs.readFileSync(CF, 'utf8')); if (Date.now() - c.at < 12 * 3600_000) return c.blob; } catch {}
+  try {
+    const img = await fetch(`${base}/art/card-home.jpg`, { signal: AbortSignal.timeout(15000) }); if (!img.ok) return undefined;
+    const bytes = Buffer.from(await img.arrayBuffer()); if (bytes.length > 950_000) return undefined;
+    const s = await session();
+    const r = await fetch(`${PDS}/xrpc/com.atproto.repo.uploadBlob`, { method: 'POST', headers: { authorization: `Bearer ${s.jwt}`, 'content-type': 'image/jpeg' }, body: bytes, signal: AbortSignal.timeout(20000) });
+    const j = await r.json().catch(() => ({})); if (!r.ok || !j.blob) return undefined;
+    fs.writeFileSync(CF, JSON.stringify({ at: Date.now(), blob: j.blob })); return j.blob;
+  } catch { return undefined; }
+}
 export const graphemes = (t) => [...new Intl.Segmenter('en', { granularity: 'grapheme' }).segment(t)].length;
 // hashtags as Bluesky wants them: positions counted in UTF-8 bytes
 export function tagFacets(text) {
