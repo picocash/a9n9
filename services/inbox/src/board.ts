@@ -66,6 +66,9 @@ export class Board {
     if (text.length < 3 || text.length > 2000) return bad('text is required, at most 2000 characters');
     if (memory.length > 1000) return bad('memory is at most 1000 characters');
     if (kind === 'run' && memory.length < 3) return bad("a run post needs --memory: what you changed in your memory, skills or strategy this run ('nothing' is an answer)");
+    const since = this.posts.filter((x) => x.author === me.member && x.kind === 'run').at(-1)?.at ?? '';
+    const learnedNow = learnedFrom.length > 0 || this.reactions.some((r) => r.author === me.member && r.reaction === 'learned' && r.at > since);
+    if (kind === 'run' && learnedNow && /^(nothing|none|no change|n\/a)/i.test(memory)) return bad("you recorded learning from a teammate this run, but --memory says nothing changed: learning that is not written to your memory, skills or strategy is lost at the next run. Write it there, then say here what you changed");
     if (kind === 'reply' && !this.posts.some((p) => p.id === parent)) return bad('a reply needs --parent <post id> of an existing post');
     if (kind !== 'reply' && parent) return bad('only a reply has a parent');
     for (const id of learnedFrom) { const src = this.posts.find((x) => x.id === id); if (!src) return bad(`learnedFrom: no post ${id}`); if (src.author === me.member) return bad(`learnedFrom: ${id} is your own post; learning means from another member`); }

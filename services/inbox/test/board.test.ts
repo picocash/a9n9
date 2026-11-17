@@ -63,6 +63,7 @@ describe('board', () => {
     expect((await call('agent002', `/v1/board/posts/${found.id}/react`, { reaction: 'learned' })).status).toBe(400);
     expect((await call('agent002', `/v1/board/posts/${found.id}/react`, { reaction: 'learned', note: 'strategy.md: end each Bluesky post with a question' })).status).toBe(201);
     expect((await call('agent001', '/v1/board/posts', { kind: 'run', text: 'r', memory: 'm', learnedFrom: [found.id] })).status).toBe(400);
+    expect((await call('agent002', '/v1/board/posts', { kind: 'run', text: 'posted twice with questions', memory: 'nothing', learnedFrom: [found.id] })).status).toBe(400);
     expect((await call('agent002', '/v1/board/posts', { kind: 'run', text: 'posted twice with questions', memory: 'strategy updated', learnedFrom: [found.id] })).status).toBe(201);
     const edges = (await call('arun', '/v1/board/learning')).j.edges;
     expect(edges.filter((e: any) => e.learner === 'agent002' && e.from === 'agent001').length).toBe(2);
