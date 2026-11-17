@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+// mail — agent002's own email: agent002@a9n9.net and the game's privacy@beatthechefs.com.
+//   mail list [--all]                       messages not yet handled (--all: last 14 days, handled too)
+//   mail read <id>                          one message in full
+//   mail reply <id> --file <path> [--operator '<what the operator must do>']
+//                                           reply from the address it was sent to (threaded); marks it handled
+//   mail done <id> '<why no reply>' [--operator '<what the operator must do>']
+// The mail service only shows mail sent to your addresses and only lets you REPLY to a message you received,
+// so you can never email anyone first. 20 replies a day. The signature and disclosure are added for you.
+import fs from 'node:fs';
+import { HOME, out, env, paused } from './_kit.mjs';
+const argv = process.argv.slice(2);
+const take = (flag) => { const i = argv.indexOf(flag); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const all = argv.includes('--all'); if (all) argv.splice(argv.indexOf('--all'), 1);
+const file = take('--file'); const operator = take('--operator');
+const [cmd, id, note] = argv;
+const sf = `${HOME}/secrets/mail.env`;
+if (!fs.existsSync(sf)) { out({ ok: false, error: 'mail is not set up yet (no secrets/mail.env)' }); process.exit(3); }
+const { MAIL_URL, MAIL_KEY } = env(sf);
+const call = async (path, body) => {
+  const r = await fetch(`${MAIL_URL}${path}`, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${MAIL_KEY}`, ...(body ? { 'content-type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { out({ ok: false, status: r.status, error: j.error ?? 'request failed' }); process.exit(1); }
+  return j;
+};
+const isId = (s) => /^[0-9a-f-]{36}$/.test(s ?? '');
+if (cmd === 'list') {
+  const j = await call(`/v1/agent/mail${all ? '?all=1' : ''}`);
+  out({ ok: true, addresses: j.addresses, count: j.mail.length, mail: j.mail, next: j.mail.length ? 'mail read <id>, then mail reply <id> --file <path> or mail done <id> <why>' : 'nothing to answer' });
+} else if (cmd === 'read' && isId(id)) {
+  out({ ok: true, ...(await call(`/v1/agent/mail/${id}`)) });
+} else if (cmd === 'reply' && isId(id) && file) {
+  if (paused()) { out({ ok: false, error: `paused: ${paused()}` }); process.exit(4); }
+  const msg = await call(`/v1/agent/mail/${id}`);
+  let body = fs.readFileSync(file, 'utf8').trim();
+  if (body.length < 20) { out({ ok: false, error: 'reply is too short to be useful' }); process.exit(2); }
+  const game = /@beatthechefs\.com$/i.test(msg.to);
+  body += game
+    ? '\n\n—\nBeat The Chefs (https://beatthechefs.com), run by Visybl Inc.\nThis reply was written by agent002, our software agent, not a person. Requests about your data are also checked by a person.'
+    : '\n\n—\nagent002, an autonomous software agent run by a9n9 (a Visybl Inc service), not a person.';
+  const j = await call(`/v1/agent/mail/${id}/reply`, { text: body, ...(operator ? { operator } : {}) });
+  fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'reply', id, to: j.to, from: j.from, subject: j.subject, operator: operator ?? null }) + '\n');
+  out(j);
+} else if (cmd === 'done' && isId(id) && note) {
+  const j = await call(`/v1/agent/mail/${id}/done`, { note, ...(operator ? { operator } : {}) });
+  fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'done', id, note, operator: operator ?? null }) + '\n');
+  out(j);
+} else {
+  out({ ok: false, error: "usage: mail list [--all] | mail read <id> | mail reply <id> --file <path> [--operator '<ask>'] | mail done <id> '<why>' [--operator '<ask>']" }); process.exit(2);
+}

@@ -16,14 +16,23 @@ const body = fs.readFileSync(file, 'utf8').trim();
 affiliateGuard(body);
 const receipt = inReplyTo ? inReplyTo.replace(/[^0-9a-zA-Z_:.-]/g, '') : `email:${Date.now()}`;
 const text = `${body}\n\n—\nagent 001, an autonomous software agent run by a9n9 (a Visybl Inc service), not a person.\nDid this help? One click, no login: https://agent001.a9n9.net/h/${encodeURIComponent(receipt)}\nMy public record: https://agent001.a9n9.net`;
+// Thread the reply: --in-reply-to is the inbox event id; the mail header needs that message's own Message-ID.
+let thread = {};
+if (inReplyTo) {
+  try {
+    const ie = env('/home/ubuntu/a9n9/secrets/inbox.env');
+    const p = (await (await fetch(`http://127.0.0.1:8810/v1/events/email/${encodeURIComponent(inReplyTo)}`, { headers: { authorization: `Bearer ${ie.INBOX_API_TOKEN}` }, signal: AbortSignal.timeout(5000) })).json()).payload ?? {};
+    if (p.messageId) thread = { inReplyTo: p.messageId, references: [...(p.references ?? []), p.messageId].join(' ') };
+  } catch {}
+}
 const e = env('/home/ubuntu/a9n9/secrets/email.env'); const url = fs.readFileSync('/home/ubuntu/a9n9/secrets/email-worker.url', 'utf8').trim();
-let res = await fetch(`${url}/v1/send`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.EMAIL_API_TOKEN}` }, body: JSON.stringify({ from: 'agent001@a9n9.net', to, subject, text, ...(inReplyTo ? { inReplyTo } : {}) }) }).catch(() => null);
+let res = await fetch(`${url}/v1/send`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${e.EMAIL_API_TOKEN}` }, body: JSON.stringify({ from: 'agent001@a9n9.net', to, subject, text, ...thread }) }).catch(() => null);
 let j = res ? await res.json().catch(() => ({})) : {}; let rail = 'cloudflare';
 if (!res || !res.ok) {
   // second rail (plan: Resend), used only when the first fails and only once the a9n9.net domain is verified there
   const rf = '/home/ubuntu/a9n9/secrets/resend.env'; const r = fs.existsSync(rf) ? env(rf) : {};
   if (r.RESEND_API_KEY && r.RESEND_DOMAIN_VERIFIED === 'true') {
-    const r2 = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${r.RESEND_API_KEY}` }, body: JSON.stringify({ from: 'agent 001 <agent001@a9n9.net>', to: [to], subject, text, ...(inReplyTo ? { headers: { 'In-Reply-To': inReplyTo } } : {}) }) }).catch(() => null);
+    const r2 = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${r.RESEND_API_KEY}` }, body: JSON.stringify({ from: 'agent 001 <agent001@a9n9.net>', to: [to], subject, text, ...(thread.inReplyTo ? { headers: { 'In-Reply-To': thread.inReplyTo, References: thread.references } } : {}) }) }).catch(() => null);
     const j2 = r2 ? await r2.json().catch(() => ({})) : {};
     if (r2 && r2.ok) { res = r2; j = j2; rail = 'resend'; } else { out({ ok: false, error: `both rails failed: cloudflare ${j.error ?? res?.status ?? 'unreachable'}; resend ${j2.message ?? r2?.status ?? 'unreachable'}` }); process.exit(1); }
   } else { out({ ok: false, error: j.error ?? `send failed ${res?.status ?? 'unreachable'} (second rail not verified yet)` }); process.exit(1); }

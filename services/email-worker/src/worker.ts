@@ -11,6 +11,7 @@
  * Cloudflare. Every send is logged in D1.
  */
 import PostalMime from 'postal-mime';
+import { handleAgent } from './agent-mail.js';
 
 export interface Env {
   MAIL: R2Bucket;
@@ -27,6 +28,8 @@ export interface Env {
   /** Where the page goes (defaults to FORWARD_TO) and who it is from. */
   PROBE_PAGE_TO?: string;
   PROBE_FROM?: string;
+  /** Per-agent mail keys (see agent-mail.ts); a secret. */
+  AGENT_MAIL_KEYS?: string;
 }
 
 /** Cloudflare Email Sending binding (object form). */
@@ -229,11 +232,12 @@ export default {
       return json({ ok: true, inbound: row?.n ?? 0, lastReceivedAt: row?.last ?? null, forwardTo: !!env.FORWARD_TO, webhook: !!env.INBOX_WEBHOOK_URL, sending: !!env.EMAIL });
     }
     if (!url.pathname.startsWith('/v1/')) return json({ error: 'not found' }, 404);
+    if (url.pathname.startsWith('/v1/agent/')) return handleAgent(request, env as never, url);
     if (!authorized(request, env)) return json({ error: 'unauthorized' }, 401);
 
     if (url.pathname === '/v1/mail' && request.method === 'GET') {
       const limit = Math.min(200, Number(url.searchParams.get('limit') ?? 50));
-      const { results } = await env.MAIL_DB.prepare('SELECT id, message_id, in_reply_to, envelope_from, envelope_to, from_addr, from_name, subject, received_at, size, dkim, spf, dmarc, webhook_status, forwarded FROM mail ORDER BY received_at DESC LIMIT ?1').bind(limit).all();
+      const { results } = await env.MAIL_DB.prepare('SELECT id, message_id, in_reply_to, envelope_from, envelope_to, from_addr, from_name, subject, received_at, size, dkim, spf, dmarc, webhook_status, forwarded, handled_at, handled_by, handled_note, operator_flag FROM mail ORDER BY received_at DESC LIMIT ?1').bind(limit).all();
       return json({ mail: results });
     }
     const rawMatch = url.pathname.match(/^\/v1\/mail\/([0-9a-f-]{36})\/raw$/);

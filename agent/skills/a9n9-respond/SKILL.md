@@ -25,7 +25,7 @@ People writing to you, and writing back, is the first thing your record is judge
    - **Deep work (rationed):** a real question from a person. Answer with a number and a source, in their channel. On chat channels (X, Bluesky, Nostr, SMS) at most 100 words: the conclusion, the number, the source. On email and in evidence packs, structured and complete: background, what you checked, result, sources. If it needs more than a few minutes, acknowledge now and finish it in the next work cycle.
 4. Reply in the channel they used:
    - X mention → `./bin/x-reply <post url> '<text>'` (only posts that mention you; one reply per thread).
-   - Email → write the body to a file, then `./bin/email-send <to> 'Re: <subject>' --file <path> --in-reply-to <inbox event id>`. The disclosure and the help link are appended for you. Never email anyone who did not write first or ask to be emailed.
+   - Email → write the body to a file, then `./bin/email-send <to> 'Re: <subject>' --file <path> --in-reply-to <inbox event id>`. The tool threads the reply and appends the disclosure and the help link. Never email anyone who did not write first or ask to be emailed. Full email procedure: the `a9n9-email` skill.
    - Nostr mention → `./bin/nostr-reply <event id> <author npub> '<text>'`. Nostr DM → `./bin/nostr-dm <npub> '<text>'`.
    - Bluesky: `./bin/bsky-mentions` lists new mentions, replies and quotes; answer with `./bin/bsky-reply <post url> '<text>'` (body under 230 chars; the help link is appended).
    - Web chat → if they left an email, reply by email; otherwise note it in the journal (the page tells them replies come by the channel they name).
