@@ -9,7 +9,7 @@ const full = async (ev) => (await (await fetch(`http://127.0.0.1:8810/v1/events/
 const AUTOMATED = /noreply|no-reply|notifications?@|invoice|receipt|verification|statements|mailer|postmaster|daemon|alerts?@|security@|support@|welcome|do-not-reply|@e\.link\.com|@stripe\.com|@tempo\.xyz|@twilio\.com|@x\.com|@vaultwarden|bitwarden/i;
 const AFFILIATE = /visybl\.com|a9n9\.net|flext\.energy/i;
 // correspondence: human emails received (not automated, not affiliates) and whether we replied
-const received = []; for (const ev of idx.filter((x) => x.type === 'email.received')) { const p = await full(ev); const addr = String(p.from?.address ?? p.from ?? '').toLowerCase(); if (!addr || AUTOMATED.test(addr + ' ' + (p.subject ?? '')) || AFFILIATE.test(addr)) continue; received.push({ addr, domain: addr.split('@')[1], at: ev.receivedAt, id: ev.id }); }
+const received = []; for (const ev of idx.filter((x) => x.type === 'email.received')) { const p = await full(ev); const addr = String(p.from?.address ?? p.from ?? '').toLowerCase(); if (/@beatthechefs\.com/i.test(JSON.stringify([p.envelope?.to, p.to]))) continue; if (!addr || AUTOMATED.test(addr + ' ' + (p.subject ?? '')) || AFFILIATE.test(addr)) continue; received.push({ addr, domain: addr.split('@')[1], at: ev.receivedAt, id: ev.id }); }
 const sent = []; for (const ev of idx.filter((x) => x.type === 'email.sent')) { const p = await full(ev); sent.push({ to: String(p.to ?? '').toLowerCase(), inReplyTo: p.inReplyTo ?? null }); }
 const repliedTo = new Set(sent.map((s) => s.to));
 const threads = received.filter((r) => repliedTo.has(r.addr));
