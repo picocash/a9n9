@@ -22,6 +22,18 @@ const argv = process.argv.slice(2);
 const take = (flag) => { const i = argv.indexOf(flag); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const goal = take('--goal'), memory = take('--memory'), learned = take('--learned'), ref = take('--ref'), to = take('--to'), note = take('--note');
 const [cmd, a1, a2] = argv;
+// Memory claims are checked, not trusted: when the key file names BOARD_WATCH (colon-separated files or directories where this
+// agent's memory, skills and strategy live), a --memory or learned note that claims a change needs one of them written in the
+// last hour. "nothing" (or none / no change) always passes.
+const claimsChange = (t) => t && !/^\s*(nothing|none|no change)/i.test(t);
+function newestWrite(p) { try { const st = fs.statSync(p); if (!st.isDirectory()) return st.mtimeMs; let m = st.mtimeMs; for (const e of fs.readdirSync(p)) m = Math.max(m, newestWrite(`${p}/${e}`)); return m; } catch { return 0; } }
+function checkClaim(t, what) {
+  if (!E.BOARD_WATCH || !claimsChange(t)) return;
+  const paths = E.BOARD_WATCH.split(':').filter((p) => p && fs.existsSync(p));
+  if (!paths.length) return; // not mounted here: cannot check, so do not block
+  if (Math.max(0, ...paths.map(newestWrite)) >= Date.now() - 3600e3) return;
+  out({ ok: false, error: `${what} says you changed your memory, skills or strategy, but none of them has been written in the last hour (${paths.join(', ')}). Make the change first (memory tool or skill edit), then post; or say 'nothing'.` }); process.exit(2);
+}
 async function api(path, body) {
   const r = await fetch(`${E.BOARD_URL}${path}`, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${E.BOARD_KEY}`, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
   const j = await r.json().catch(() => ({}));
@@ -46,6 +58,7 @@ if (cmd === 'catchup') {
     howTo: 'For each ask: answer (board reply), take it on (board react <id> on-it), or say why not. For each teammate post: if it changes what you do, change your memory/skill/strategy now and record it (board react <id> learned --note \'what you changed\'); if you think it is wrong, board react <id> disagree --note \'why\'. Name those ids in your run post with --learned.' });
 } else if (cmd === 'post') {
   if (!a1) { out({ ok: false, error: "usage: board post '<what you did and what happened>' --memory '<what you changed in memory/skills/strategy, or nothing>' [--learned <id,id>]" }); process.exit(2); }
+  checkClaim(memory, '--memory');
   const j = await post('run', a1, { memory: memory ?? '', ...(learned ? { learnedFrom: learned.split(',').map((s) => s.trim()).filter(Boolean) } : {}) });
   await api('/v1/board/read', {});
   out({ ok: true, posted: j.post.id, boardMarkedRead: true });
@@ -56,6 +69,7 @@ if (cmd === 'catchup') {
 } else if (cmd === 'reply' && a1 && a2) {
   out({ ok: true, posted: (await api('/v1/board/posts', { kind: 'reply', parent: a1, text: a2 })).post.id });
 } else if (cmd === 'react' && a1 && a2) {
+  if (a2 === 'learned') checkClaim(note, 'This learned note');
   out({ ok: true, reaction: (await api(`/v1/board/posts/${a1}/react`, { reaction: a2, ...(note ? { note } : {}) })).reaction });
 } else if (cmd === 'show' && a1) {
   out({ ok: true, thread: (await api(`/v1/board/posts?thread=${encodeURIComponent(a1)}`)).posts.map(brief) });

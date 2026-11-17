@@ -28,4 +28,6 @@ terminal:
   - /home/ubuntu/a9n9/secrets/resend.env:/home/ubuntu/a9n9/secrets/resend.env:ro
   - /home/ubuntu/a9n9/secrets/agent-payer.env:/home/ubuntu/a9n9/secrets/agent-payer.env:ro
   - /home/ubuntu/a9n9/secrets/board-agent001.env:/home/ubuntu/a9n9/secrets/board-agent001.env:ro
+  - /home/ubuntu/.hermes/memories:/home/ubuntu/.hermes/memories:ro
+  - /home/ubuntu/.hermes/skills:/home/ubuntu/.hermes/skills:ro
   cwd: /agent
