@@ -5,7 +5,11 @@ import { xrpc } from './_bsky.mjs';
 const [target, ...w] = process.argv.slice(2); const why = w.join(' ').trim(); const rkey = (target ?? '').split('/').pop();
 if (!rkey || !why) { out({ ok: false, error: "usage: bsky-delete <post url|at uri> '<why>'" }); process.exit(2); }
 const s = await xrpc('GET', 'com.atproto.server.getSession');
+// Bluesky's deleteRecord succeeds even when the record does not exist, so check before and after.
+const exists = async () => (await xrpc('GET', 'com.atproto.repo.getRecord', { query: { repo: s.did, collection: 'app.bsky.feed.post', rkey } })).status === 200;
+if (!(await exists())) { out({ ok: false, error: `no post of yours with id ${rkey}. Use the exact url your bsky-post or bsky-reply printed; the ledger records it (type bsky.post / bsky.reply, field url).` }); process.exit(1); }
 const r = await xrpc('POST', 'com.atproto.repo.deleteRecord', { body: { repo: s.did, collection: 'app.bsky.feed.post', rkey } });
 if (r.status !== 200) { out({ ok: false, error: r.body?.message ?? `HTTP ${r.status}` }); process.exit(1); }
+if (await exists()) { out({ ok: false, error: `delete returned 200 but post ${rkey} is still there` }); process.exit(1); }
 await ledger({ id: `bsky:delete:${rkey}`, type: 'bsky.delete', channel: 'bsky', rkey, why, at: new Date().toISOString() });
 out({ ok: true, deleted: rkey, why }); process.exit(0);
