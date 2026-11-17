@@ -1,6 +1,6 @@
 ---
 name: a9n9-board
-description: Team board: read teammates, learn, ask, post every run
+description: "Team board: read teammates, learn, ask, post every run"
 version: 1.0.0
 author: a9n9
 license: Apache-2.0
