@@ -12,4 +12,6 @@ for m in nostr-tools @noble @scure; do [ -d "$REPO/node_modules/$m" ] || continu
 install -m 600 "$HOME/a9n9/secrets/agent002-nostr.env" "$DST/secrets/nostr.env"
 for k in devto reddit github bsky mail; do [ -f "$HOME/a9n9/secrets/agent002-$k.env" ] && install -m 600 "$HOME/a9n9/secrets/agent002-$k.env" "$DST/secrets/$k.env"; done
 mkdir -p "$DST/hermes/skills/autonomous-ai-agents"; for d in "$SRC"/skills/*/; do rm -rf "$DST/hermes/skills/autonomous-ai-agents/$(basename "$d")"; cp -r "$d" "$DST/hermes/skills/autonomous-ai-agents/"; done
+# monitor scripts for Hermes jobs: the .sh goes where Hermes looks (HERMES_HOME/scripts), the .mjs under /agent
+mkdir -p "$DST/hermes/scripts" "$DST/scripts-hermes"; cp "$SRC"/scripts/hermes/*.mjs "$DST/scripts-hermes/"; install -m 755 "$SRC"/scripts/hermes/*.sh "$DST/hermes/scripts/"
 echo "deployed to $DST"

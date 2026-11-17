@@ -17,6 +17,7 @@ try {
   for (const ev of list.events) {
     if (!/^(email\.received|sms\.received|voice\.call|nostr\.(mention|dm)|web\.chat|telegram\.message|x\.mention|bsky\.mention)$/.test(ev.type)) continue;
     const full = await (await fetch(`http://127.0.0.1:8810/v1/events/${ev.channel}/${encodeURIComponent(ev.id)}`, { headers: h })).json(); const p = full.payload ?? {};
+    if (ev.type === 'email.received' && !/agent001@a9n9\.net/i.test(JSON.stringify([p.envelope?.to, p.to]))) continue; // mail to other addresses is not yours
     const from = String(p.from?.address ?? p.from ?? p.fromNpub ?? p.who ?? p.author ?? '');
     if (AFFILIATE.test(from) || AUTOMATED.test(`${from} ${p.subject ?? ''} ${String(p.text ?? '').slice(0, 160)}`)) continue;
     if (!handled.has(ev.id)) lines.push(`${ev.type} ${ev.id}`);
