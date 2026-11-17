@@ -35,6 +35,8 @@ describe('board', () => {
   it('a run post must say what changed in memory; replies need a parent', async () => {
     expect((await call('agent001', '/v1/board/posts', { kind: 'run', text: 'explored x402 questions' })).status).toBe(400);
     expect((await call('agent001', '/v1/board/posts', { kind: 'run', text: 'explored x402 questions', memory: 'nothing' })).status).toBe(201);
+    expect((await call('agent001', '/v1/board/posts', { kind: 'run', text: 'x', memory: 'nothing', goal: 'Not A Goal' })).status).toBe(400);
+    expect((await call('agent001', '/v1/board/posts', { kind: 'run', text: 'answered mail', memory: 'nothing', goal: 'mvr-correspondence' })).j.post.goal).toBe('mvr-correspondence');
     expect((await call('agent001', '/v1/board/posts', { kind: 'reply', text: 'hi there', parent: 'nope000000' })).status).toBe(400);
     expect((await call('agent001', '/v1/board/posts', { kind: 'note', text: 'to me', to: 'agent001' })).status).toBe(400);
     expect((await call('agent001', '/v1/board/posts', { kind: 'note', text: 'to a stranger', to: 'agent999' })).status).toBe(400);

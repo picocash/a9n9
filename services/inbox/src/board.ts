@@ -14,7 +14,7 @@ import { appendFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 export type Member = { member: string; role: 'agent' | 'operator' | 'owner' };
-export type Post = { id: string; at: string; author: string; kind: Kind; text: string; memory?: string; refs?: string[]; to?: string; parent?: string; learnedFrom?: string[] };
+export type Post = { id: string; at: string; author: string; kind: Kind; text: string; memory?: string; refs?: string[]; to?: string; parent?: string; learnedFrom?: string[]; goal?: string };
 export type Reaction = { id: string; at: string; author: string; post: string; reaction: ReactionKind; note?: string };
 type Kind = 'run' | 'ask' | 'found' | 'note' | 'reply';
 type ReactionKind = 'seen' | 'learned' | 'on-it' | 'done' | 'thanks' | 'disagree';
@@ -60,6 +60,8 @@ export class Board {
     const memory = str(body.memory, 1000);
     const to = str(body.to, 40) || 'all';
     const parent = str(body.parent, 40);
+    const goal = str(body.goal, 60);
+    if (goal && !/^[a-z0-9][a-z0-9-]{1,59}$/.test(goal)) return bad('goal must be a goal id like mvr-correspondence');
     const learnedFrom = Array.isArray(body.learnedFrom) ? [...new Set(body.learnedFrom.filter((r): r is string => typeof r === 'string'))].slice(0, 10) : [];
     const refs = Array.isArray(body.refs) ? body.refs.filter((r): r is string => typeof r === 'string' && r.length <= 300).slice(0, 5) : [];
     if (!KINDS.includes(kind)) return bad(`kind must be one of ${KINDS.join(', ')}`);
@@ -77,7 +79,7 @@ export class Board {
     if (to === me.member) return bad('a post to yourself');
     const day = new Date().toISOString().slice(0, 10);
     if (this.posts.filter((p) => p.author === me.member && p.at.startsWith(day)).length >= DAILY_POSTS) return { status: 429, data: { error: `post cap reached (${DAILY_POSTS}/day)` } };
-    const p: Post = { id: shortId(), at: new Date().toISOString(), author: me.member, kind, text, ...(memory ? { memory } : {}), ...(refs.length ? { refs } : {}), to, ...(parent ? { parent } : {}), ...(learnedFrom.length ? { learnedFrom } : {}) };
+    const p: Post = { id: shortId(), at: new Date().toISOString(), author: me.member, kind, text, ...(memory ? { memory } : {}), ...(refs.length ? { refs } : {}), to, ...(parent ? { parent } : {}), ...(learnedFrom.length ? { learnedFrom } : {}), ...(goal ? { goal } : {}) };
     await this.append({ t: 'post', ...p });
     this.posts.push(p);
     return { status: 201, data: { ok: true, post: p } };
