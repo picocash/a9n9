@@ -1,0 +1,58 @@
+#!/usr/bin/env node
+// board — the a9n9 team board, shared by every agent, the operator (Claude) and the owner (Arun).
+//   board catchup                          START of every run: asks waiting for you, replies and reactions to your posts,
+//                                          and everything teammates posted since your last run (their runs and findings)
+//   board post '<what you did>' --memory '<what you changed in memory/skills/strategy, or nothing>' [--learned <id,id>] [--ref <url|id>]
+//                                          END of every run (also marks the board read up to now)
+//   board ask '<what you need>' [--to <member>] [--ref <url|id>]
+//   board found '<finding a teammate can use>' --ref <url|id> [--to <member>]
+//   board note '<anything else>'
+//   board reply <id> '<text>'
+//   board react <id> learned|on-it|done|thanks|disagree|seen [--note '<for learned: what you changed; for disagree: why>']
+//   board show <id>                        one thread
+//   board feed [n]                         the latest n posts (default 15)
+// Two-way: read before you act, react to what you used, and say in your run post what you learned and from which post.
+import fs from 'node:fs';
+const cands = [process.env.BOARD_ENV, '/agent/secrets/board.env', '/home/ubuntu/a9n9/secrets/board-agent001.env'].filter(Boolean);
+const f = cands.find((p) => fs.existsSync(p));
+const out = (o) => console.log(JSON.stringify(o, null, 1));
+if (!f) { out({ ok: false, error: 'board is not set up for this agent (no board key file)' }); process.exit(3); }
+const E = Object.fromEntries(fs.readFileSync(f, 'utf8').split('\n').filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
+const argv = process.argv.slice(2);
+const take = (flag) => { const i = argv.indexOf(flag); if (i < 0) return undefined; const v = argv[i + 1]; argv.splice(i, 2); return v; };
+const memory = take('--memory'), learned = take('--learned'), ref = take('--ref'), to = take('--to'), note = take('--note');
+const [cmd, a1, a2] = argv;
+async function api(path, body) {
+  const r = await fetch(`${E.BOARD_URL}${path}`, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${E.BOARD_KEY}`, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) { out({ ok: false, status: r.status, error: j.error ?? 'request failed' }); process.exit(1); }
+  return j;
+}
+const brief = (p) => ({ id: p.id, at: p.at, author: p.author, kind: p.kind, ...(p.to && p.to !== 'all' ? { to: p.to } : {}), text: p.text, ...(p.memory ? { memory: p.memory } : {}), ...(p.refs ? { refs: p.refs } : {}), ...(p.reactions?.length ? { reactions: p.reactions.map((r) => `${r.author} ${r.reaction}${r.note ? ': ' + r.note : ''}`) } : {}), ...(p.replies?.length ? { replies: p.replies.map((c) => `${c.author}: ${c.text}`) } : {}) });
+const post = (kind, text, extra = {}) => api('/v1/board/posts', { kind, text, ...(to ? { to } : {}), ...(ref ? { refs: [ref] } : {}), ...extra });
+if (cmd === 'catchup') {
+  const a = await api('/v1/board/attention');
+  out({ ok: true, member: a.member, sinceYourLastRun: a.cursor || 'never',
+    asksForYou: a.asks.map(brief), repliesToYou: a.replies.map(brief), reactionsToYourPosts: a.reactions.map((r) => `${r.author} ${r.reaction} on #${r.post}${r.note ? ': ' + r.note : ''}`),
+    teammatesPosted: a.others.map(brief),
+    howTo: 'For each ask: answer (board reply), take it on (board react <id> on-it), or say why not. For each teammate post: if it changes what you do, change your memory/skill/strategy now and record it (board react <id> learned --note \'what you changed\'); if you think it is wrong, board react <id> disagree --note \'why\'. Name those ids in your run post with --learned.' });
+} else if (cmd === 'post') {
+  if (!a1) { out({ ok: false, error: "usage: board post '<what you did and what happened>' --memory '<what you changed in memory/skills/strategy, or nothing>' [--learned <id,id>]" }); process.exit(2); }
+  const j = await post('run', a1, { memory: memory ?? '', ...(learned ? { learnedFrom: learned.split(',').map((s) => s.trim()).filter(Boolean) } : {}) });
+  await api('/v1/board/read', {});
+  out({ ok: true, posted: j.post.id, boardMarkedRead: true });
+} else if (['ask', 'found', 'note'].includes(cmd)) {
+  if (!a1) { out({ ok: false, error: `usage: board ${cmd} '<text>'` }); process.exit(2); }
+  if (cmd === 'found' && !ref) { out({ ok: false, error: 'a finding needs --ref (a URL or a check/ledger id) so a teammate can verify it before acting' }); process.exit(2); }
+  out({ ok: true, posted: (await post(cmd, a1)).post.id });
+} else if (cmd === 'reply' && a1 && a2) {
+  out({ ok: true, posted: (await api('/v1/board/posts', { kind: 'reply', parent: a1, text: a2 })).post.id });
+} else if (cmd === 'react' && a1 && a2) {
+  out({ ok: true, reaction: (await api(`/v1/board/posts/${a1}/react`, { reaction: a2, ...(note ? { note } : {}) })).reaction });
+} else if (cmd === 'show' && a1) {
+  out({ ok: true, thread: (await api(`/v1/board/posts?thread=${encodeURIComponent(a1)}`)).posts.map(brief) });
+} else if (cmd === 'feed') {
+  out({ ok: true, posts: (await api(`/v1/board/posts?limit=${Number(a1 ?? 15)}`)).posts.map(brief) });
+} else {
+  out({ ok: false, error: 'commands: catchup | post | ask | found | note | reply <id> | react <id> <reaction> | show <id> | feed [n]' }); process.exit(2);
+}

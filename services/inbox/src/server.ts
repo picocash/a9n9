@@ -9,6 +9,7 @@
  *   INBOX_WEBHOOK_SECRET   HMAC key shared with the adapters (required)
  *   INBOX_API_TOKEN        bearer token for GET /v1/events (required)
  *   SWARM_KEYS_FILE        optional fleet registry {agents:{<id>:{x:<Ed25519 public key, base64url>}}}; without it every swarm event is refused
+ *   BOARD_KEYS_FILE        member keys for the team board (/board, /v1/board/*): {"<sha256 hex of key>": {member, role}}
  *   DATABASE_URL           optional Postgres (a9n9.events): every stored event is also inserted there; the file store stays authoritative
  */
 import { createHash, createHmac, createPublicKey, timingSafeEqual, verify as edVerify } from 'node:crypto';
@@ -16,6 +17,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { appendFile, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import pg from 'pg';
+import { Board, handleBoard } from './board.js';
+import { BOARD_PAGE } from './board-page.js';
 
 const env = process.env;
 const PORT = Number(env.INBOX_PORT ?? 8810);
@@ -150,10 +153,12 @@ export async function digest(day: string): Promise<{ day: string; count: number;
   return { day, count: lines.length, ids: lines.map((l) => (JSON.parse(l) as IndexLine).id), sha256 };
 }
 
+const board = new Board(join(DATA, 'board'), env.BOARD_KEYS_FILE ?? '');
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`);
   try {
     if (url.pathname === '/livez') return send(res, 200, { ok: true, pg: !!pool });
+    if (await handleBoard(board, req, res, url, BOARD_PAGE)) return;
 
     const hook = url.pathname.match(/^\/hooks\/([a-z]+)$/);
     if (hook && req.method === 'POST') {
@@ -213,6 +218,7 @@ const server = createServer(async (req, res) => {
 });
 
 await mkdir(join(DATA, 'events'), { recursive: true });
+await board.load();
 server.listen(PORT, HOST, () => log(`listening on http://${HOST}:${PORT}, data in ${DATA}`));
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => server.close(() => process.exit(0)));
 

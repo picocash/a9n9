@@ -23,6 +23,13 @@ try {
     if (!handled.has(ev.id)) lines.push(`${ev.type} ${ev.id}`);
   }
 } catch (e) { lines.push(`inbox-error ${e.message.slice(0, 60)}`); }
+// Team board (docs/board.md): an ask for you (or everyone) that you have not answered, or a reply to your post, wakes you.
+try {
+  const b = env('/home/ubuntu/a9n9/secrets/board-agent001.env');
+  const a = await (await fetch(`${b.BOARD_URL}/v1/board/attention`, { headers: { authorization: `Bearer ${b.BOARD_KEY}` }, signal: AbortSignal.timeout(10000) })).json();
+  for (const p of a.asks ?? []) lines.push(`board-ask ${p.id}`);
+  for (const p of a.replies ?? []) lines.push(`board-reply ${p.id}`);
+} catch (e) { lines.push(`board-error ${String(e.message).slice(0, 40)}`); }
 // Messages from other agents (docs/swarm-comms.md): an unread count, not an interruption; the agent decides when to read.
 try { const { ME, swarmEvents, readState } = await import(`${HOME}/bin/_swarm.mjs`); const seen = readState(); const n = (await swarmEvents({ type: 'agent.message' })).filter((m) => m.to === ME && !seen[m.id]).length; if (n) lines.push(`swarm-unread ${n}`); } catch {}
 try { const { xrpc } = await import(`${HOME}/bin/_bsky.mjs`); const r = await xrpc('GET', 'app.bsky.notification.getUnreadCount'); if (r.body?.count) lines.push(`bsky-unread ${r.body.count}`); } catch {}
