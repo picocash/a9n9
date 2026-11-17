@@ -23,7 +23,8 @@ if (cmd === 'list') {
 }
 if (cmd !== 'add') fail("usage: predict add --metric <m> --subject <id|repo> --at-least <n> --by <YYYY-MM-DD> --chance <p> --change '<what>' --because '<why>' | predict list | predict metrics");
 const goal = take('--goal'); const metric = take('--metric'), subject = take('--subject'), atLeast = Number(take('--at-least')), by = take('--by'), chance = Number(take('--chance')), change = take('--change'), because = take('--because');
-{ const ids = JSON.parse(fs.readFileSync(`${process.env.AGENT_HOME || '/agent'}/goals.json`, 'utf8')).goals.map((g) => g.id); if (!ids.includes(goal)) fail(`--goal must name the rung of your goal ladder this change serves: ${ids.join(', ')} (goals shows them)`); }
+const goalIds = JSON.parse(fs.readFileSync(`${process.env.AGENT_HOME || '/agent'}/goals.json`, 'utf8')).goals.map((g) => g.id);
+if (!goalIds.includes(goal)) fail(`--goal must name the rung of your goal ladder this change serves: ${goalIds.join(', ')} (goals shows them)`);
 if (!METRICS[metric]) fail(`unknown metric ${metric}; predict metrics lists them`);
 if (!subject) fail('--subject is required (article id, repo name, or for game metrics: agent or src:<tag>)');
 if (metric.startsWith('game.') && !/^(agent|src:(bsky|pin)(-[a-z0-9]{1,12})?)$/.test(subject)) fail('for game metrics --subject is agent (all your links) or src:<tag> exactly as the link carries it, e.g. src:bsky or src:bsky-noodles');
@@ -37,7 +38,8 @@ if (!change || change.length < 15) fail("--change: say what you are about to do 
 if (!because || because.length < 15) fail("--because: say why you expect it (at least 15 characters)");
 const l = ledger(); const t = today();
 if ([...l.queued, ...l.open, ...l.settled, ...l.rejected].filter((p) => (p.filedAt ?? '').startsWith(t)).length >= 6) fail('6 predictions a day; predict the changes that matter', 4);
-if (l.open.length + l.queued.length >= 25) fail('25 open predictions; wait for some to settle', 4);
+// Predictions on goals no longer in goals.json (a parked job) still settle and still count in calibration, but not toward the cap.
+if ([...l.open, ...l.queued].filter((p) => !p.goal || goalIds.includes(p.goal)).length >= 25) fail('25 open predictions on your current goals; wait for some to settle', 4);
 fs.mkdirSync(INBOX, { recursive: true });
 const id = `${Date.now()}-${crypto.randomBytes(3).toString('hex')}`;
 const p = { id, filedAt: new Date().toISOString(), goal, metric, subject: String(subject), atLeast, by, chance, change: change.slice(0, 400), because: because.slice(0, 600) };
