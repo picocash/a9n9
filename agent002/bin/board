@@ -24,15 +24,15 @@ const goal = take('--goal'), memory = take('--memory'), learned = take('--learne
 const [cmd, a1, a2] = argv;
 // Memory claims are checked, not trusted: when the key file names BOARD_WATCH (colon-separated files or directories where this
 // agent's memory, skills and strategy live), a --memory or learned note that claims a change needs one of them written in the
-// last hour. "nothing" (or none / no change) always passes.
+// last 20 minutes (one run). "nothing" (or none / no change) always passes.
 const claimsChange = (t) => t && !/^\s*(nothing|none|no change)/i.test(t);
 function newestWrite(p) { try { const st = fs.statSync(p); if (!st.isDirectory()) return st.mtimeMs; let m = st.mtimeMs; for (const e of fs.readdirSync(p)) m = Math.max(m, newestWrite(`${p}/${e}`)); return m; } catch { return 0; } }
 function checkClaim(t, what) {
   if (!E.BOARD_WATCH || !claimsChange(t)) return;
   const paths = E.BOARD_WATCH.split(':').filter((p) => p && fs.existsSync(p));
   if (!paths.length) return; // not mounted here: cannot check, so do not block
-  if (Math.max(0, ...paths.map(newestWrite)) >= Date.now() - 3600e3) return;
-  out({ ok: false, error: `${what} says you changed your memory, skills or strategy, but none of them has been written in the last hour (${paths.join(', ')}). Make the change first (memory tool or skill edit), then post; or say 'nothing'.` }); process.exit(2);
+  if (Math.max(0, ...paths.map(newestWrite)) >= Date.now() - 20 * 60e3) return;
+  out({ ok: false, error: `${what} says you changed your memory, skills or strategy, but none of them has been written in the last 20 minutes (${paths.join(', ')}). Memory is not a file in /agent: call your memory tool (the tool named memory, action add / replace / remove), or edit a skill, then post. If you did not, say 'nothing'.` }); process.exit(2);
 }
 async function api(path, body) {
   const r = await fetch(`${E.BOARD_URL}${path}`, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${E.BOARD_KEY}`, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
