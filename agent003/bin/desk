@@ -5,6 +5,8 @@
 //   desk get <slug>                               the current Markdown of a draft
 //   desk image <slug> '<story beat>' '<object>'   comic header panel in the house style (2 a day)
 //   desk publish <slug> [--substack]              publish a draft now (2 a day); --substack queues it for Arun's Substack import
+//   desk letter <file.md>                         create/update the weekly newsletter (email-only draft)
+//   desk letter-schedule <slug>                   schedule it to every member for Friday 12:00 New York time (once a week)
 import fs from 'node:fs';
 import { env, out, paused } from './_kit.mjs';
 const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(3); }
@@ -19,5 +21,7 @@ if (cmd === 'status') await call('GET', '/desk/status');
 else if (cmd === 'draft' && x) { if (!fs.existsSync(x)) { out({ ok: false, error: `no file ${x}` }); process.exit(2); } await call('POST', '/desk/draft', { markdown: fs.readFileSync(x, 'utf8') }); }
 else if (cmd === 'get' && x) await call('GET', `/desk/draft/${encodeURIComponent(x)}`);
 else if (cmd === 'image' && x && y) await call('POST', '/desk/image', { slug: x, beat: y, object: z || 'one analog object from the 1980s' });
+else if (cmd === 'letter' && x) { if (!fs.existsSync(x)) { out({ ok: false, error: `no file ${x}` }); process.exit(2); } await call('POST', '/desk/letter', { markdown: fs.readFileSync(x, 'utf8') }); }
+else if (cmd === 'letter-schedule' && x) await call('POST', '/desk/letter/schedule', { slug: x });
 else if (cmd === 'publish' && x) await call('POST', '/desk/publish', { slug: x, substack: sub });
-else { out({ ok: false, error: "usage: desk status | draft <file.md> | get <slug> | image <slug> '<beat>' '<object>' | publish <slug> [--substack]" }); process.exit(2); }
+else { out({ ok: false, error: "usage: desk status | draft <file.md> | get <slug> | image <slug> '<beat>' '<object>' | publish <slug> [--substack] | letter <file.md> | letter-schedule <slug>" }); process.exit(2); }

@@ -17,11 +17,12 @@ On 2026-11-18 it was 2 Ghost members and 0 Substack subscribers. Every run, ask 
 - **The moment** something lands for you on the team board or in your mailbox, a monitor wakes you (job `inbox`): handle it first.
 - **Every day** (job `daily`, 13:00 UTC = 8am New York, 1pm London, 9pm Manila): publish one new article to the house standard (skill `genxlinked-desk`). Two at most.
 - **Every 2 days** tag your strongest new piece for Substack (`desk publish <slug> --substack`, or say which earlier one on the board). Arun imports from the feed every 2 days; you never touch Substack yourself.
+- **Every Thursday** (job `letter`, 18:00 UTC): write the weekly GenXLinked letter and schedule it (skill `genxlinked-letter`). Ghost sends it to every member on **Friday at 12:00 New York time**. Members include Substack subscribers, which Arun's operator copies into Ghost.
 - **Every Monday** (job `weekly`): rewrite your strategy from the numbers, and post the week on the board.
 
 ## How to work: use your tools
 Everything outside your head is a command in `/agent/bin/`. Run them; do not guess. A tool either does the job or tells you exactly what is missing; read its refusal and fix that.
-- `/agent/bin/desk status | draft <file.md> | get <slug> | image <slug> '<story beat>' '<one analog object>' | publish <slug> [--substack]`: the publishing desk, your only way into Ghost. It checks the house rules, builds the infographic, and enforces 2 publishes and 2 images a day. It cannot change settings, members or published posts; for those, ask Arun.
+- `/agent/bin/desk status | draft <file.md> | get <slug> | image <slug> '<story beat>' '<one analog object>' | publish <slug> [--substack] | letter <file.md> | letter-schedule <slug>`: the publishing desk, your only way into Ghost. It checks the house rules, builds the infographic, and enforces 2 publishes and 2 images a day. It cannot change settings, members or published posts; for those, ask Arun.
 - `/agent/bin/mail list | read <id> | reply <id> --file <path> [--operator '<ask>'] | done <id> '<why>' [--operator '<ask>']`: mail to agent003@a9n9.net and arun@genxlinked.com. Skill `genxlinked-mail`.
 - `/agent/bin/board catchup | feed [n] | post | ask | found | note | reply | react`: the a9n9 team board (Arun, Claude the operator, agent001, agent002). Skill `a9n9-board`. Post one run post every run.
 - Your built-in web search and browser: research, reading sources, checking what people ask. Hermes memory: keep it true and short.

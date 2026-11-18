@@ -5,6 +5,8 @@
 //   POST /desk/image    {slug, beat, object}   comic header panel in the house style (cap 2/day), attached to the draft
 //   POST /desk/publish  {slug, substack?}      publish a draft now (cap 2/day); substack:true adds #substack
 //   GET  /desk/status                          recent posts, drafts, members, poll totals, today's usage
+//   POST /desk/letter   {markdown}             create/update the weekly newsletter (email-only draft, tag #newsletter)
+//   POST /desk/letter/schedule {slug}          schedule it to every member for the next Friday 12:00 America/New_York (once a week)
 // Never: settings, members, other staff, deleting posts, unpublishing. Everything is logged to /data/desk-log.jsonl.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -81,6 +83,48 @@ async function publish(slug, substack) {
   const [st, j] = await admin('PUT', `/posts/${p.id}/`, { posts: [{ status: 'published', published_at: new Date().toISOString(), tags, updated_at: p.updated_at }] });
   log({ kind: 'publish', ok: st < 300, slug, substack: !!substack }); return st < 300 ? [200, { ok: true, url: j.posts[0].url }] : [500, { error: 'ghost refused', detail: JSON.stringify(j).slice(0, 300) }];
 }
+// Weekly newsletter: email-only post, sent by Ghost to all members at Friday noon Eastern.
+function nextFridayNoonET(from = new Date()) {
+  const fmt = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', weekday: 'short', hour: 'numeric', hourCycle: 'h23' });
+  for (let d = 0; d < 9; d++) for (const h of [16, 17]) {
+    const c = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate() + d, h, 0, 0));
+    const parts = Object.fromEntries(fmt.formatToParts(c).map((p) => [p.type, p.value]));
+    if (parts.weekday === 'Fri' && parts.hour === '12' && c.getTime() > from.getTime() + 15 * 60000) return c;
+  }
+  return null;
+}
+async function letter(md) {
+  const errs = [], fm = (k) => (md.match(new RegExp(`^${k}:\\s*["']?(.+?)["']?\\s*$`, 'm')) || [])[1];
+  if (!/^---\n[\s\S]*?\n---\n/.test(md)) errs.push('missing YAML front matter');
+  const title = fm('title'), slug = fm('slug'), excerpt = fm('excerpt');
+  if (!title) errs.push('front matter needs title: (the email subject, under 80 characters)'); else if (title.length > 80) errs.push('title over 80 characters');
+  if (!slug || !/^letter-\d{4}-\d{2}-\d{2}$/.test(slug)) errs.push('slug must be letter-YYYY-MM-DD (the Friday it goes out)');
+  if (!excerpt || excerpt.length > 160) errs.push('excerpt: needed, under 160 characters (the email preview line)');
+  const body = md.replace(/^---\n[\s\S]*?\n---\n/, ''), words = body.split(/\s+/).filter(Boolean).length;
+  if (words < 150 || words > 900) errs.push(`body is ${words} words; the letter is 150-900`);
+  if ((body.match(/https:\/\/genxlinked\.com\/[a-z0-9-]+\/?/g) || []).length < 3) errs.push('link at least 3 genxlinked.com pieces');
+  if (!/AI-assisted/i.test(body.split('\n').filter(Boolean).slice(-2).join(' '))) errs.push("end with the line '*AI-assisted, edited by Arun.*'");
+  if (/:::/.test(body)) errs.push('no ::: blocks in the letter (polls and quizzes live on the site; link to them)');
+  if (errs.length) return [400, { error: 'fix these and send again', problems: errs }];
+  const { marked } = await import('marked');
+  const html = marked.parse(body);
+  const [, cur] = await admin('GET', `/posts/slug/${slug}/?formats=html`); const p = cur.posts?.[0];
+  if (p && p.status !== 'draft') return [409, { error: `that letter is already ${p.status}` }];
+  const post = { title, slug, custom_excerpt: excerpt, email_only: true, status: 'draft', tags: [{ name: '#newsletter' }] };
+  const [st, j] = p ? await admin('PUT', `/posts/${p.id}/?source=html`, { posts: [{ ...post, html, updated_at: p.updated_at }] }) : await admin('POST', '/posts/?source=html', { posts: [{ ...post, html }] });
+  log({ kind: 'letter-draft', ok: st < 300, slug }); return st < 300 ? [200, { ok: true, slug, words, sendsAt: nextFridayNoonET()?.toISOString() }] : [500, { error: 'ghost refused', detail: JSON.stringify(j).slice(0, 300) }];
+}
+async function scheduleLetter(slug) {
+  const recent = (() => { try { return fs.readFileSync(LOG, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((e) => e.kind === 'letter-schedule' && e.ok && Date.now() - Date.parse(e.t) < 5 * 86400000); } catch { return []; } })();
+  if (recent.length) return [429, { error: `a letter was already scheduled on ${recent[0].t.slice(0, 10)} (${recent[0].slug}); one a week` }];
+  const [, cur] = await admin('GET', `/posts/slug/${slug}/?include=tags`); const p = cur.posts?.[0];
+  if (!p || !p.tags.some((t) => t.name === '#newsletter')) return [404, { error: 'no such letter (make it with desk letter)' }];
+  if (p.status !== 'draft') return [409, { error: `already ${p.status}` }];
+  const at = nextFridayNoonET(); if (!at) return [500, { error: 'could not compute Friday noon ET' }];
+  const [st, j] = await admin('PUT', `/posts/${p.id}/?newsletter=default-newsletter&email_segment=all`, { posts: [{ status: 'scheduled', published_at: at.toISOString(), updated_at: p.updated_at }] });
+  log({ kind: 'letter-schedule', ok: st < 300, slug, at: at.toISOString() });
+  return st < 300 ? [200, { ok: true, slug, sendsAt: at.toISOString(), to: 'all members' }] : [500, { error: 'ghost refused (bulk email may not be set up yet: tell the operator)', detail: JSON.stringify(j).slice(0, 300) }];
+}
 async function status() {
   const [, pub] = await admin('GET', '/posts/?limit=15&order=published_at%20desc&filter=status:published&fields=title,slug,published_at,url&include=tags');
   const [, dr] = await admin('GET', '/posts/?limit=15&filter=status:draft&fields=title,slug,updated_at,feature_image');
@@ -100,6 +144,8 @@ http.createServer((req, res) => {
       else if (req.method === 'POST' && u === '/desk/image') r = await image(String(j.slug || ''), j.beat || '', j.object || 'one analog object');
       else if (req.method === 'POST' && u === '/desk/publish') r = await publish(String(j.slug || ''), !!j.substack);
       else if (req.method === 'GET' && u === '/desk/status') r = await status();
+      else if (req.method === 'POST' && u === '/desk/letter') r = await letter(String(j.markdown || ''));
+      else if (req.method === 'POST' && u === '/desk/letter/schedule') r = await scheduleLetter(String(j.slug || ''));
       else r = [404, { error: 'unknown desk command' }];
       send(res, r[0], r[1]);
     } catch (e) { send(res, 500, { error: String(e.message).slice(0, 300) }); }
