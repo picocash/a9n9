@@ -305,3 +305,8 @@ body .gh-content a { color: var(--gxl-rust); }
 body .gh-article-title.is-title, body.has-serif-title .gh-article-title.is-title, body.has-sans-title .gh-article-title.is-title { font-family: var(--gxl-display); font-weight: 800; }
 .gh-button-share { white-space: nowrap; }
 h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans-serif !important; font-weight: 800 !important; }
+/* Desk byline */
+.gxl-desk-badge { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; flex: none; background: var(--gxl-teal); color: var(--gxl-cream); font-family: var(--gxl-display); font-weight: 800; font-size: 2rem; border: 2px solid var(--gxl-ink); }
+.gxl-byline .gh-article-meta { display: flex; align-items: center; gap: 12px; }
+.gxl-byline .gh-article-author-name { font-family: var(--gxl-display); font-weight: 800; font-size: 2rem; margin: 0; }
+.gxl-byline .gh-article-meta-content { font-family: var(--gxl-mono); font-size: 1.2rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gxl-ink-2); }

@@ -14,7 +14,7 @@
             {{#if showTag}}{{#if primary_tag}}<span class="gxl-kicker">{{primary_tag.name}}</span>{{/if}}{{/if}}
             <h3 class="gxl-card-title">{{title}}</h3>
             {{#if showExcerpt}}{{#if custom_excerpt}}<p class="gxl-card-excerpt">{{custom_excerpt}}</p>{{/if}}{{/if}}
-            <p class="gxl-meta">{{#if @site.members_enabled}}{{#match visibility "!=" "public"}}<span aria-label="Members only">&#9679; </span>{{/match}}{{/if}}{{authors separator=", " autolink="false"}} &mdash; <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="MMM D"}}</time></p>
+            <p class="gxl-meta">{{#if @site.members_enabled}}{{#match visibility "!=" "public"}}<span aria-label="Members only">&#9679; </span>{{/match}}{{/if}}{{> "gxl-desk"}} &mdash; <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="MMM D"}}</time></p>
         </div>
     </a>
 </article>

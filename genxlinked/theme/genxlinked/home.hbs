@@ -26,7 +26,7 @@
                             {{/if}}
                         </figure>
                         {{#if custom_excerpt}}<p class="gxl-hero-excerpt">{{custom_excerpt}}</p>{{/if}}
-                        <p class="gxl-meta">{{authors separator=", " autolink="false"}} &mdash; <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="MMM D"}}</time></p>
+                        <p class="gxl-meta">{{> "gxl-desk"}} &mdash; <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="MMM D"}}</time></p>
                     </a>
                 </article>
                 {{/foreach}}
