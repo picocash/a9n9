@@ -258,3 +258,49 @@ body { font-family: var(--gxl-serif); }
 #gh-navigation.gxl-nav .gxl-nav-menu .nav { gap: 0; margin: 0; padding: 0; }
 #gh-navigation.gxl-nav .gxl-nav-menu .nav > li { margin: 0 0 -1.5px; padding: 0; }
 @media (max-width: 680px) { #gh-navigation.gxl-nav .gxl-has-sub { display: none; } }  /* phones: countries live in the "Read by country" strip and footer */
+
+/* ---- Phones: swipe rows instead of stacked cards, shorter page ---- */
+@media (max-width: 680px) {
+  .gxl-top { padding-block: 20px 28px; }
+  .gxl-hero-title { font-size: 3.6rem; margin-bottom: 12px; }
+  .gxl-hero-excerpt { font-size: 1.6rem; }
+  .gxl-card-lead .gxl-card-title { font-size: 2.4rem; }
+  .gxl-card-excerpt { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .gxl-side .gxl-callout { padding: 12px 14px; }
+  .gxl-callout-q { font-size: 1.8rem; }
+  .gxl-feature { margin-bottom: 32px; }
+  .gxl-feature-text { padding: 20px; }
+  .gxl-feature-title { font-size: 3rem; }
+  .gxl-feature-img { min-height: 0; aspect-ratio: 16 / 10; order: -1; }
+
+  /* swipe rows: quizzes and topic bands */
+  .gxl-quiz-row, .gxl-band-grid { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin-right: calc(-1 * max(16px, 3vw)); padding-right: max(16px, 3vw); padding-bottom: 10px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .gxl-quiz-row::-webkit-scrollbar, .gxl-band-grid::-webkit-scrollbar { display: none; }
+  .gxl-quiz-card, .gxl-card-band { flex: 0 0 78%; scroll-snap-align: start; }
+  .gxl-quiz-card { box-shadow: 4px 4px 0 var(--gxl-teal); }
+  .gxl-quiz-card-t { font-size: 2rem; }
+  .gxl-card-band .gxl-card-title { font-size: 2.1rem; }
+  .gxl-band { padding-block: 28px 30px; }
+  .gxl-band-head { margin-bottom: 14px; gap: 8px 12px; }
+  .gxl-band-title { font-size: 3.2rem; }
+  .gxl-band-desc { font-size: 1.4rem; flex-basis: 100%; order: 3; }
+  .gxl-band-head .gxl-btn-line { padding: 5px 10px; font-size: 1.1rem; }
+  .gxl-strip { padding-block: 0 28px; }
+  .gxl-strip-head .gxl-side-note { display: none; }
+  .gxl-countries { gap: 8px; }
+  .gxl-country { padding: 10px 12px; }
+  .gxl-country-n { font-size: 2.1rem; }
+  .gxl-subscribe { padding-block: 36px; }
+  .gxl-footer { padding-block: 32px 16px; }
+  .gxl-footer-grid { gap: 24px; }
+}
+@media (max-width: 680px) { #gh-navigation.gxl-nav .gxl-nav-menu { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; } #gh-navigation.gxl-nav .gxl-nav-menu::-webkit-scrollbar { display: none; } }
+/* article header in house type (Source's serif-title switch and pink accent must not win) */
+body .gh-article-title, body.has-serif-title .gh-article-title, body.has-sans-title .gh-article-title { font-family: var(--gxl-display); font-weight: 800; letter-spacing: 0; line-height: 1.02; }
+body .gh-article-tag { color: var(--gxl-rust); font-family: var(--gxl-mono); }
+body .gh-content a { color: var(--gxl-rust); }
+@media (max-width: 680px) { body .gh-article-title { font-size: 3.6rem; } .gh-content .gxl-stats { grid-template-columns: 1fr 1fr; } .gxl-stat:nth-child(2n) { border-right: none; } .gxl-stat { border-bottom: 1px solid var(--gxl-rule); } }
+.gh-content .gxl-chart { position: relative; overflow: hidden; }
+.gh-content table.gxl-sr { position: absolute !important; left: 0; top: 0; width: 1px !important; height: 1px !important; max-width: 1px; overflow: hidden !important; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; display: block !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }
+body .gh-article-title.is-title, body.has-serif-title .gh-article-title.is-title, body.has-sans-title .gh-article-title.is-title { font-family: var(--gxl-display); font-weight: 800; }
+.gh-button-share { white-space: nowrap; }
