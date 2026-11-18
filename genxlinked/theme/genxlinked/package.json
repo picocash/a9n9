@@ -57,14 +57,6 @@
                 "type": "color",
                 "default": "#EFE3C8"
             },
-            "header_and_footer_color": {
-                "type": "select",
-                "options": [
-                    "Background color",
-                    "Accent color"
-                ],
-                "default": "Background color"
-            },
             "title_font": {
                 "type": "select",
                 "options": [
@@ -81,14 +73,6 @@
                     "Elegant serif"
                 ],
                 "default": "Elegant serif"
-            },
-            "signup_heading": {
-                "type": "text",
-                "description": "Used in your footer across your theme, defaults to site title when empty"
-            },
-            "signup_subheading": {
-                "type": "text",
-                "description": "Defaults to site description when empty"
             },
             "header_style": {
                 "type": "select",

@@ -78,7 +78,9 @@ function parse(file) {
   const src = (fm.sources || []).map((s) => { const [name, url] = s.split(/\s+[—–-]\s+(?=https?:)/); return url ? `- [${name}](${url})` : `- ${s}`; });
   const md = `${body}\n\n${src.length ? `## Sources\n\n${src.join('\n')}\n\n` : ''}${ai}\n`;
   const slug = path.basename(file, '.md').replace(/^\d+-/, '');
-  const tags = [...new Set([fm.pillar, ...(fm.tags || [])].filter(Boolean))].map((name) => ({ name }));
+  const PILLAR_NAMES = { connection: 'Real connection', sandwich: 'Sandwich generation', body: 'Body at 50+', 'bucket-list': 'Bucket list', 'in-charge': 'Gen X in charge', 'analog-life': 'Analog life', 'work-money': 'Work & money' };
+  // pillar first (primary tag), sent by its canonical name + slug so Ghost reuses the existing tag instead of creating "connection-2"
+  const tags = [...new Set([fm.pillar, ...(fm.tags || [])].filter(Boolean))].map((t) => (PILLAR_NAMES[t] ? { name: PILLAR_NAMES[t], slug: t } : { name: t }));
     let html = marked.parse(blocks(md));
   if (IG[slug]) {
     const fig = `<figure class="kg-card kg-image-card kg-width-wide kg-card-hascaption"><img src="${IG[slug]}" class="kg-image" alt="Infographic: ${esc(fm.title)}" loading="lazy"><figcaption>The numbers at a glance. Save it or share it.</figcaption></figure>`;

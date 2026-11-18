@@ -71,6 +71,28 @@
         {{/foreach}}
     {{/get}}
 
+
+    <section class="gxl-inner gxl-strip">
+        <header class="gxl-strip-head"><h2 class="gxl-label">Two-minute quizzes</h2><a class="gxl-strip-more" href="{{@site.url}}/tag/quiz/">All quizzes &rarr;</a></header>
+        <div class="gxl-quiz-row">
+            {{#get "posts" filter="tag:quiz" limit="3" include="tags"}}{{#foreach posts}}
+            <a class="gxl-quiz-card" href="{{url}}">
+                {{#if feature_image}}<img src="{{img_url feature_image size="m"}}" alt="{{#if feature_image_alt}}{{feature_image_alt}}{{else}}{{title}}{{/if}}" loading="lazy">{{/if}}
+                <span class="gxl-quiz-card-t">{{title}}</span><span class="gxl-callout-go">Take the quiz &rarr;</span>
+            </a>
+            {{/foreach}}{{/get}}
+        </div>
+    </section>
+
+    <section class="gxl-inner gxl-strip">
+        <header class="gxl-strip-head"><h2 class="gxl-label">Read by country</h2><p class="gxl-side-note">Same year, different country: eight places, one generation.</p></header>
+        <div class="gxl-countries">
+            {{#get "tags" filter="slug:[usa,uk,canada,australia,ireland,new-zealand,philippines,singapore]" limit="8" include="count.posts"}}{{#foreach tags}}
+            <a class="gxl-country" href="{{url}}"><span class="gxl-country-n">{{name}}</span><span class="gxl-country-c">{{count.posts}} stories</span></a>
+            {{/foreach}}{{/get}}
+        </div>
+    </section>
+
     {{> "gxl-band" slug="connection"}}
     {{> "gxl-band" slug="sandwich"}}
     {{> "gxl-band" slug="body"}}

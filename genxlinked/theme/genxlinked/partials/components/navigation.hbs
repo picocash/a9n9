@@ -13,5 +13,15 @@
             {{/if}}
         </div>
     </div>
-    <nav class="gxl-nav-menu" aria-label="Topics">{{navigation}}</nav>
+    <nav class="gxl-nav-menu" aria-label="Topics"><ul class="nav">
+        <li class="{{#is "home"}}nav-current{{/is}}"><a href="{{@site.url}}/">Home</a></li>
+        <li class="{{#has tag="connection"}}{{#is "tag"}}nav-current{{/is}}{{/has}}"><a href="{{@site.url}}/tag/connection/">Real connection</a></li>
+        <li><a href="{{@site.url}}/tag/sandwich/">Sandwich generation</a></li>
+        <li><a href="{{@site.url}}/tag/body/">Body at 50+</a></li>
+        <li><a href="{{@site.url}}/tag/analog-life/">Analog life</a></li>
+        <li><a href="{{@site.url}}/tag/work-money/">Work &amp; money</a></li>
+        <li><a href="{{@site.url}}/tag/in-charge/">Gen X in charge</a></li>
+        <li><a href="{{@site.url}}/tag/bucket-list/">Bucket list</a></li>
+        <li><a href="{{@site.url}}/tag/quiz/">Quizzes</a></li>
+    </ul></nav>
 </header>
