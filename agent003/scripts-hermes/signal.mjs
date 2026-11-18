@@ -15,4 +15,10 @@ try {
   for (const p of a.asks ?? []) lines.push(`board-ask ${p.id}`);
   for (const p of a.replies ?? []) lines.push(`board-reply ${p.id}`);
 } catch (err) { lines.push(`board-error ${String(err.message).slice(0, 40)}`); }
-process.stdout.write(lines.length ? lines.sort().join('\n') + '\n' : 'idle\n');
+// Hermes wakes the agent on ANY change of this output, including "items" -> "idle", which made empty runs.
+// So when nothing is waiting, repeat the last non-empty output: only a NEW item changes the output.
+const LAST = '/agent/state/signal-last.txt';
+let outText = lines.length ? lines.sort().join('\n') + '\n' : null;
+if (outText) { try { fs.writeFileSync(LAST, outText); } catch {} }
+else { try { outText = fs.readFileSync(LAST, 'utf8'); } catch { outText = 'idle\n'; } }
+process.stdout.write(outText);
