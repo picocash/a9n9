@@ -11,3 +11,4 @@ site/record.json
 
 # Beat The Chefs lives in its own private repo (picocash/beatthechefs); this folder only holds the activity-log copy read by agent002/scripts/game-stats.mjs
 apps/cookgame/
+genxlinked/theme/genxlinked.zip

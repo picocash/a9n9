@@ -1,0 +1,17 @@
+<header id="gh-navigation" class="gxl-nav">
+    <div class="gxl-nav-top">
+        <a class="gxl-logo" href="{{@site.url}}">{{#if @site.logo}}<img src="{{@site.logo}}" alt="{{@site.title}}">{{else}}{{@site.title}}{{/if}}</a>
+        <div class="gxl-nav-actions">
+            {{> "search-toggle"}}
+            {{#if @site.members_enabled}}
+                {{#unless @member}}
+                    <a class="gxl-btn gxl-btn-ghost" href="#/portal/signin" data-portal="signin">{{t "Sign in"}}</a>
+                    <a class="gxl-btn" href="#/portal/signup" data-portal="signup">{{t "Subscribe"}}</a>
+                {{else}}
+                    <a class="gxl-btn" href="#/portal/account" data-portal="account">{{t "Account"}}</a>
+                {{/unless}}
+            {{/if}}
+        </div>
+    </div>
+    <nav class="gxl-nav-menu" aria-label="Topics">{{navigation}}</nav>
+</header>

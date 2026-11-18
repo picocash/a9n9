@@ -1,0 +1,90 @@
+{{!< default}}
+<main class="gxl-home">
+
+    <section class="gxl-inner gxl-top">
+        <div class="gxl-col gxl-latest">
+            <h2 class="gxl-label">Latest</h2>
+            {{#get "posts" filter="featured:false+tag:-hash-callout" limit="4" include="tags,authors"}}
+                {{#foreach posts}}
+                    {{#if @first}}{{> "gxl-card" size="lead" showImage=true showExcerpt=true}}{{else}}{{> "gxl-card" size="small" showImage=true}}{{/if}}
+                {{/foreach}}
+            {{/get}}
+        </div>
+
+        <div class="gxl-col gxl-hero">
+            {{#get "posts" filter="featured:true" limit="1" include="tags,authors"}}
+                {{#foreach posts}}
+                <article class="gxl-hero-card {{post_class}}">
+                    <a href="{{url}}">
+                        {{#if primary_tag}}<span class="gxl-kicker">{{primary_tag.name}}</span>{{/if}}
+                        <h1 class="gxl-hero-title">{{title}}</h1>
+                        <figure class="gxl-hero-img">
+                            {{#if feature_image}}
+                                <img srcset="{{img_url feature_image size="m"}} 600w, {{img_url feature_image size="l"}} 960w, {{img_url feature_image size="xl"}} 1200w" sizes="(max-width: 900px) 100vw, 640px" src="{{img_url feature_image size="l"}}" alt="{{#if feature_image_alt}}{{feature_image_alt}}{{else}}{{title}}{{/if}}">
+                            {{else}}
+                                <span class="gxl-card-noimg gxl-tag-{{primary_tag.slug}}"><span>{{primary_tag.name}}</span></span>
+                            {{/if}}
+                        </figure>
+                        {{#if custom_excerpt}}<p class="gxl-hero-excerpt">{{custom_excerpt}}</p>{{/if}}
+                        <p class="gxl-meta">{{authors separator=", " autolink="false"}} &mdash; <time datetime="{{date format="YYYY-MM-DD"}}">{{date format="MMM D"}}</time></p>
+                    </a>
+                </article>
+                {{/foreach}}
+            {{/get}}
+        </div>
+
+        <aside class="gxl-col gxl-side">
+            <h2 class="gxl-label">Tell us yours</h2>
+            <p class="gxl-side-note">Same year, different country: your answers become the next issue.</p>
+            {{#get "posts" filter="tag:hash-callout" limit="4" include="tags"}}
+                {{#foreach posts}}
+                <a class="gxl-callout" href="{{url}}">
+                    <span class="gxl-callout-q">{{title}}</span>
+                    <span class="gxl-callout-go">Answer &rarr;</span>
+                </a>
+                {{/foreach}}
+            {{/get}}
+            {{#if @site.members_enabled}}{{#unless @member}}
+            <div class="gxl-side-sub">
+                <p>One letter a week from Gen X in eight countries. Free.</p>
+                <a class="gxl-btn" href="#/portal/signup" data-portal="signup">Subscribe</a>
+            </div>
+            {{/unless}}{{/if}}
+        </aside>
+    </section>
+
+    {{#get "posts" filter="featured:true" limit="2" include="tags,authors"}}
+        {{#foreach posts from="2" to="2"}}
+        <section class="gxl-inner">
+            <a class="gxl-feature" href="{{url}}">
+                <div class="gxl-feature-text">
+                    {{#if primary_tag}}<span class="gxl-kicker">{{primary_tag.name}}</span>{{/if}}
+                    <h2 class="gxl-feature-title">{{title}}</h2>
+                    {{#if custom_excerpt}}<p class="gxl-feature-excerpt">{{custom_excerpt}}</p>{{/if}}
+                    <span class="gxl-btn gxl-btn-line">Read story &rarr;</span>
+                </div>
+                <figure class="gxl-feature-img">
+                    {{#if feature_image}}<img src="{{img_url feature_image size="l"}}" alt="{{#if feature_image_alt}}{{feature_image_alt}}{{else}}{{title}}{{/if}}" loading="lazy">{{else}}<span class="gxl-card-noimg gxl-tag-{{primary_tag.slug}}"><span>{{primary_tag.name}}</span></span>{{/if}}
+                </figure>
+            </a>
+        </section>
+        {{/foreach}}
+    {{/get}}
+
+    {{> "gxl-band" slug="connection"}}
+    {{> "gxl-band" slug="sandwich"}}
+    {{> "gxl-band" slug="body"}}
+    {{> "gxl-band" slug="bucket-list"}}
+    {{> "gxl-band" slug="in-charge"}}
+
+    {{#if @site.members_enabled}}{{#unless @member}}
+    <section class="gxl-subscribe">
+        <div class="gxl-inner">
+            <h2>Same year. Different country.</h2>
+            <p>Gen X from Manila to Manchester, in one weekly letter. Free to read; your stories welcome.</p>
+            <a class="gxl-btn" href="#/portal/signup" data-portal="signup">Subscribe free</a>
+        </div>
+    </section>
+    {{/unless}}{{/if}}
+
+</main>

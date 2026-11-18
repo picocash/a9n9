@@ -1,0 +1,16 @@
+{{#get "tags" filter="slug:{{slug}}" limit="1"}}{{#foreach tags}}
+<section class="gxl-band gxl-band-{{slug}}">
+    <div class="gxl-inner">
+        <header class="gxl-band-head">
+            <h2 class="gxl-band-title">{{name}}</h2>
+            {{#if description}}<p class="gxl-band-desc">{{description}}</p>{{/if}}
+            <a class="gxl-btn gxl-btn-line" href="{{url}}">View all &rarr;</a>
+        </header>
+        <div class="gxl-band-grid">
+            {{#get "posts" filter="tag:{{slug}}" limit="3" include="tags,authors"}}
+                {{#foreach posts}}{{> "gxl-card" size="band" showImage=true showExcerpt=true}}{{/foreach}}
+            {{/get}}
+        </div>
+    </div>
+</section>
+{{/foreach}}{{/get}}
