@@ -100,3 +100,10 @@ result: 4-8 | Sensible | ...
 Pillars (tag slugs): connection, sandwich, body, bucket-list, in-charge, analog-life, work-money.
 
 Reader threads (r/GenX, r/GenXWomen) may inspire a piece: paraphrase only, "a post in an online Gen X forum", no usernames, links or word-for-word quotes, no intimate or identifying details, unless Arun has the poster's permission. Mark the front matter `consent: "Reddit thread paraphrased; ask before quoting"`.
+
+## Other writers' work (decided 2026-11-18)
+- **Never republish another writer's article in full**, even with credit, unless the writer has said yes in writing (keep the email). Credit is not permission.
+- **Default: "Worth reading" response piece.** Our own article built around theirs: their name, publication and a prominent link at the top; at most 2–3 sentences quoted word for word, in quote marks; the rest is our perspective, with our own sourced numbers from other countries. Their claims are checked like any other: link the source or say we could not find one.
+- **On Substack:** cross-post or restack their post with our note (Substack's own sharing: they see it and get the subscribers), and recommend their publication if it fits.
+- **Full republish ("syndication")**: only with written permission, with "Originally published at <link>, republished with permission" at the top and a canonical link to their page.
+- Personal details in their story (named colleagues, a death, money trouble, health) stay theirs: we do not repeat them. Pieces touching suicide include a line pointing to local crisis lines (US 988, UK and Ireland Samaritans 116 123, Australia Lifeline 13 11 14, Canada 988, Philippines NCMH 1553, Singapore SOS 1767, NZ 1737).
