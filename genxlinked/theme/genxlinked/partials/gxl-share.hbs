@@ -1,0 +1,12 @@
+<div class="gxl-share" data-url="{{url absolute="true"}}" data-title="{{title}}">
+    <span class="gxl-share-label">{{#if label}}{{label}}{{else}}Share{{/if}}</span>
+    <button type="button" class="gxl-share-btn gxl-share-native" hidden>Share&hellip;</button>
+    <a class="gxl-share-btn" href="https://wa.me/?text={{encode title}}%20{{url absolute="true"}}" target="_blank" rel="noopener">WhatsApp</a>
+    <a class="gxl-share-btn" href="https://www.facebook.com/sharer/sharer.php?u={{url absolute="true"}}" target="_blank" rel="noopener">Facebook</a>
+    <a class="gxl-share-btn" href="https://twitter.com/intent/tweet?text={{encode title}}&amp;url={{url absolute="true"}}" target="_blank" rel="noopener">X</a>
+    <a class="gxl-share-btn" href="https://bsky.app/intent/compose?text={{encode title}}%20{{url absolute="true"}}" target="_blank" rel="noopener">Bluesky</a>
+    <a class="gxl-share-btn" href="https://www.reddit.com/submit?url={{url absolute="true"}}&amp;title={{encode title}}" target="_blank" rel="noopener">Reddit</a>
+    <a class="gxl-share-btn" href="https://www.linkedin.com/sharing/share-offsite/?url={{url absolute="true"}}" target="_blank" rel="noopener">LinkedIn</a>
+    <a class="gxl-share-btn" href="mailto:?subject={{encode title}}&amp;body={{encode title}}%0A%0A{{url absolute="true"}}">Email</a>
+    <button type="button" class="gxl-share-btn gxl-share-copy">Copy link</button>
+</div>

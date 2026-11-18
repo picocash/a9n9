@@ -28,8 +28,9 @@
                         </div>
                     </div>
                 </div>
-                <a href="#/share" class="gh-button gh-button-share">{{t "Share"}}</a>
+
             </div>
+            {{> "gxl-share"}}
 
             {{> "feature-image"}}
 
@@ -37,6 +38,11 @@
 
         <section class="gh-content gh-canvas is-body{{#if @custom.enable_drop_caps_on_posts}} drop-cap{{/if}}">
             {{content}}
+        </section>
+
+        <section class="gh-canvas gxl-share-end" id="gxl-share-end">
+            <p class="gxl-share-end-h">Know someone born between 1965 and 1980 who'd like this?</p>
+            {{> "gxl-share" label="Send it to them"}}
         </section>
 
     </article>
@@ -49,6 +55,7 @@
 
 </main>
 
+<button type="button" class="gxl-fab" hidden aria-label="Share this article">Share</button>
 {{/post}}
 
 {{#if @custom.show_related_articles}}

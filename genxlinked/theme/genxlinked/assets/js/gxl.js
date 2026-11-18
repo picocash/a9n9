@@ -69,3 +69,60 @@
     reset.addEventListener('click', function () { el.querySelectorAll('.is-picked').forEach(function (x) { x.classList.remove('is-picked'); }); el.querySelectorAll('.gxl-quiz-r').forEach(function (r) { r.hidden = true; }); el.classList.remove('is-done'); reset.hidden = true; dist.hidden = true; qs[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); });
   });
 })();
+/* Sharing: native share sheet where supported, copy link, floating share on phones, infographic save/share,
+   share-your-answer after polls and quizzes. Plain links only: no third-party share scripts, no tracking. */
+(function () {
+  var canShare = !!navigator.share;
+  var pageUrl = location.origin + location.pathname;
+  var pageTitle = (document.querySelector('h1.gh-article-title') || {}).textContent || document.title;
+  function toast(msg) { var t = document.createElement('div'); t.className = 'gxl-toast'; t.textContent = msg; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200); }
+  function copy(text) {
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { toast('Link copied'); }).catch(function () {
+      var a = document.createElement('textarea'); a.value = text; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); toast('Link copied'); } catch (e) {} a.remove();
+    });
+  }
+  function nativeShare(data) { return navigator.share(data).catch(function () {}); }
+  window.gxlShare = function (text, url) { url = url || pageUrl; if (canShare) return nativeShare({ title: pageTitle, text: text, url: url }); copy(text + ' ' + url); };
+  document.querySelectorAll('.gxl-share').forEach(function (bar) {
+    var url = bar.getAttribute('data-url'), title = bar.getAttribute('data-title');
+    var nb = bar.querySelector('.gxl-share-native');
+    if (canShare && nb) { nb.hidden = false; nb.addEventListener('click', function () { nativeShare({ title: title, text: title, url: url }); }); }
+    var cb = bar.querySelector('.gxl-share-copy'); if (cb) cb.addEventListener('click', function () { copy(url); });
+  });
+  var fab = document.querySelector('.gxl-fab');
+  if (fab && window.matchMedia('(max-width: 680px)').matches) {
+    fab.hidden = false;
+    fab.addEventListener('click', function () { if (canShare) nativeShare({ title: pageTitle, text: pageTitle, url: pageUrl }); else document.getElementById('gxl-share-end').scrollIntoView({ behavior: 'smooth' }); });
+  }
+  // Infographic: save + share buttons under the image
+  document.querySelectorAll('.gh-content img[alt^="Infographic"]').forEach(function (img) {
+    var fig = img.closest('figure') || img, row = document.createElement('div'); row.className = 'gxl-ig-actions';
+    var name = (location.pathname.replace(/\//g, '') || 'genxlinked') + '-infographic.png';
+    row.innerHTML = '<a class="gxl-share-btn" href="' + img.src + '" download="' + name + '">Save infographic</a><button type="button" class="gxl-share-btn gxl-ig-share">Share infographic</button>';
+    fig.insertAdjacentElement('afterend', row);
+    row.querySelector('.gxl-ig-share').addEventListener('click', function () {
+      fetch(img.src).then(function (r) { return r.blob(); }).then(function (b) {
+        var file = new File([b], name, { type: b.type || 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) return navigator.share({ files: [file], title: pageTitle, text: pageTitle + ' ' + pageUrl });
+        throw 0;
+      }).catch(function () { window.gxlShare('The numbers at a glance:', pageUrl); });
+    });
+  });
+  // Polls and quizzes: offer to share the reader's answer once it shows
+  function addShare(box, textFn) {
+    if (box.querySelector('.gxl-answer-share')) return;
+    var b = document.createElement('button'); b.type = 'button'; b.className = 'gxl-share-btn gxl-answer-share'; b.textContent = 'Share your answer';
+    b.addEventListener('click', function () { window.gxlShare(textFn()); });
+    box.appendChild(b);
+  }
+  new MutationObserver(function () {
+    document.querySelectorAll('.gxl-poll.is-voted').forEach(function (el) {
+      addShare(el, function () { var m = el.querySelector('.gxl-poll-opt.is-mine .gxl-poll-t'), q = el.querySelector('.gxl-poll-q'); return (q ? q.textContent + ' ' : '') + 'My answer: ' + (m ? m.textContent : '') + '. What’s yours?'; });
+    });
+    document.querySelectorAll('.gxl-quiz.is-done').forEach(function (el) {
+      var out = el.querySelector('.gxl-quiz-out');
+      addShare(out, function () { var r = el.querySelector('.gxl-quiz-r:not([hidden]) .gxl-quiz-name'), t = el.querySelector('.gxl-quiz-title'); return (t ? t.textContent + ' ' : '') + 'I got: ' + (r ? r.textContent : '') + '. Take it:'; });
+      var btn = out.querySelector('.gxl-answer-share'); if (btn) btn.textContent = 'Share my result';
+    });
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+})();
