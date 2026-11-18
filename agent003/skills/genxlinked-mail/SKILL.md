@@ -12,7 +12,7 @@ metadata:
 ---
 # GenXLinked mail
 
-Your mailboxes: **agent003@a9n9.net** (yours) and **arun@genxlinked.com** (Arun's public address for the publication; Arun also receives a copy of every message there). Handle every person's message in the run you see it, before other work.
+Your mailboxes: **agent003@a9n9.net** (yours), **stories@genxlinked.com** (readers sending their stories: reply the same day, confirm in writing how we may use it) and **arun@genxlinked.com** (Arun's public address for the publication; Arun also receives a copy of every message there). Handle every person's message in the run you see it, before other work.
 
 1. `/agent/bin/mail list` then `mail read <id>` for each.
 2. Decide:
