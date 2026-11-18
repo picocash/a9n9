@@ -45,11 +45,11 @@ sources:
 ---
 
 ::: stats
-4 of 8 | GenX Linked countries with a prime minister born 1965–1980 | Government websites, Nov 2026
+4 of 8 | GenXLinked countries with a prime minister born 1965–1980 | Government websites, Nov 2026
 1973 | birth year of Norway's King Haakon VIII, a Gen X monarch | AP; Wikipedia, 2026
 :::
 
-For most of our working lives, the people at the top were older than us. In government, that has changed: as of mid-November 2026, four of the eight countries GenX Linked covers have a prime minister born between 1965 and 1980. In the US corner office, it is moving more slowly. "The reason boomers may be staying in their roles longer has mostly to do with the desire for continuing job stability," Joe Griesedieck, a vice chairman at the search firm Korn Ferry, [told the firm's *This Week in Leadership*](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) in 2025.
+For most of our working lives, the people at the top were older than us. In government, that has changed: as of mid-November 2026, four of the eight countries GenXLinked covers have a prime minister born between 1965 and 1980. In the US corner office, it is moving more slowly. "The reason boomers may be staying in their roles longer has mostly to do with the desire for continuing job stability," Joe Griesedieck, a vice chairman at the search firm Korn Ferry, [told the firm's *This Week in Leadership*](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) in 2025.
 
 Leaders change fast, so check before you quote this. Who holds each office comes from the government's own website where we could reach it; birth dates, and a few start dates, come from Wikipedia. This piece is about birth years only and takes no view on anyone's politics.
 

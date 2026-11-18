@@ -18,17 +18,17 @@ function teaser(p) {
   const link = `${p.url}?utm_source=substack&utm_medium=newsletter&utm_campaign=${p.slug}`;
   const interactive = /gxl-quiz/.test(p.html) ? 'take the quiz' : /gxl-poll/.test(p.html) ? 'answer the one-tap poll' : 'see the charts';
   return [
-    `<p><em>Originally published at <a href="${link}">GenX Linked</a>.</em></p>`,
+    `<p><em>Originally published at <a href="${link}">GenXLinked</a>.</em></p>`,
     p.feature_image ? `<p><img src="${p.feature_image}" alt="${x(p.feature_image_alt || p.title)}"></p>` : '',
     ...paras.map((t) => `<p>${t}</p>`),
     ig[1] ? `<p><img src="${ig[1]}" alt="${x(ig[2])}"></p>` : '',
-    `<p><strong><a href="${link}">Read the full story on GenX Linked, and ${interactive} →</a></strong></p>`,
+    `<p><strong><a href="${link}">Read the full story on GenXLinked, and ${interactive} →</a></strong></p>`,
     `<p>Same year, different country: tell us yours in the comments (your birth year, country and city).</p>`,
   ].filter(Boolean).join('\n');
 }
 const items = posts.map((p) => `<item><title>${x(p.title)}</title><link>${x(p.url)}</link><guid isPermaLink="false">genxlinked-${p.id}</guid><pubDate>${new Date(p.published_at).toUTCString()}</pubDate><description>${cdata(p.custom_excerpt || '')}</description><content:encoded>${cdata(teaser(p))}</content:encoded></item>`).join('\n');
 process.stdout.write(`<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>GenX Linked (Substack teasers)</title><link>${SITE}</link><description>Teasers of GenX Linked posts queued for Substack (tag #substack).</description><lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/"><channel><title>GenXLinked (Substack teasers)</title><link>${SITE}</link><description>Teasers of GenXLinked posts queued for Substack (tag #substack).</description><lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
 ${items}
 </channel></rss>
 `);

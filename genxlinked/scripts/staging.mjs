@@ -19,7 +19,7 @@ async function api(method, p, body, form) {
   return j;
 }
 const st = await api('GET', '/authentication/setup/');
-if (!st.setup?.[0]?.status) await api('POST', '/authentication/setup/', { setup: [{ name: 'Arun', email, password: pass, blogTitle: 'GenX Linked' }] });
+if (!st.setup?.[0]?.status) await api('POST', '/authentication/setup/', { setup: [{ name: 'Arun', email, password: pass, blogTitle: 'GenXLinked' }] });
 await api('POST', '/session/', { username: email, password: pass });
 
 const PILLARS = [
@@ -33,7 +33,7 @@ const PILLARS = [
 ];
 const s = await api('GET', '/settings/');
 await api('PUT', '/settings/', { settings: [
-  { key: 'title', value: 'GenX Linked' },
+  { key: 'title', value: 'GenXLinked' },
   { key: 'description', value: 'Same year, different country. Gen X from Manila to Manchester.' },
   { key: 'accent_color', value: '#C1622D' },
   { key: 'navigation', value: JSON.stringify([...PILLARS.map(([slug, name]) => ({ label: name, url: `/tag/${slug}/` })), { label: 'About', url: '/about/' }]) },

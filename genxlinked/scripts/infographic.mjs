@@ -75,7 +75,7 @@ ${big ? ".body{justify-content:center;gap:56px}" : ""}
 .src{font-family:CP;font-size:16px;line-height:1.35;color:#5E5248;max-width:720px}
 .url{font-family:BSD;font-weight:800;font-size:34px;white-space:nowrap}
 </style></head><body><div class="frame">
-<div class="top"><span class="logo">GenX Linked</span>${a.pillar ? `<span class="pill">${esc(a.pillar)}</span>` : ''}</div>
+<div class="top"><span class="logo">GenX<span style="color:#C1622D">Linked</span></span>${a.pillar ? `<span class="pill">${esc(a.pillar)}</span>` : ''}</div>
 <div class="body">
 <h1>${esc(a.title)}</h1>
 ${stats.length ? `<div class="stats${big ? ' big' : ''}">${stats.map((s) => `<div class="st"><span class="n">${esc(s[0])}</span><span class="l">${esc(s[1])}</span></div>`).join('')}</div>` : ''}

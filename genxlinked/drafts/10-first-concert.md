@@ -23,7 +23,7 @@ Ask anyone born between 1965 and 1980 about their first concert and you usually 
 
 Even the people running the big shows remember the small things. Forty years on, Live Aid's promoter, Harvey Goldsmith, [told Pollstar](https://news.pollstar.com/2025/07/21/qa-how-harvey-goldsmith-pulled-together-live-aid-in-just-10-weeks/): "I bought three crates of ice-cold beer, drove down to Wembley, which calmed the crew down."
 
-Our generation came of age just as big touring shows went global. Here are five that crossed a lot of the countries GenX Linked readers live in.
+Our generation came of age just as big touring shows went global. Here are five that crossed a lot of the countries GenXLinked readers live in.
 
 ## Live Aid, 13 July 1985
 

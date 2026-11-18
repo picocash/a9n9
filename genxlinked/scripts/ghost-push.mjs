@@ -26,8 +26,10 @@ for (const p of posts) {
   let res;
   if (cur.status === 200) {
     const e = cur.j.posts[0];
-    if (e.status !== 'draft') { console.log(JSON.stringify({ slug: p.slug, skipped: `already ${e.status}` })); continue; }
-    res = await api('PUT', `/posts/${e.id}/?source=html`, { posts: [{ ...post, updated_at: e.updated_at }] });
+    if (e.status !== 'draft' && !(process.env.ALLOW_PUBLISHED === '1' && e.status === 'published')) { console.log(JSON.stringify({ slug: p.slug, skipped: `already ${e.status}` })); continue; }
+    // ALLOW_PUBLISHED=1: refresh the body of a live post; keep its status, date, featured flag and image
+    const upd = e.status === 'published' ? (({ status, ...rest }) => rest)(post) : post;
+    res = await api('PUT', `/posts/${e.id}/?source=html`, { posts: [{ ...upd, updated_at: e.updated_at }] });
   } else res = await api('POST', '/posts/?source=html', { posts: [post] });
   const out = res.j.posts?.[0];
   console.log(JSON.stringify(out ? { slug: out.slug, status: out.status, id: out.id, action: cur.status === 200 ? 'updated' : 'created' } : { slug: p.slug, error: res.status, detail: JSON.stringify(res.j).slice(0, 300) }));

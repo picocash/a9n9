@@ -1,4 +1,4 @@
-# GenX Linked house style (from the wave-1 reviews, 2026-11-18)
+# GenXLinked house style (from the wave-1 reviews, 2026-11-18)
 
 Keep (what worked):
 - Open in the reader's life, not the data ("becomes a Tuesday-night phone call").

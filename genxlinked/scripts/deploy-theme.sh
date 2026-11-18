@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build + deploy the GenX Linked theme to prod Ghost (VM 105). CSS/JS get content-hashed file names so Cloudflare's
+# Build + deploy the GenXLinked theme to prod Ghost (VM 105). CSS/JS get content-hashed file names so Cloudflare's
 # year-long asset cache can never serve a stale copy (Ghost's ?v= hash does not always change between uploads).
 set -euo pipefail
 cd "$(dirname "$0")/.."

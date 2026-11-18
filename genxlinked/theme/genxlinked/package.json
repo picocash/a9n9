@@ -1,6 +1,6 @@
 {
     "name": "genxlinked",
-    "description": "GenX Linked: magazine homepage on top of Ghost Source (MIT).",
+    "description": "GenXLinked: magazine homepage on top of Ghost Source (MIT).",
     "version": "0.1.0",
     "engines": {
         "ghost": ">=5.0.0",
@@ -8,7 +8,7 @@
     },
     "license": "MIT",
     "author": {
-        "name": "GenX Linked",
+        "name": "GenXLinked",
         "url": "https://genxlinked.com",
         "email": "hello@genxlinked.com"
     },

@@ -1,4 +1,4 @@
-/* GenX Linked — "Faded snapshot" magazine layer over Ghost Source. */
+/* GenXLinked — "Faded snapshot" magazine layer over Ghost Source. */
 :root {
   --gxl-mustard: #D9A441; --gxl-rust: #C1622D; --gxl-teal: #2F6F73; --gxl-denim: #5B7A99;
   --gxl-cream: #EFE3C8; --gxl-paper: #F6EEDC; --gxl-ink: #2B2622; --gxl-ink-2: #5E5248; --gxl-rule: #D8C9A8;
@@ -345,3 +345,4 @@ h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans
   .gxl-nav-actions { gap: 8px; }
   .gxl-nav-actions .gxl-btn { padding: 7px 10px; font-size: 1.1rem; }
 }
+.gxl-logo .gxl-logo-b { color: var(--gxl-rust); } .gxl-footer .gxl-logo .gxl-logo-b { color: var(--gxl-cream); }

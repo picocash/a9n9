@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// GenX Linked quick polls: tiny vote counter. No accounts, no cookies, no IPs stored.
+// GenXLinked quick polls: tiny vote counter. No accounts, no cookies, no IPs stored.
 // GET  /gxl-api/poll/<id>          -> {id, counts:[...], total}
 // POST /gxl-api/poll/<id> {"i":N}  -> counts after the vote. One vote per (salted daily hash of client IP + poll) ; the hash is
 // kept only to stop repeat votes and the salt rotates every UTC day, so a hash cannot be tied back to an address later.

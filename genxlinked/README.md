@@ -1,4 +1,4 @@
-# GenX Linked
+# GenXLinked
 
 Global publication connecting Gen X (born 1965-1980) across countries. Editor: Arun. Every piece is labelled "AI-assisted, edited by Arun".
 Plan: https://claude.ai/artifact/WavZ1zRDXKWHQACMfJ56Kf

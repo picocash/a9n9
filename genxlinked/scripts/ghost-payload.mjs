@@ -6,7 +6,7 @@ import path from 'node:path';
 import { marked } from 'marked';
 
 
-// ---- GenX Linked blocks: ::: stats | ::: stat | ::: chart | ::: poll ... ::: (each becomes a Ghost HTML card) ----
+// ---- GenXLinked blocks: ::: stats | ::: stat | ::: chart | ::: poll ... ::: (each becomes a Ghost HTML card) ----
 const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const card = (html) => `\n\n<!--kg-card-begin: html-->\n${html}\n<!--kg-card-end: html-->\n\n`;
 const split = (l) => l.split('|').map((x) => x.trim());
