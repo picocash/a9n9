@@ -126,3 +126,9 @@
     });
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 })();
+/* Phone menu: "Sections" button opens the full list */
+(function () {
+  var btn = document.querySelector('.gxl-menu-toggle'), nav = document.getElementById('gxl-menu');
+  if (!btn || !nav) return;
+  btn.addEventListener('click', function () { var open = nav.classList.toggle('is-open'); btn.setAttribute('aria-expanded', String(open)); btn.textContent = open ? 'Close' : 'Sections'; });
+})();

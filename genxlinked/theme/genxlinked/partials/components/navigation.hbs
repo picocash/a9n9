@@ -2,6 +2,7 @@
     <div class="gxl-nav-top">
         <a class="gxl-logo" href="{{@site.url}}">{{#if @site.logo}}<img src="{{@site.logo}}" alt="{{@site.title}}">{{else}}{{@site.title}}{{/if}}</a>
         <div class="gxl-nav-actions">
+            <button type="button" class="gxl-menu-toggle" aria-expanded="false" aria-controls="gxl-menu">Sections</button>
             {{> "search-toggle"}}
             {{#if @site.members_enabled}}
                 {{#unless @member}}
@@ -13,7 +14,7 @@
             {{/if}}
         </div>
     </div>
-    <nav class="gxl-nav-menu" aria-label="Topics"><ul class="nav">
+    <nav class="gxl-nav-menu" id="gxl-menu" aria-label="Topics"><ul class="nav">
         <li class="{{#is "home"}}nav-current{{/is}}"><a href="{{@site.url}}/">Home</a></li>
         <li class="{{#has tag="connection"}}{{#is "tag"}}nav-current{{/is}}{{/has}}"><a href="{{@site.url}}/tag/connection/">Real connection</a></li>
         <li><a href="{{@site.url}}/tag/sandwich/">Sandwich generation</a></li>
@@ -27,5 +28,9 @@
             <li><a href="{{@site.url}}/tag/usa/">USA</a></li><li><a href="{{@site.url}}/tag/uk/">UK</a></li><li><a href="{{@site.url}}/tag/canada/">Canada</a></li><li><a href="{{@site.url}}/tag/australia/">Australia</a></li>
             <li><a href="{{@site.url}}/tag/ireland/">Ireland</a></li><li><a href="{{@site.url}}/tag/new-zealand/">New Zealand</a></li><li><a href="{{@site.url}}/tag/philippines/">Philippines</a></li><li><a href="{{@site.url}}/tag/singapore/">Singapore</a></li>
         </ul></details></li>
+    </ul>
+    <ul class="gxl-mcountries"><li class="gxl-mhead">Countries</li>
+        <li><a href="{{@site.url}}/tag/usa/">USA</a></li><li><a href="{{@site.url}}/tag/uk/">UK</a></li><li><a href="{{@site.url}}/tag/canada/">Canada</a></li><li><a href="{{@site.url}}/tag/australia/">Australia</a></li>
+        <li><a href="{{@site.url}}/tag/ireland/">Ireland</a></li><li><a href="{{@site.url}}/tag/new-zealand/">New Zealand</a></li><li><a href="{{@site.url}}/tag/philippines/">Philippines</a></li><li><a href="{{@site.url}}/tag/singapore/">Singapore</a></li>
     </ul></nav>
 </header>

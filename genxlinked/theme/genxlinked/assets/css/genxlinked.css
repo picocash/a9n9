@@ -324,3 +324,24 @@ h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans
 .gxl-fab { position: fixed; right: 16px; bottom: 18px; z-index: 70; padding: 12px 18px; background: var(--gxl-rust); color: var(--gxl-cream); border: 2px solid var(--gxl-ink); box-shadow: 4px 4px 0 var(--gxl-ink); font-family: var(--gxl-mono); font-weight: 700; font-size: 1.35rem; text-transform: uppercase; letter-spacing: .06em; }
 .gxl-toast { position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%); z-index: 80; background: var(--gxl-ink); color: var(--gxl-cream); padding: 10px 16px; font-family: var(--gxl-mono); font-size: 1.3rem; }
 @media (max-width: 680px) { .gxl-share .gxl-share-btn:not(.gxl-share-native):not(.gxl-share-copy):nth-of-type(n+6) { display: none; } }
+
+/* Phone menu: hidden strip -> "Sections" toggle with a 2-column grid */
+.gxl-menu-toggle, .gxl-mcountries { display: none; }
+@media (max-width: 680px) {
+  .gxl-menu-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1.5px solid var(--gxl-ink); background: transparent; color: var(--gxl-ink); font-family: var(--gxl-mono); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .06em; cursor: pointer; }
+  .gxl-menu-toggle::before { content: "\2630"; font-size: 1.4rem; }
+  .gxl-menu-toggle[aria-expanded="true"]::before { content: "\2715"; }
+  .gxl-nav-actions .gh-search { display: none; }
+  #gh-navigation.gxl-nav .gxl-nav-menu { display: none; overflow: visible; }
+  #gh-navigation.gxl-nav .gxl-nav-menu.is-open { display: block; background: var(--gxl-cream); border-top: 2px solid var(--gxl-ink); padding: 8px max(16px, 3vw) 16px; }
+  #gh-navigation.gxl-nav .gxl-nav-menu.is-open .nav, .gxl-nav-menu.is-open .gxl-mcountries { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  #gh-navigation.gxl-nav .gxl-nav-menu.is-open .nav > li { border: none; border-bottom: 1px solid var(--gxl-rule); margin: 0; }
+  #gh-navigation.gxl-nav .gxl-nav-menu.is-open .nav a { padding: 12px 4px; }
+  .gxl-mcountries { list-style: none; margin: 14px 0 0; padding: 0; }
+  .gxl-mcountries li { border-bottom: 1px solid var(--gxl-rule); }
+  .gxl-mcountries a { display: block; padding: 10px 4px; font-family: var(--gxl-mono); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; color: var(--gxl-ink); }
+  .gxl-mcountries .gxl-mhead { grid-column: 1 / -1; border: none; font-family: var(--gxl-mono); font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: .1em; color: var(--gxl-rust); padding: 4px 4px 6px; }
+  .gxl-nav-top { padding: 10px 16px; }
+  .gxl-nav-actions { gap: 8px; }
+  .gxl-nav-actions .gxl-btn { padding: 7px 10px; font-size: 1.1rem; }
+}
