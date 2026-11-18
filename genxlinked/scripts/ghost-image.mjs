@@ -20,5 +20,5 @@ const up = await (await fetch(`${base}/images/upload/`, { method: 'POST', header
 const url = up.images?.[0]?.url;
 if (!url) { console.log(JSON.stringify({ slug, error: 'upload failed', detail: JSON.stringify(up).slice(0, 300) })); process.exit(1); }
 const res = await (await fetch(`${base}/posts/${post.id}/`, { method: 'PUT', headers: { ...H(), 'Content-Type': 'application/json' },
-  body: JSON.stringify({ posts: [{ feature_image: url, feature_image_alt: alt, feature_image_caption: 'AI illustration (Grok), not a photo of real people.', updated_at: post.updated_at }] }) })).json();
+  body: JSON.stringify({ posts: [{ feature_image: url, feature_image_alt: alt, feature_image_caption: 'AI illustration (Grok).', updated_at: post.updated_at }] }) })).json();
 console.log(JSON.stringify(res.posts ? { slug, status: res.posts[0].status, feature_image: res.posts[0].feature_image } : { slug, error: JSON.stringify(res).slice(0, 300) }));
