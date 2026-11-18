@@ -20,9 +20,14 @@ body{width:1200px;height:240px;display:flex;align-items:center;padding:0 40px;ga
 .a{font-family:BSD;font-weight:800;font-size:170px;line-height:1}.c{color:#C1622D}</style>
 <span class="a">GENX<span class="c">LINKED</span></span>`;
 const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome' });
-for (const [name, html, w, h] of [['logo', logo, 1024, 1024], ['wordmark', mark, 1200, 240]]) {
+const ssmark = `<!doctype html><style>${css}
+body{width:1344px;height:256px;background:transparent;display:flex;align-items:center;justify-content:center}
+body:before{display:none}
+.a{font-family:BSD;font-weight:800;font-size:200px;line-height:1;letter-spacing:-.005em;color:#2B2622}.c{color:#C1622D}</style>
+<span class="a">GENX<span class="c">LINKED</span></span>`;
+for (const [name, html, w, h] of [['logo', logo, 1024, 1024], ['wordmark', mark, 1200, 240], ['substack-wordmark', ssmark, 1344, 256]]) {
   const p = await b.newPage({ viewport: { width: w, height: h } });
   await p.setContent(html); await p.evaluate(() => document.fonts.ready);
-  await p.screenshot({ path: new URL(`../brand/${name}.png`, import.meta.url).pathname }); await p.close();
+  await p.screenshot({ path: new URL(`../brand/${name}.png`, import.meta.url).pathname, omitBackground: name === 'substack-wordmark' }); await p.close();
 }
 await b.close(); console.log('ok');
