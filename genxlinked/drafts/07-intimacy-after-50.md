@@ -11,6 +11,12 @@ sources:
   - "EurekAlert! — Global Study of Sexual Attitudes and Behaviors release (19 April 2006) — https://www.eurekalert.org/news-releases/655102"
 ---
 
+::: stats
+6,201 | people 50+ answered England's confidential sex-and-health questionnaire | ELSA, 2012/13
+72% | of Australians 60+ had had sex in the past year | Sex, Age & Me, La Trobe, 2017
+27,500 | people aged 40–80 in 29 countries, in a Pfizer-funded survey | GSSAB, 2006
+:::
+
 "Trying to impose youthful norms of sexual health on older people would be over-simplistic and even unhelpful," Dr David Lee of the University of Manchester said in January 2015. His team had just published the first nationally representative study in England to ask people over 80, as well as those in their fifties, sixties and seventies, about their sexual health. He hoped the findings would "offer older people a reference against which they may relate their own experiences and expectations."
 
 That is a fair way to read everything below: as a reference, not a target.
@@ -26,6 +32,18 @@ Among people aged 50 to 59:
 - 95% of men and 69% of women said they thought about sex frequently.
 - Among those who were sexually active, 73% of women and 68% of men reported frequent kissing, fondling or petting.
 
+::: chart
+title: Any sexual activity in the past year, England, ages 50–59
+subtitle: Share reporting some sexual activity (counted broadly), by group
+unit: %
+source: English Longitudinal Study of Ageing, 2012/13 (Lee et al., 2016)
+highlight: Women, with partner
+Men | 94
+Women | 76
+Women, with partner | 86
+Women, no partner | 58
+:::
+
 Worry was much lower than problems. The most common concern among sexually active people in their fifties was level of desire, reported by about 15% of men and 14% of women. Activity fell with each decade after that, and women reported less than men at every age, but, in the authors' words, "a sizable minority of older people in their 70s and 80s remain sexually active."
 
 ## Older ages, older data
@@ -34,9 +52,22 @@ The other big studies cover people older than Gen X today, or are older themselv
 
 **United States, 2018, ages 65 to 80.** A University of Michigan poll of 1,002 people, sponsored by AARP and Michigan Medicine, found 40% were sexually active, rising to 54% of those with a partner. Nearly two-thirds said they were interested in sex, and 73% were satisfied with their sex life. Half of men said they were extremely or very interested, against 12% of women.
 
+::: stat
+73% | of Americans aged 65 to 80 were satisfied with their sex life | University of Michigan poll, 2018
+:::
+
 **Australia, 2017, ages 60 and over.** La Trobe University's *Sex, Age & Me* study surveyed more than 2,000 people and interviewed 53 in depth. Seventy-two percent had had sex in the past year (76% of men, 61% of women). More hoped or planned to in future: 88% of men and 72% of women. "The biggest thing to come out of this research is that older Australians are interested in sex," said researcher Bianca Fileborn.
 
 **29 countries, 2006, ages 40 to 80.** Pfizer funded the Global Study of Sexual Attitudes and Behaviors, which surveyed about 27,500 people, equal numbers of men and women. Across every country, men reported sexual well-being at least 10 percentage points higher than women. The researchers, led by Edward Laumann of the University of Chicago, suggested that couples in more equal relationships tend to develop sexual habits that suit both partners. That was their explanation for the differences, not something the survey proved.
+
+::: poll
+id: intimacy-after-50-1
+question: Who would you actually talk to about this?
+- My partner, eventually
+- My doctor, if I had to
+- A close friend, after a glass of wine
+- Nobody. I'm Gen X, I'll work it out
+:::
 
 None of these studies included the Philippines, Singapore, Ireland, New Zealand or Canada as separate results, so we can't say anything about those countries.
 

@@ -44,6 +44,11 @@ sources:
   - "Haakon, Crown Prince of Norway — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Haakon,_Crown_Prince_of_Norway"
 ---
 
+::: stats
+4 of 8 | GenX Linked countries with a prime minister born 1965–1980 | Government websites, Nov 2026
+1973 | birth year of Norway's King Haakon VIII, a Gen X monarch | AP; Wikipedia, 2026
+:::
+
 For most of our working lives, the people at the top were older than us. In government, that has changed: as of mid-November 2026, four of the eight countries GenX Linked covers have a prime minister born between 1965 and 1980. In the US corner office, it is moving more slowly. "The reason boomers may be staying in their roles longer has mostly to do with the desire for continuing job stability," Joe Griesedieck, a vice chairman at the search firm Korn Ferry, [told the firm's *This Week in Leadership*](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) in 2025.
 
 Leaders change fast, so check before you quote this. Who holds each office comes from the government's own website where we could reach it; birth dates, and a few start dates, come from Wikipedia. This piece is about birth years only and takes no view on anyone's politics.
@@ -70,6 +75,10 @@ Leaders change fast, so check before you quote this. Who holds each office comes
 
 So in our eight countries, Gen X holds the prime minister's office and nothing above it. Every head of state is older.
 
+::: stat
+1948 | King Charles III's birth year; he is head of state of the UK, Canada, Australia and New Zealand | royal.uk, 2026
+:::
+
 ## Elsewhere in the world
 
 Further afield, all of these were in office in November 2026:
@@ -82,11 +91,34 @@ Further afield, all of these were in office in November 2026:
 - **Europe:** France's President [Emmanuel Macron](https://en.wikipedia.org/wiki/Emmanuel_Macron) (born 1977, in office since May 2017), Italy's Prime Minister [Giorgia Meloni](https://en.wikipedia.org/wiki/Giorgia_Meloni) (1977), Spain's Prime Minister [Pedro Sánchez](https://en.wikipedia.org/wiki/Pedro_S%C3%A1nchez) (1972) and Ukraine's President [Volodymyr Zelenskyy](https://en.wikipedia.org/wiki/Volodymyr_Zelenskyy) (1978).
 - **Norway:** King Harald V [died on 28 August 2026](https://abc7chicago.com/story/norways-king-harald-dies-89-son-becomes/19750576/) and his son became King Haakon VIII. Born on [20 July 1973](https://en.wikipedia.org/wiki/Haakon,_Crown_Prince_of_Norway), he is a Gen X monarch.
 
+::: poll
+id: gen-x-already-in-charge-1
+question: Would you want the top job now?
+- No. I've seen the hours
+- Yes, someone has to fix the printer
+- Only if it comes with a pension
+- I already run the family group chat
+:::
+
 ## The corner office
 
 We looked for a clean count of Gen X chief executives and didn't find one we trust; reports use different company lists and age cut-offs. The figure that holds up is about age. [Korn Ferry reports](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) that in 2025 only 43% of top bosses at US companies were in their fifties, down from 51% in 2017, when The Conference Board and ESGAUGE analysed about 3,000 mid-sized and large US companies. Someone in their fifties in 2025 was born between about 1965 and 1975.
 
 Over the same years, the share of chief executives under 50 stayed at 15%. The share aged 60 or over rose from 35% to 42%.
+
+::: chart
+title: Who runs US companies, by age
+subtitle: Share of top bosses at about 3,000 mid-sized and large US companies, 2017 vs 2025
+unit: %
+source: Korn Ferry, 2025, citing The Conference Board and ESGAUGE
+highlight: In their 50s, 2025
+Under 50, 2017 | 15
+Under 50, 2025 | 15
+In their 50s, 2017 | 51
+In their 50s, 2025 | 43
+60 or over, 2017 | 35
+60 or over, 2025 | 42
+:::
 
 **Who is the first person your own age you remember seeing in charge of something big? Tell us the year, the country and the city.**
 

@@ -13,6 +13,12 @@ sources:
   - "Philadelphia Inquirer (Washington Post) — The loneliest Americans, according to a survey of 3,000 adults (2025, reporting AARP research) — https://www.inquirer.com/health/loneliest-americans-survey-loneliness-increasing-20251207.html"
 ---
 
+::: stats
+12% | of US adults had no close friends in 2021 (3% in 1990) | Survey Center on American Life, 2021; Gallup, 1990
+27% | of 19–29s worldwide felt lonely, against 17% of over-65s | Meta-Gallup, 142 countries, 2023
+8.2% | of UK 30–49s felt lonely often or always | Campaign to End Loneliness, ONS data 2022–23
+:::
+
 The story goes like this. We knocked on doors. We rode bikes until the streetlights came on. We rang a friend's house on the landline and talked to their mum first. So our friendships must have been deeper than anything built through a screen.
 
 Then you hear Debra Whitman, AARP's chief public policy officer, describe people in midlife as ["so busy with work and raising children and being part of the sandwich generation"](https://www.inquirer.com/health/loneliest-americans-survey-loneliness-increasing-20251207.html) that they struggle to keep up the relationships that sustain them. That isn't the street-corner crowd. That's us, now.
@@ -23,11 +29,26 @@ Children in the 1970s and 1980s really did roam more freely, though only England
 
 That covers Gen X childhoods fairly well: the oldest were starting school in 1971, the youngest were in primary school around 1990. What it doesn't show is whether that freedom produced better friendships.
 
+::: chart
+title: Walking home alone, England, primary school age
+subtitle: Share of parents who allowed their primary school children to travel home from school alone
+unit: %
+source: Policy Studies Institute / University of Westminster, via Road.cc 2013
+highlight: 1971
+1971 | 86
+1990 | 35
+2010 | 25
+:::
+
 ## Friendship has shrunk, for everyone
 
 In the United States, a 1990 Gallup survey found that 3% of Americans had no close friends and 33% had ten or more. In 2021, the Survey Center on American Life asked a similar question and found [12% with no close friends and 13% with ten or more](https://www.americansurveycenter.org/research/the-state-of-american-friendship-change-challenges-and-loss/). The researchers flag that the 1990 survey was by phone and the 2021 one online, which may affect the answers.
 
 That covers all adults, not one generation. In the same 2021 survey, 56% of 18 to 29 year olds had made a new friend in the past year, compared with 41% of seniors.
+
+::: stat
+49% | of Americans aged 45–49 said they were lonely | AARP / Ipsos, Aug 2025
+:::
 
 ## Are young people today lonelier than we were?
 
@@ -38,6 +59,14 @@ So young adults in the late 1970s and 1980s, older Gen X among them, were on ave
 ## How we are doing now
 
 Elsewhere, age seems to help. A Meta-Gallup survey of 142 countries and areas, published in 2023, found that [27% of people aged 19 to 29 felt very or fairly lonely](https://news.gallup.com/opinion/gallup/512618/almost-quarter-world-feels-lonely.aspx), compared with 17% of those aged 65 and over. In the UK, Campaign to End Loneliness analysis of ONS data from November 2022 to February 2023 found [8.2% of 30 to 49 year olds felt lonely often or always](https://www.campaigntoendloneliness.org/press-release/younger-brits-report-higher-levels-of-loneliness/), against 3.7% of people over 70. In Pew's 2023 US survey, [40% of 50 to 64 year olds had five or more close friends](https://www.pewresearch.org/short-reads/2023/10/12/what-does-friendship-look-like-in-america/), against 49% of those 65 and over.
+
+::: poll
+id: better-friendships-1
+question: More friends at 15, or now?
+- At 15, easily
+- Now, honestly
+- About the same, just fewer phone calls
+:::
 
 Midlife is the dip. AARP's survey of more than 3,000 Americans aged 45 and older, run by Ipsos in August 2025, found [40% were lonely](https://www.inquirer.com/health/loneliest-americans-survey-loneliness-increasing-20251207.html), up from 35% in both 2010 and 2018. Among the loneliest were adults aged 45 to 49: 49% of them said they were lonely.
 

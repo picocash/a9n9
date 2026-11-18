@@ -50,7 +50,7 @@ Write these in the Markdown; scripts/ghost-payload.mjs turns them into Ghost HTM
 ```
 ::: stats
 49% | of Americans aged 45–49 said they were lonely | AARP, 2025
-83% | of Filipino primary carers live with the person | PSA, 2022
+60% | of Filipinos aged 60+ live with at least one child | LSAHP, 2018–19
 :::
 ```
 2. One pull-stat mid-article (the single most striking number):

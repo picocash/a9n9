@@ -15,6 +15,12 @@ sources:
   - "Wikipedia — 1984 in Singapore — https://en.wikipedia.org/wiki/1984_in_Singapore"
 ---
 
+::: stats
+Five grand | in cash for the caller who got through to Radio Nova | TheJournal.ie, 2014
+7 weeks | "Two Tribes" at number one in Ireland, summer 1984 | Irish singles chart, 1984
+800,000 | adults watched the first series of The Awakening on SBC 8 | 1984
+:::
+
 In September 1984, the pirate station Radio Nova ran a phone-in with five grand in cash for the caller who got through. The catch: you had to ring once the station played three particular songs in a row. When it did, Dublin rang. "It was mad," the former DJ Denis Murray told TheJournal.ie thirty years later. ["People were getting out of cars and running to phone boxes to get through."](https://www.thejournal.ie/radio-phone-in-nova-1691310-Oct2014/) For a few hours, the city's fragile phone system simply collapsed under the demand.
 
 That was one city's 1984. Here are seven more moments from the same year in Dublin and in Singapore, using only what the records show. We couldn't find matching price lists for both cities, so tell us: what did a bus fare, a bowl of noodles or a single cost where you lived in 1984?
@@ -27,13 +33,31 @@ That was one city's 1984. Here are seven more moments from the same year in Dubl
 
 **The marathon.** On 12 August 1984, John Treacy of Villierstown, County Waterford, [took silver in the Olympic marathon](https://www.rte.ie/archives/2014/0812/636602-john-treacy-wins-olympic-silver) in Los Angeles. On RTÉ, Jimmy Magee called the finish: "The crowd stand to the Irishman from Villierstown in Waterford."
 
+::: stat
+55,000 | people at the National Stadium to watch Singapore beat India | AFC Asian Cup, Dec 1984
+:::
+
 ## Singapore
 
 **The drama.** From 6 February to 12 October 1984, *The Awakening* ran on SBC 8, with Huang Wenyong and Xiang Yun in the lead, and its [first series reached an audience of 800,000 adults](https://en.wikipedia.org/wiki/The_Awakening_(TV_series)). The National Library Board's BiblioAsia calls it a [massive hit](https://biblioasia.nlb.gov.sg/vol-20/issue-3/oct-dec-2024/colour-tv-history-singapore/) for the state broadcaster. Its theme song, "Wu Suo Nan Yang", sung by Sun Zhenfu, is still popular.
 
+::: poll
+id: 1984-dublin-singapore-1
+question: In 1984, how did you get through to anyone?
+- Landline in the hall, cord stretched to the stairs
+- Phone box and a pocket of coins
+- Turned up at their door
+- I was too young to be trusted with the phone
+:::
+
 **The songs.** Xinyao, Mandarin songs written by students from secondary schools, junior colleges and polytechnics, had its first album in 1984. [*Tomorrow We'll be 21*](https://en.wikipedia.org/wiki/Xinyao) sold 30,000 copies, a record at the time. Lily Kong, who has written on the genre, describes it as "developed within the space of the school".
 
 **The football.** Singapore hosted the [AFC Asian Cup](https://en.wikipedia.org/wiki/1984_AFC_Asian_Cup) for the first time, from 1 to 16 December, with every match at the National Stadium in Kallang. At nine on the night of 2 December, 55,000 people watched Singapore beat India 2–0. It was Singapore's only win of the tournament.
+
+::: stats
+30,000 | copies of Tomorrow We'll be 21, a Xinyao record at the time | 1984
+2–0 | Singapore over India: its only win of the Asian Cup | AFC Asian Cup, 1984
+:::
 
 **The pork.** In November, as the government phased out pig farms, it launched an [Eat Frozen Pork campaign](https://en.wikipedia.org/wiki/1984_in_Singapore) to cut reliance on imported fresh pork. In Wikipedia's dry summary: "The campaign did not lead to substantial results."
 

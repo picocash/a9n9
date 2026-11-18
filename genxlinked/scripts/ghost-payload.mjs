@@ -18,7 +18,7 @@ function stats(lines) {
 function stat(lines) { const [n, label, src] = split(lines.join(' ')); return card(`<div class="gxl-pullstat"><span class="gxl-stat-n">${esc(n)}</span><span class="gxl-stat-l">${esc(label || '')}</span>${src ? `<span class="gxl-stat-s">${esc(src)}</span>` : ''}</div>`); }
 function chart(lines) {
   const [o, rows] = kv(lines);
-  const data = rows.map(split).filter((r) => r.length >= 2 && r[1] !== '' && !isNaN(parseFloat(r[1]))).map(([label, v, note]) => ({ label, v: parseFloat(v), shown: v, note }));
+  const data = rows.map(split).filter((r) => r.length >= 2 && r[1] !== '' && !isNaN(parseFloat(r[1].replace(/,/g, '')))).map(([label, v, note]) => ({ label, v: parseFloat(v.replace(/,/g, '')), shown: v, note }));
   if (!data.length) throw new Error('chart without rows');
   const unit = o.unit || '', max = Math.max(...data.map((d) => d.v), o.max ? parseFloat(o.max) : 0) || 1;
   const W = 640, L = 150, R = 70, rowH = 34, top = 8, H = top + data.length * rowH + 4, bw = W - L - R;

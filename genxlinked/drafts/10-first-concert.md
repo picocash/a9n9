@@ -13,6 +13,12 @@ sources:
   - "Dangerous World Tour — Wikipedia — https://en.wikipedia.org/wiki/Dangerous_World_Tour"
 ---
 
+::: stats
+1.9 billion | estimated people who saw the Live Aid broadcast, in 150 nations | Wikipedia, Live Aid, 1985
+3.9 million | people saw Springsteen's Born in the U.S.A. Tour over 156 shows | Wikipedia, 1984–85
+$1.75 | about what a ticket cost to see Wham! in Beijing | Wikipedia, 1985
+:::
+
 Ask anyone born between 1965 and 1980 about their first concert and you usually get two answers at once: the band, and the place. A stadium, a town hall, a field outside a castle. The ticket stub may be long gone, but the venue sticks.
 
 Even the people running the big shows remember the small things. Forty years on, Live Aid's promoter, Harvey Goldsmith, [told Pollstar](https://news.pollstar.com/2025/07/21/qa-how-harvey-goldsmith-pulled-together-live-aid-in-just-10-weeks/): "I bought three crates of ice-cold beer, drove down to Wembley, which calmed the crew down."
@@ -29,11 +35,33 @@ Most of us watched Live Aid from the couch. It doesn't count, and you know it.
 
 Three months earlier, Wham! played [Beijing's Workers' Gymnasium on 7 April 1985](https://en.wikipedia.org/wiki/Wham!_in_China:_Foreign_Skies) to a crowd of about 12,000, with tickets at about $1.75. Three days later they played Guangzhou to about 5,000. Two Hong Kong concerts came first. The China shows were played without a fee.
 
+::: chart
+title: How many people were in the room
+subtitle: People at a single show: Live Aid (Philadelphia, Wembley), Springsteen (Toronto), Wham! (Beijing, Guangzhou), 1984–85; most figures approximate
+source: Wikipedia (Live Aid; Wham! in China; Born in the U.S.A. Tour)
+highlight: Wembley
+Philadelphia | 89,484
+Wembley | 72,000
+Toronto | 68,187
+Beijing | 12,000
+Guangzhou | 5,000
+:::
+
 ## Springsteen's Born in the U.S.A. Tour, 1984–85
 
 Bruce Springsteen's [Born in the U.S.A. Tour](https://en.wikipedia.org/wiki/Born_in_the_U.S.A._Tour) ran from 29 June 1984 in Saint Paul, Minnesota, to 2 October 1985 in Los Angeles: 156 shows to a total audience of 3.9 million.
 
 A show at Toronto's CNE Stadium in July 1984 drew 68,187 people. The tour played eight concerts in Australia, starting in Sydney in March 1985, and eight in Japan, the only time Springsteen and the E Street Band have fronted a tour there. The European leg opened at Slane Castle in Ireland on 1 June 1985, then went on to England, including Wembley Stadium, St James' Park in Newcastle and Roundhay Park in Leeds.
+
+::: poll
+id: first-concert-1
+question: How old were you at your first concert?
+- Young enough that a parent came along
+- Early teens, and I bought the T-shirt
+- Late teens, and I drove myself
+- Older than I'd like to admit
+- Still waiting for the right band
+:::
 
 ## Michael Jackson's Bad tour, 1987–89
 

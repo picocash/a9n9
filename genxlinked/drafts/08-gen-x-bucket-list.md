@@ -9,6 +9,12 @@ sources:
   - "This Is the No. 1 Destination People Want to Visit Before They Die — TIME (2017) — https://time.com/4726565/bucket-list-travel-aarp-hawaii/"
 ---
 
+::: stats
+53% | of UK over-55s want to see the Northern Lights, their top pick | Royal London, 2021
+42% | named a trip on the Orient Express, in second place | Royal London, 2021
+18% | of US baby boomers named Hawaii their top dream trip at home | AARP, 2016
+:::
+
 Somewhere between our first passport and our first reading glasses, a lot of us started keeping a list. Not always written down. Just a running sense of the places we'd regret not seeing.
 
 "Travel and new experiences are high on the bucket lists of over-55s post-pandemic," Louise Eaton-Terry, later life lead at Royal London, said in 2021, when the company [published its own survey](https://www.royallondon.com/media/press-releases/press-releases-2021/april/life-begins-at-fifty-five-new-study-reveals-how-the-over-55s-are-planning-to-live-life-to-the-fullest-in-a-post-pandemic-world/). That's the generation just ahead of us. For Gen X itself, we couldn't find a current survey, in any of our eight countries, that asks where we most want to go.
@@ -24,6 +30,16 @@ So the Northern Lights and Hawaii are the over-55s' answers, from 2021 and 2016.
 ## Your turn
 
 Tell us the one place you want to see before you turn 60. Not a list: one. Then tell us why that one. Maybe it's somewhere a parent always meant to go, or a city from a song, or a beach you saw on a postcard in 1987.
+
+::: poll
+id: gen-x-bucket-list-1
+question: Which kind of trip is on your list?
+- Something in the sky: lights, stars, an eclipse
+- A long train with a dining car
+- The beach from the postcard
+- A city from a song
+- Wherever a parent always meant to go
+:::
 
 Tell us, too, the year you were born and the country and city you live in now. We cover the US, the UK, Ireland, Canada, Australia, New Zealand, Singapore and the Philippines, and we'd especially like to hear from Manila and Singapore, where we found no bucket-list survey at all.
 

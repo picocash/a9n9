@@ -14,6 +14,12 @@ sources:
   - "Ministry of Finance Singapore — Close to 500,000 eligible seniors will receive letters on the Merdeka Generation Package (1 April 2019) — https://www.mof.gov.sg/news-resources/newsroom/close-to-500-000-eligible-seniors-will-receive-letters-on-the-merdeka-generation-package-by-end-april/"
 ---
 
+::: stats
+1965 | Gen X in the US, a boomer year in Canada and Australia | Pew, 2019; StatCan, ABS, 2021 Census
+1960 | where Filipino Gen X starts, by Michael L. Tan's count | Philippine Daily Inquirer, 2013
+1950–1959 | birth years of Singapore's Merdeka Generation Package | Ministry of Finance Singapore, 2019
+:::
+
 In 2013 the Filipino columnist Michael L. Tan sat down to prepare a lecture on demography and asked whether the American labels fitted at home. His answer was a qualified yes: "We can probably retain the American generational divide and talk about our version of Gen X—those born between 1960 and 1980." Five years earlier than the Americans start counting. "Our Gen X is now in midlife," he wrote, "fascinated by the new technologies but not always comfortable with them."
 
 That is the thing about generations. The labels travel; the dates don't. Pick your birth year.
@@ -26,13 +32,36 @@ In the Philippines, by Michael Tan's reckoning, you were already five years into
 
 And if you were born in Singapore after 9 August 1965, you belong to the first generation born in an independent Singapore. That was the day, as the National Library Board records, that Singapore separated from Malaysia. The Singapore government has since named older generations itself, because benefits come attached: the Merdeka Generation Package, announced in 2019, covers citizens born from 1 January 1950 to 31 December 1959.
 
+::: stat
+569,259 | births in England and Wales in 1977, the 20th century's lowest | ONS
+:::
+
 **Born in 1977?** In England and Wales you arrived in the smallest year of the century. The Office for National Statistics records that live births "peaked again in 1964 (875,972 births)", the last year of the American-dated boom, and fell from there. "The lowest annual number of births in the 20th century was 569,259 in 1977." British Gen X grew up in noticeably smaller school years.
 
 Canada's statisticians have a deadpan line about this. "Owing to its relatively small size," Statistics Canada wrote after the 2021 Census, "Generation X will never hold the position of being the largest generation as it passes through different life stages."
 
+::: poll
+id: gen-z-thinks-youre-a-boomer-1
+question: Has anyone younger called you a boomer?
+- Yes, and I corrected them with dates
+- Yes, and I let it go
+- Not yet. I'm braced
+- I am a boomer, apparently, in Canada
+:::
+
 **Born in 1980?** Almost everywhere you are the last of Generation X: Pew, Statistics Canada and the ABS all end it that year.
 
 But in Ireland, you were born at the top of a boom. While England and Wales were bottoming out in 1977, Irish births were climbing: the Central Statistics Office counts 67,178 births in 1975, then a rise every year to 74,064 in 1980. Then births fell every year, to 52,018 in 1989. No year in the CSO's series topped 1980 until 2008.
+
+::: chart
+title: Births in Ireland, around the end of Gen X
+subtitle: Live births per year
+source: Central Statistics Office (CSO)
+highlight: 1980
+1975 | 67,178
+1980 | 74,064
+1989 | 52,018
+:::
 
 So an Irish child born in 1980 is, on paper, the last of Generation X and part of the biggest birth year in the CSO's records until 2008. In Ireland, Gen X didn't fade out. It ended in a crowd.
 
