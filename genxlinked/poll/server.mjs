@@ -21,6 +21,10 @@ function limited(ip) { const now = Date.now(), h = hits.get(ip) || [0, now]; if 
 const send = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': 'https://genxlinked.com' }); res.end(JSON.stringify(obj)); };
 const view = (id) => { const p = db.polls[id] || { counts: [] }; return { id, counts: p.counts, total: p.counts.reduce((a, b) => a + b, 0) }; };
 http.createServer((req, res) => {
+  if (req.method === 'GET' && /^\/gxl-api\/feed\/substack\.xml(\?.*)?$/.test(req.url)) {
+    try { res.writeHead(200, { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'max-age=300' }); return res.end(fs.readFileSync(`${DIR}/substack.xml`)); }
+    catch { res.writeHead(503); return res.end('feed not built yet'); }
+  }
   const m = req.url.match(/^\/gxl-api\/poll\/([a-z0-9-]{3,64})\/?$/);
   if (!m) return send(res, 404, { error: 'not found' });
   const id = m[1];
