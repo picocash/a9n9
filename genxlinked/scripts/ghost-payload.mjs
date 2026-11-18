@@ -79,8 +79,16 @@ function parse(file) {
   const md = `${body}\n\n${src.length ? `## Sources\n\n${src.join('\n')}\n\n` : ''}${ai}\n`;
   const slug = path.basename(file, '.md').replace(/^\d+-/, '');
   const tags = [...new Set([fm.pillar, ...(fm.tags || [])].filter(Boolean))].map((name) => ({ name }));
-  return { title: fm.title, slug, html: marked.parse(blocks(md)), custom_excerpt: (fm.excerpt || '').slice(0, 300) || undefined, tags, status: 'draft' };
+    let html = marked.parse(blocks(md));
+  if (IG[slug]) {
+    const fig = `<figure class="kg-card kg-image-card kg-width-wide kg-card-hascaption"><img src="${IG[slug]}" class="kg-image" alt="Infographic: ${esc(fm.title)}" loading="lazy"><figcaption>The numbers at a glance. Save it or share it.</figcaption></figure>`;
+    const end = '<!--kg-card-end: html-->';
+    const i = html.indexOf(end);
+    html = i >= 0 && html.slice(0, i).includes('gxl-stats') ? html.slice(0, i + end.length) + '\n' + fig + html.slice(i + end.length) : fig + html;
+  }
+  return { title: fm.title, slug, html, custom_excerpt: (fm.excerpt || '').slice(0, 300) || undefined, tags, status: 'draft' };
 }
+let IG = {}; try { IG = JSON.parse(fs.readFileSync(new URL('../infographics/urls.json', import.meta.url), 'utf8')); } catch {}
 const files = process.argv.slice(2);
 if (!files.length) { console.error('usage: ghost-payload.mjs file.md ...'); process.exit(2); }
 process.stdout.write(JSON.stringify({ posts: files.map(parse) }));

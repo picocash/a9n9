@@ -1,3 +1,11 @@
+/* Hide polls and quiz result counts until the vote counter answers (route may not be live yet). */
+(function () {
+  var els = document.querySelectorAll('.gxl-poll');
+  if (!els.length) return;
+  els.forEach(function (el) { el.hidden = true; });
+  fetch('/gxl-api/poll/health-check', { redirect: 'error' }).then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    .then(function (d) { if (d && 'counts' in d) els.forEach(function (el) { el.hidden = false; }); }).catch(function () {});
+})();
 /* GenX Linked quick polls: one tap, then show everyone's answers. */
 (function () {
   var API = '/gxl-api/poll/';
