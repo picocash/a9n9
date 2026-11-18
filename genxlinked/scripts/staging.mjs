@@ -28,6 +28,7 @@ const PILLARS = [
   ['body', 'Body at 50+', 'Sleep, health and intimacy in midlife, by the numbers.'],
   ['bucket-list', 'Bucket list', 'The places we promised ourselves.'],
   ['in-charge', 'Gen X in charge', 'The generation now running things.'],
+  ['analog-life', 'Analog life', 'Paperbacks, landlines and the gadgets we refuse to download an app for.'],
 ];
 const s = await api('GET', '/settings/');
 await api('PUT', '/settings/', { settings: [

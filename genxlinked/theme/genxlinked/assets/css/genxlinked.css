@@ -178,3 +178,22 @@ body { font-family: var(--gxl-serif); }
 .gxl-poll-note { font-family: var(--gxl-mono); font-size: 1.15rem; margin: 12px 0 0; }
 @media (max-width: 680px) { .gh-content .gxl-pullstat { grid-template-columns: 1fr; } .gxl-pullstat .gxl-stat-n { grid-row: auto; } }
 @media (prefers-reduced-motion: reduce) { .gxl-poll-bar { transition: none; } }
+
+/* Quiz */
+.gh-content .gxl-quiz { margin: 3.6rem 0; padding: 22px; background: var(--gxl-paper); border: 2px solid var(--gxl-ink); box-shadow: 6px 6px 0 var(--gxl-teal); }
+.gh-content .gxl-quiz-title { font-family: var(--gxl-display); font-weight: 800; font-size: 3.2rem; line-height: 1; margin: 0 0 16px; }
+.gxl-quiz-q { border: none; border-top: 1px solid var(--gxl-rule); margin: 0; padding: 16px 0 12px; display: grid; gap: 8px; }
+.gxl-quiz-q legend { font-family: var(--gxl-display); font-weight: 700; font-size: 2.2rem; line-height: 1.1; padding: 0; margin-bottom: 10px; float: left; width: 100%; }
+.gxl-quiz-num { font-family: var(--gxl-mono); font-size: 1.2rem; color: var(--gxl-rust); margin-right: 6px; }
+.gxl-quiz-a { text-align: left; padding: 10px 14px; background: var(--gxl-cream); border: 1.5px solid var(--gxl-ink); color: var(--gxl-ink); font-family: var(--gxl-serif); font-size: 1.6rem; cursor: pointer; }
+.gxl-quiz-a:hover { background: #F2E7CF; }
+.gxl-quiz-a.is-picked { background: var(--gxl-teal); color: var(--gxl-cream); border-color: var(--gxl-teal); }
+.gxl-quiz-r { margin-top: 16px; padding: 20px; background: var(--gxl-mustard); border: 2px solid var(--gxl-ink); }
+.gxl-quiz-kicker { font-family: var(--gxl-mono); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .1em; margin: 0 0 4px; }
+.gh-content .gxl-quiz-name { font-family: var(--gxl-display); font-weight: 800; font-size: 4.4rem; line-height: 1; margin: 0 0 8px; }
+.gh-content .gxl-quiz-text { font-size: 1.7rem; margin: 0; }
+.gxl-quiz-dist { margin-top: 14px; display: grid; gap: 6px; }
+.gxl-quiz-row { display: grid; grid-template-columns: 9em 1fr 3.5em; gap: 10px; align-items: center; font-family: var(--gxl-mono); font-size: 1.3rem; }
+.gxl-quiz-track { height: 12px; background: var(--gxl-cream); border: 1px solid var(--gxl-ink); }
+.gxl-quiz-track span { display: block; height: 100%; background: var(--gxl-rust); }
+.gxl-quiz-reset { margin-top: 12px; background: none; border: none; padding: 0; font-family: var(--gxl-mono); font-weight: 700; font-size: 1.25rem; text-transform: uppercase; text-decoration: underline; color: var(--gxl-ink); cursor: pointer; }

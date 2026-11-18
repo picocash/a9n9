@@ -34,7 +34,23 @@ function poll(lines) {
   if (!/^[a-z0-9-]{3,64}$/.test(o.id || '') || opts.length < 2 || opts.length > 6) throw new Error(`poll needs id (a-z0-9-) and 2-6 options: ${o.id}`);
   return card(`<div class="gxl-poll" data-poll="${esc(o.id)}"><p class="gxl-poll-kicker">Quick poll</p><p class="gxl-poll-q">${esc(o.question || '')}</p><div class="gxl-poll-opts">${opts.map((t, i) => `<button type="button" class="gxl-poll-opt" data-i="${i}"><span class="gxl-poll-t">${esc(t)}</span><span class="gxl-poll-bar"></span><span class="gxl-poll-pct"></span></button>`).join('')}</div><p class="gxl-poll-note">One tap. Anonymous. Results show after you vote.</p></div>`);
 }
-const BLOCKS = { stats, stat, chart, poll };
+
+function quiz(lines) {
+  const qs = [], results = []; let o = {}, cur = null;
+  for (const l of lines) {
+    let m;
+    if ((m = l.match(/^q:\s*(.+)$/))) { cur = { q: m[1], a: [] }; qs.push(cur); }
+    else if (l.startsWith('- ') && cur) { const [t, pts] = split(l.slice(2)); cur.a.push({ t, p: Number(pts) || 0 }); }
+    else if ((m = l.match(/^result:\s*(\d+)\s*-\s*(\d+)\s*\|\s*([^|]+)\|\s*(.+)$/))) results.push({ lo: +m[1], hi: +m[2], name: m[3].trim(), text: m[4].trim() });
+    else if ((m = l.match(/^(\w+):\s*(.*)$/))) o[m[1]] = m[2];
+  }
+  if (!/^[a-z0-9-]{3,64}$/.test(o.id || '') || qs.length < 3 || results.length < 2 || results.length > 6) throw new Error(`quiz needs id, 3+ q: and 2-6 result: lines (${o.id})`);
+  const qh = qs.map((q, qi) => `<fieldset class="gxl-quiz-q"><legend><span class="gxl-quiz-num">${qi + 1}/${qs.length}</span> ${esc(q.q)}</legend>${q.a.map((a) => `<button type="button" class="gxl-quiz-a" data-p="${a.p}">${esc(a.t)}</button>`).join('')}</fieldset>`).join('');
+  const rh = results.map((r, i) => `<div class="gxl-quiz-r" data-lo="${r.lo}" data-hi="${r.hi}" data-i="${i}" hidden><p class="gxl-quiz-kicker">You are</p><p class="gxl-quiz-name">${esc(r.name)}</p><p class="gxl-quiz-text">${esc(r.text)}</p></div>`).join('');
+  const names = results.map((r) => esc(r.name)).join('|');
+  return card(`<div class="gxl-quiz" data-quiz="${esc(o.id)}" data-names="${names}"><p class="gxl-poll-kicker">Quiz</p><p class="gxl-quiz-title">${esc(o.title || '')}</p>${qh}<div class="gxl-quiz-out">${rh}<div class="gxl-quiz-dist" hidden></div><button type="button" class="gxl-quiz-reset" hidden>Take it again</button></div></div>`);
+}
+const BLOCKS = { stats, stat, chart, poll, quiz };
 function blocks(md) {
   return md.replace(/^:::[ \t]*(\w+)[ \t]*\n([\s\S]*?)\n:::[ \t]*$/gm, (m, kind, body) => {
     const f = BLOCKS[kind]; if (!f) throw new Error(`unknown block ::: ${kind}`);

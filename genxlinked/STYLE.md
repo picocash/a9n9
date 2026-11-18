@@ -83,3 +83,18 @@ question: More friends at 15, or now?
 :::
 ```
 Rules: every number in a block must already be in the article and its sources (no new facts); no block repeats a number from another block; charts never mix units, years or age bands without saying so in the subtitle; keep paragraphs short (3 sentences max) so blocks break the text every 150-250 words.
+
+5. Quiz (optional, for quiz pieces): 5-8 questions, 3-4 answers each with points, 3-4 results covering every possible score with no gaps or overlaps; results are friendly, never shaming, never advice. id = slug + -quiz.
+```
+::: quiz
+id: are-you-a-prepper-quiz
+title: Are you a prepper?
+q: How much bottled water is in the house right now?
+- None, there's a tap | 0
+- A few bottles | 1
+- Enough for three days for everyone | 2
+result: 0-3 | Grasshopper | You'd be in the supermarket queue with everyone else.
+result: 4-8 | Sensible | ...
+:::
+```
+Pillars (tag slugs): connection, sandwich, body, bucket-list, in-charge, analog-life.
