@@ -227,3 +227,34 @@ body { font-family: var(--gxl-serif); }
 .gxl-footer-base { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 36px; padding-top: 14px; border-top: 1px solid #4A4038; font-family: var(--gxl-mono); font-size: 1.15rem; color: #B9AC8E; }
 .gxl-btn-cream { background: var(--gxl-mustard); color: var(--gxl-ink); border-color: var(--gxl-mustard); }
 @media (max-width: 900px) { .gxl-footer-grid { grid-template-columns: 1fr 1fr; } .gxl-countries { grid-template-columns: repeat(2, 1fr); } .gxl-quiz-row { grid-template-columns: 1fr; } }
+
+/* Menu: every section visible; wraps on desktop, scrolls on phones; Countries dropdown */
+.gxl-nav-menu { overflow: visible; }
+.gxl-nav-menu .nav { flex-wrap: wrap; }
+.gxl-nav-menu .nav li { border-bottom: 1.5px solid var(--gxl-ink); margin-bottom: -1.5px; }
+.gxl-nav-menu .nav a, .gxl-nav-menu summary { padding: 9px 14px; font-size: 1.25rem; }
+.gxl-nav-menu summary { display: block; cursor: pointer; font-family: var(--gxl-mono); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--gxl-ink); list-style: none; white-space: nowrap; }
+.gxl-nav-menu summary::-webkit-details-marker { display: none; }
+.gxl-nav-menu summary::after { content: " \25BE"; }
+.gxl-nav-menu details[open] summary, .gxl-nav-menu summary:hover { background: var(--gxl-ink); color: var(--gxl-mustard); }
+.gxl-has-sub { position: relative; }
+.gxl-sub { position: absolute; z-index: 60; top: 100%; left: -1.5px; min-width: 190px; margin: 0; padding: 0; list-style: none; background: var(--gxl-cream); border: 1.5px solid var(--gxl-ink); box-shadow: 4px 4px 0 var(--gxl-ink); }
+.gxl-nav-menu .gxl-sub li { border: none; border-bottom: 1px solid var(--gxl-rule); margin: 0; }
+.gxl-nav-menu .gxl-sub a { display: block; }
+@media (max-width: 680px) {
+  .gxl-nav-menu { overflow-x: auto; }
+  .gxl-nav-menu .nav { flex-wrap: nowrap; }
+  .gxl-sub { position: fixed; top: auto; left: 16px; right: 16px; }
+}
+/* Source's mobile header rules (fixed 64px height, hidden menu items) must not apply to our masthead */
+#gh-navigation.gxl-nav { height: auto !important; overflow: visible; }
+.gxl-nav .gxl-nav-menu .nav > li { opacity: 1 !important; }
+#gh-navigation.gxl-nav .gxl-nav-menu .nav a, #gh-navigation.gxl-nav .gxl-nav-menu summary { font-family: var(--gxl-mono); font-weight: 700; font-size: 1.25rem; text-transform: uppercase; letter-spacing: .06em; color: var(--gxl-ink); padding: 9px 14px; line-height: 1.4; }
+#gh-navigation.gxl-nav .gxl-nav-menu .nav-current a, #gh-navigation.gxl-nav .gxl-nav-menu .nav a:hover { background: var(--gxl-ink); color: var(--gxl-mustard); }
+#gh-navigation.gxl-nav .gxl-sub a { color: var(--gxl-ink); }
+@media (max-width: 680px) {
+  .gxl-sub { position: fixed; top: 104px; left: 16px; right: 16px; max-height: 70vh; overflow-y: auto; }
+}
+#gh-navigation.gxl-nav .gxl-nav-menu .nav { gap: 0; margin: 0; padding: 0; }
+#gh-navigation.gxl-nav .gxl-nav-menu .nav > li { margin: 0 0 -1.5px; padding: 0; }
+@media (max-width: 680px) { #gh-navigation.gxl-nav .gxl-has-sub { display: none; } }  /* phones: countries live in the "Read by country" strip and footer */
