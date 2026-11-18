@@ -304,3 +304,4 @@ body .gh-content a { color: var(--gxl-rust); }
 .gh-content table.gxl-sr { position: absolute !important; left: 0; top: 0; width: 1px !important; height: 1px !important; max-width: 1px; overflow: hidden !important; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; display: block !important; margin: 0 !important; padding: 0 !important; border: 0 !important; }
 body .gh-article-title.is-title, body.has-serif-title .gh-article-title.is-title, body.has-sans-title .gh-article-title.is-title { font-family: var(--gxl-display); font-weight: 800; }
 .gh-button-share { white-space: nowrap; }
+h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans-serif !important; font-weight: 800 !important; }
