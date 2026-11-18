@@ -33,7 +33,7 @@ Palette (same six colours, flat fills; hex for the site):
 
 Rules:
 - Style: bold hand-inked outlines, flat colour fills, Ben-Day halftone dots in shadows, slight colour misregistration, newsprint paper texture. Stylised cartoon people (simple faces, exaggerated poses), clearly drawn, never photographic.
-- People: aged 45-60, mixed backgrounds, expressive but generic; nobody resembling a real person.
+- People: Gen X adults drawn in their mid-40s to early 50s: youthful, energetic, dark or lightly greying hair, few lines; never elderly (white hair, canes) unless the beat is about their parents. Mixed backgrounds, expressive but generic; nobody resembling a real person.
 - One analog object in every panel, the series signature: landline phone, cassette, Walkman, Polaroid, paper map, bus ticket, vinyl record, film camera, handwritten letter, rotary dial.
 - Composition: one panel, 16:9 landscape, a clear moment (like a story beat), calm space on one side.
 - Never: real or recognisable people, logos, brand names, flags as the subject, anything sexual, and NO words: no speech-bubble text, captions, signs or lettering (AI lettering comes out garbled). Empty speech bubbles are fine.
