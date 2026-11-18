@@ -50,7 +50,8 @@ async function join(ip, email, name) {
 const DIR = process.env.POLL_DIR || '/data', FILE = `${DIR}/polls.json`, PORT = Number(process.env.PORT || 2370);
 const MAX_POLLS = 500, MAX_OPTS = 6;
 // Only poll/quiz ids that exist in the articles (allowed.json, written by scripts/poll-ids.mjs); health-check for the theme probe.
-let ALLOWED = null; try { ALLOWED = new Set([...JSON.parse(fs.readFileSync(process.env.POLL_ALLOWED || '/app/allowed.json', 'utf8')), 'health-check']); } catch {}
+let ALLOWED = null; const reloadAllowed = () => { try { ALLOWED = new Set([...JSON.parse(fs.readFileSync(process.env.POLL_ALLOWED || '/app/allowed.json', 'utf8')), 'health-check']); } catch {} };
+reloadAllowed(); setInterval(reloadAllowed, 60e3).unref(); // the desk adds new poll ids as agent003 drafts
 let db = { polls: {} }; try { db = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
 let dirty = false;
 setInterval(() => { if (!dirty) return; dirty = false; fs.writeFileSync(`${FILE}.tmp`, JSON.stringify(db)); fs.renameSync(`${FILE}.tmp`, FILE); }, 2000).unref();

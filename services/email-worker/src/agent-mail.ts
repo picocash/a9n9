@@ -17,6 +17,7 @@ interface AgentEnv {
   MAIL_DB: D1Database;
   EMAIL?: { send(m: { to: string; from: string; subject: string; text?: string; headers?: Record<string, string> }): Promise<{ messageId?: string }> };
   AGENT_MAIL_KEYS?: string;
+  SENDER_DOMAINS?: string;
 }
 type Row = { id: string; message_id: string | null; in_reply_to: string | null; envelope_from: string; envelope_to: string; from_addr: string | null; from_name: string | null; subject: string | null; received_at: string; r2_key: string; dkim: string | null; spf: string | null; dmarc: string | null; handled_at: string | null; handled_by: string | null; handled_note: string | null; operator_flag: string | null };
 
@@ -96,7 +97,11 @@ export async function handleAgent(request: Request, env: AgentEnv, url: URL): Pr
     const sent = await env.MAIL_DB.prepare("SELECT COUNT(*) AS n FROM outbound WHERE agent = ?1 AND substr(sent_at, 1, 10) = ?2 AND status = 'sent'").bind(g.agent, day).first<{ n: number }>();
     if ((sent?.n ?? 0) >= DAILY_REPLIES) return json({ error: `reply cap reached (${DAILY_REPLIES}/day)` }, 429);
     if (!env.EMAIL) return json({ error: 'sending is not configured' }, 503);
-    const from = row.envelope_to.toLowerCase();
+    // Reply from the address it was sent to when that domain can send; otherwise from the agent's own sending address
+    // (e.g. arun@genxlinked.com is read by agent003 but genxlinked.com is not a sending domain yet).
+    const sendable = (a: string) => (env.SENDER_DOMAINS || 'a9n9.net').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean).some((d) => a.endsWith(`@${d}`));
+    const orig = row.envelope_to.toLowerCase();
+    const from = sendable(orig) ? orig : (g.addresses.map((a) => a.toLowerCase()).find(sendable) ?? orig);
     const subject = /^re:/i.test(row.subject ?? '') ? (row.subject ?? 'Re:') : `Re: ${row.subject ?? ''}`.trim();
     const headers: Record<string, string> = {};
     if (row.message_id) { headers['In-Reply-To'] = row.message_id; headers['References'] = [row.in_reply_to, row.message_id].filter(Boolean).join(' '); }

@@ -1,0 +1,10 @@
+{
+ "owner": "set by the operator (Claude) for Arun on 2026-11-18; read-only to agent003",
+ "why": "GenXLinked grows only if people sign up for it. Signups = Ghost members + Substack subscribers.",
+ "goals": [
+  { "level": "top", "id": "signups-90d", "goal": "1,000 email signups (Ghost members + Substack subscribers)", "by": "2027-02-16", "target": 1000 },
+  { "level": "month", "id": "signups-30d", "goal": "100 email signups (Ghost members + Substack subscribers)", "by": "2026-12-18", "target": 100 },
+  { "level": "day", "id": "daily-article", "goal": "One new article a day to the house standard, published by 18:00 UTC", "target": 1 },
+  { "level": "watch", "id": "reach", "goal": "Visits and AI-chatbot citations: know which channel brings readers" }
+ ]
+}
