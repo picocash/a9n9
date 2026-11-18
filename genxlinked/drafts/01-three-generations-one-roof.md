@@ -1,65 +1,40 @@
 ---
-title: "Three generations, one roof: how Gen X in Manila, Manchester and Melbourne care for parents"
+title: "Under one roof or across town: caring for parents in seven countries"
 pillar: sandwich
-tags: [sandwich, Philippines, UK, Australia, USA, Canada, caregiving, multigenerational households]
-excerpt: "In the Philippines most older people live with a child. In England, care often happens across town. What the numbers say about Gen X looking after parents in five countries."
+tags: [sandwich, Philippines, Singapore, Australia, Ireland, UK, USA, Canada, caregiving, multigenerational households]
+excerpt: "In the Philippines, most carers live with the parent they look after. In the UK, care crosses town. Figures from seven countries on midlife care."
 sources:
+  - "SBS Insight — The Sandwich Generation: 'I want to be my mum's daughter, not carer' (26 May 2025) — https://www.sbs.com.au/news/insight/article/sandwich-generation-caring-for-parents-and-kids/6ld2fun4a"
   - "ERIA / DRDF — Ageing and Health in the Philippines, Executive Summary (2019) — https://www.eria.org/uploads/media/Books/2019-Dec-ERIA-Ageing-And-Health-In-The-Philippines-Executive-Summary.pdf"
+  - "Singapore Department of Statistics — Residents aged 65 years and over in resident households by living arrangement and age group, annual (data.gov.sg) — https://data.gov.sg/datasets/d_45acf574880ac493ec638f72338e62d5/view"
+  - "ABS — Disability, Ageing and Carers, Australia: Summary of Findings, 2022 — https://www.abs.gov.au/statistics/health/disability/disability-ageing-and-carers-australia-summary-findings/2022"
+  - "CSO — Census of Population 2022 Profile 4: Disability, Health and Carers — Carers — https://www.cso.ie/en/releasesandpublications/ep/p-cpp4/censusofpopulation2022profile4-disabilityhealthandcarers/carers/"
   - "ONS — Unpaid care by age, sex and deprivation, England and Wales: Census 2021 — https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/socialcare/articles/unpaidcarebyagesexanddeprivationenglandandwales/census2021"
   - "ONS — Families and households in the UK: 2024 — https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/families/bulletins/familiesandhouseholds/2024"
-  - "ABS — Disability, Ageing and Carers, Australia: Summary of Findings, 2022 — https://www.abs.gov.au/statistics/health/disability/disability-ageing-and-carers-australia-summary-findings/2022"
-  - "McCrindle — Attitudes towards multigenerational living — https://mccrindle.com.au/article/attitudes-towards-multigenerational-living/"
-  - "Pew Research Center — The demographics of multigenerational households (2022) — https://www.pewresearch.org/social-trends/2022/03/24/the-demographics-of-multigenerational-households/"
   - "Pew Research Center — Financial issues top the list of reasons U.S. adults live in multigenerational homes (2022) — https://www.pewresearch.org/social-trends/2022/03/24/financial-issues-top-the-list-of-reasons-u-s-adults-live-in-multigenerational-homes/"
   - "Statistics Canada — Canada's multigenerational and intergenerational households, 2021 — https://www.statcan.gc.ca/o1/en/app/8361-canadas-multigenerational-and-intergenerational-households-2021"
 ---
 
-If you were born between 1965 and 1980, you are somewhere between your mid-forties and early sixties now. That is exactly the stretch of life when caring for a parent stops being a someday conversation and becomes a Tuesday-night phone call.
+Julie-Anne Dietz is 59 and still working full-time. Both her parents have dementia; her 82-year-old mother doesn't want aged-care services, so she relies on Julie-Anne and her sisters. Knowing the time left is finite, Julie-Anne told SBS's *Insight* in May 2025, she would "really like to be a daughter rather than a carer". She has two daughters in their early twenties as well. "This is my first turn at being a daughter … and being a mother," she said. "So, this is my first rodeo at trying to balance those things together."
 
-How that care looks depends a great deal on where you live. In some countries it happens across the kitchen table. In others it happens across town, or across a motorway. The headline cities here are shorthand: the figures below are national, because that is how statistics offices count.
+Most of us will recognise the rodeo. What differs from country to country is where it is held: across the kitchen table, or across town.
 
-## Manila: under one roof is still the norm
+**In the Philippines, care lives at home.** The Longitudinal Study of Ageing and Health in the Philippines interviewed 5,985 people aged 60 and over between October 2018 and February 2019. Six in ten (60%) lived with at least one child. Only 7% had a primary caregiver at the time, but among those who did, daughters were the largest group (40%), then spouses (29%) and daughters-in-law (9%). Female caregivers were 46 on average. The researchers found "an overwhelming belief that children are obligated to support and take responsibility for their ageing parents," and a strong preference for living with a daughter.
 
-The Philippines is the clearest example of care that lives at home. The 2018 Longitudinal Study of Ageing and Health in the Philippines, a nationally representative survey of nearly 6,000 people aged 60 and over, found that [60% of older Filipinos live with at least one child](https://www.eria.org/uploads/media/Books/2019-Dec-ERIA-Ageing-And-Health-In-The-Philippines-Executive-Summary.pdf).
+**In Singapore, the shared home is still the most common arrangement, but it is shrinking.** The Singapore Department of Statistics counts how residents aged 65 and over live. By our calculation from its tables, 51% lived with at least one child (in-laws included) in 2025, down from 67% at the 2010 Census. Over the same years the share living alone rose from 8% to 12%. Among Singaporeans aged 85 and over, 62% still lived with a child in 2025.
 
-The same study shows who does the caring. Only 7% of older people had a primary caregiver at the time of the survey, but among those who did, daughters made up the largest group (40%), followed by spouses (29%) and daughters-in-law (9%). About 83% of caregivers lived with the person they cared for, and those who didn't usually lived next door or in the same barangay.
+**In Australia, the parent is often the one who lives elsewhere.** The Australian Bureau of Statistics counted 3.0 million carers in 2022, 1.2 million of them primary carers, the person doing most of the work. The average primary carer was 54 and two-thirds (67.7%) were women. Most primary carers (82.7%) lived with the person they cared for, but that group includes many partners. Among the minority who did not live with them, 70.2% were caring for a parent, and 63.6% were aged 45 to 64. That is the midlife commute: your house, their house, back again.
 
-The expectation runs deep. The researchers report "an overwhelming belief that children are obligated to support and take responsibility for their ageing parents," along with a strong preference for living with a daughter. And care flows both ways: about 24% of older Filipinos were fully or partly in charge of looking after a grandchild.
+**In Ireland, the numbers jumped.** Census 2022 counted 299,128 people giving regular unpaid care, up from 195,263 in 2016, or 6% of the population. Almost two-thirds (64%) were aged 40 to 64, the single biggest five-year band was 50 to 54 (15% of all carers), and 61% were women. The heavy end grew too: 29% gave 43 hours or more a week, up from 21% in 2016.
 
-## Manchester: care at a distance, and it peaks in your fifties
+**In the US and Canada, more homes are stretching to fit.** A Pew Research Center survey in October 2021 asked adults living in multigenerational homes why. A third said caregiving was a major reason; on its own, a quarter (25%) named caring for an adult relative. Among adults living with a parent aged 65 or older, 23% said they personally provide care for another adult in the home at least sometimes. The verdicts were mixed: 54% said living with adult relatives was rewarding all or most of the time, and 23% said it was stressful all or most of the time. Canada's 2021 Census counted 2.4 million people in households of three or more generations; 40.5% of them were born outside Canada, against 25.5% of people in other households.
 
-In the UK, sharing a house across generations is rare by comparison. The Office for National Statistics found that in 2024 only [0.9% of UK households contained two or more families](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/families/bulletins/familiesandhouseholds/2024). The bigger multigenerational story there runs the other way: 28.0% of people aged 20 to 34 lived with their parents in 2024, up from 25.6% in 2014.
+One caveat: these surveys measure different things in different years, so they show patterns, not a league table.
 
-Caring for parents still happens on a large scale; it just happens between households. At the 2021 Census, about [5.0 million people in England and Wales](https://www.ons.gov.uk/peoplepopulationandcommunity/healthandsocialcare/socialcare/articles/unpaidcarebyagesexanddeprivationenglandandwales/census2021) provided unpaid care. In England, the age group of women most likely to be carers was 55 to 59, at 19.9%. For men it was 60 to 64, at 13.0%. Those are Gen X ages now.
+**And in the UK, care crosses town.** At the 2021 Census, about 5.0 million people in England and Wales gave unpaid care. In England, women aged 55 to 59 were the most likely to be carers (19.9%), and men aged 60 to 64 (13.0%). Yet in 2024 only 0.9% of UK households contained two or more families, according to the Office for National Statistics.
 
-One caution from the ONS itself: the share of unpaid carers fell between 2011 and 2021, but the question wording changed and the census was taken during the pandemic, so the drop may not reflect a real change in caring.
+So: in the Philippines, 83% of primary caregivers live under the same roof as the older person they look after. In the UK, fewer than one household in a hundred holds two families, and five million people care anyway, by car, bus and phone.
 
-## Melbourne: more carers, mostly women, often for partners and parents
-
-Australia counts carers through its Survey of Disability, Ageing and Carers. In 2022 there were [3.0 million carers in Australia](https://www.abs.gov.au/statistics/health/disability/disability-ageing-and-carers-australia-summary-findings/2022), up from 2.6 million in 2018. Of those, 1.2 million were primary carers, the person doing most of the work.
-
-The average primary carer was 54 years old, and two-thirds (67.7%) were women. Among women, the age groups providing the most unpaid care were 45 to 54 (20.5%) and 55 to 64 (19.5%). Primary carers most often cared for a spouse or partner (37.4%), then a child (29.1%), then a parent (24.7%).
-
-Shared homes are less common than in the Philippines but not unusual. A survey by the research firm McCrindle found [12% of Australians currently live in a multigenerational home](https://mccrindle.com.au/article/attitudes-towards-multigenerational-living/) and 32% have done so in the past. People who speak a language other than English at home were far more likely to have lived that way (71%, against 39% of English-only speakers).
-
-## The USA and Canada: the shared home is growing
-
-In the United States, Pew Research Center found that [18% of Americans lived in a multigenerational household in 2021](https://www.pewresearch.org/social-trends/2022/03/24/the-demographics-of-multigenerational-households/), up from 7% in 1971. That is 59.7 million people. Foreign-born Americans were more likely to live this way (26%) than those born in the US (17%).
-
-Asked why, about a third of adults in these homes [named caregiving as a major reason](https://www.pewresearch.org/social-trends/2022/03/24/financial-issues-top-the-list-of-reasons-u-s-adults-live-in-multigenerational-homes/): 25% pointed to caring for an adult family member and 12% to child care. The experience is mixed, which will surprise nobody who has tried it. 23% said living with extended family is stressful all or most of the time, while 54% of those living with adult relatives said it is rewarding all or most of the time.
-
-In Canada, the 2021 Census counted [2.4 million people living in a multigenerational household](https://www.statcan.gc.ca/o1/en/app/8361-canadas-multigenerational-and-intergenerational-households-2021), meaning three or more generations of the same family. Immigrants made up 40.5% of people in these homes, compared with 25.5% in other households.
-
-## What the comparison shows
-
-Put the countries side by side and two patterns stand out.
-
-First, where you live shapes whether care happens under your roof or down the road. In the Philippines most older people live with a child. In the UK, fewer than one household in a hundred contains two families, yet millions still care for someone.
-
-Second, the work falls on the same people almost everywhere: people in their late forties and fifties, and mostly women. In the Philippines it is daughters and daughters-in-law. In England it is women aged 55 to 59. In Australia two in three primary carers are women, with an average age of 54.
-
-Migration links the two patterns. In the US and Canada, people born abroad are more likely to live in multigenerational homes, and in Australia so are people who speak another language at home.
-
-How does it work in your family and your country? Under one roof, around the corner, or on a long-distance phone line? Reply and tell us.
+Where does your parent live, relative to you: same house, same street, or a flight away? Tell us your country.
 
 *AI-assisted, edited by Arun.*

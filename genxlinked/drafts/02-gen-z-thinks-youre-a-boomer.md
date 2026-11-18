@@ -1,67 +1,41 @@
 ---
-title: "Your Gen Z kid thinks you're a boomer. Here's what they get wrong, country by country"
+title: "Boomer, Gen X or Millennial? It depends where you were born"
 pillar: connection
-tags: [connection, USA, UK, Ireland, Canada, Australia, Singapore, New Zealand, 1964, 1965, 1980]
-excerpt: "To a teenager, anyone with a mortgage and reading glasses is a boomer. Official definitions and birth records across seven countries tell a more interesting story."
+tags: [connection, USA, Canada, Australia, UK, Ireland, Singapore, Philippines, 1965, 1977, 1980]
+excerpt: "Born in 1965? You're Gen X in the US and a boomer in Canada and Australia. Born in 1980? In Ireland you arrived at the top of a baby boom."
 sources:
+  - "Michael L. Tan — Pinoy generations, Philippine Daily Inquirer (27 June 2013) — https://opinion.inquirer.net/55415/pinoy-generations"
   - "Pew Research Center — Defining generations: Where Millennials end and Generation Z begins (2019) — https://www.pewresearch.org/short-reads/2019/01/17/where-millennials-end-and-generation-z-begins/"
-  - "Wikipedia — OK boomer — https://en.wikipedia.org/wiki/OK_boomer"
-  - "Wikipedia — Generation X — https://en.wikipedia.org/wiki/Generation_X"
+  - "Statistics Canada — A generational portrait of Canada's aging population from the 2021 Census (9 February 2022) — https://www12.statcan.gc.ca/census-recensement/2021/as-sa/98-200-X/2021003/98-200-x2021003-eng.cfm"
+  - "ABS — 2021 Census shows Millennials overtaking Boomers (28 June 2022) — https://www.abs.gov.au/media-centre/media-releases/2021-census-shows-millennials-overtaking-boomers"
   - "ONS — Births in England and Wales: 2014 — https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2015-07-15"
   - "CSO — Ireland and the EU at 50: Births — https://www.cso.ie/en/releasesandpublications/ep/p-ieu50/irelandandtheeuat50/society/births/"
-  - "McCrindle — The Generations Defined — https://mccrindle.com.au/article/topic/demographics/the-generations-defined"
-  - "Ministry of Finance Singapore — Close to 500,000 eligible seniors will receive letters on the Merdeka Generation Package (2019) — https://www.mof.gov.sg/news-resources/newsroom/close-to-500-000-eligible-seniors-will-receive-letters-on-the-merdeka-generation-package-by-end-april/"
-  - "Wikipedia — Proclamation of Singapore — https://en.wikipedia.org/wiki/Proclamation_of_Singapore"
+  - "National Library Board Singapore, BiblioAsia — The Days Leading to Separation in Lee Kuan Yew's Own Words — https://biblioasia.nlb.gov.sg/all-sections/vol-22-issue-2-jul-sep-2026-the-days-leading-to-separation-in-lee-kuan-yews-own-words-/"
+  - "Ministry of Finance Singapore — Close to 500,000 eligible seniors will receive letters on the Merdeka Generation Package (1 April 2019) — https://www.mof.gov.sg/news-resources/newsroom/close-to-500-000-eligible-seniors-will-receive-letters-on-the-merdeka-generation-package-by-end-april/"
 ---
 
-At some point your teenager or twenty-something has probably called you a boomer. Maybe it was about how you answer the phone, or the way you type a full stop at the end of a text. It is usually affectionate. It is also, by most definitions, wrong.
+In 2013 the Filipino columnist Michael L. Tan sat down to prepare a lecture on demography and asked whether the American labels fitted at home. His answer was a qualified yes: "We can probably retain the American generational divide and talk about our version of Gen X—those born between 1960 and 1980." Five years earlier than the Americans start counting. "Our Gen X is now in midlife," he wrote, "fascinated by the new technologies but not always comfortable with them."
 
-The fun part is that *how* wrong depends on which country you grew up in.
+That is the thing about generations. The labels travel; the dates don't. Pick your birth year.
 
-## What the labels actually mean
+**Born in 1965?** In the United States you are Gen X. Pew Research Center, whose dates are the ones most often quoted, puts Generation X at 1965 to 1980, after a baby boom it dates from the post-war surge in 1946 to the fall in births after 1964. Pew is candid that "generational cutoff points aren't an exact science" and "should be viewed primarily as tools."
 
-The most widely quoted dates come from Pew Research Center in the United States. Pew [defines Generation X as people born between 1965 and 1980](https://www.pewresearch.org/short-reads/2019/01/17/where-millennials-end-and-generation-z-begins/), Millennials as 1981 to 1996, and Gen Z as 1997 onwards. The baby boom, in Pew's telling, starts with the surge in births after the Second World War in 1946 and runs for 19 years.
+Cross the border and you are a boomer. Statistics Canada dates Canada's baby boom from 1946 to 1965 and Generation X from 1966 to 1980. The Australian Bureau of Statistics uses the same lines for its census: boomers 1946 to 1965, Gen X 1966 to 1980.
 
-Pew is candid that these lines are drawn by people, not nature. "Generational cutoff points aren't an exact science," it says, and they "should be viewed primarily as tools." It expects the data to show "more of a continuum across generations than a threshold."
+In the Philippines, by Michael Tan's reckoning, you were already five years into Gen X.
 
-So your kid has a point, of a sort. Nobody changes overnight on New Year's Day 1965. But a person born in 1972 is not a boomer under any official definition.
+And if you were born in Singapore after 9 August 1965, you belong to the first generation born in an independent Singapore. That was the day, as the National Library Board records, that Singapore separated from Malaysia. The Singapore government has since named older generations itself, because benefits come attached: the Merdeka Generation Package, announced in 2019, covers citizens born from 1 January 1950 to 31 December 1959.
 
-## How "OK boomer" spread
+**Born in 1977?** In England and Wales you arrived in the smallest year of the century. The Office for National Statistics records that live births "peaked again in 1964 (875,972 births)", the last year of the American-dated boom, and fell from there. "The lowest annual number of births in the 20th century was 569,259 in 1977." British Gen X grew up in noticeably smaller school years.
 
-The phrase went mainstream in late 2019. Wikipedia credits a [New York Times piece by Taylor Lorenz on 29 October 2019](https://en.wikipedia.org/wiki/OK_boomer) with popularising it.
+Canada's statisticians have a deadpan line about this. "Owing to its relatively small size," Statistics Canada wrote after the 2021 Census, "Generation X will never hold the position of being the largest generation as it passes through different life stages."
 
-New Zealand gave the phrase one of its best-known moments a week later. A millennial MP used "OK boomer" in Parliament to answer a heckle, and the heckler, as Wikipedia notes, was "himself a Gen Xer and not a boomer." Even in that moment, the label missed its target.
+**Born in 1980?** Almost everywhere you are the last of Generation X: Pew, Statistics Canada and the ABS all end it that year.
 
-## The UK: Gen X was born on the way down
+But in Ireland, you were born at the top of a boom. While England and Wales were bottoming out in 1977, Irish births were climbing: the Central Statistics Office counts 67,178 births in 1975, then a rise every year to 74,064 in 1980. Then births fell every year, to 52,018 in 1989. No year in the CSO's series topped 1980 until 2008.
 
-In England and Wales, the official birth figures show why the line falls where it does. The Office for National Statistics records that [live births peaked in 1964, at 875,972](https://www.ons.gov.uk/peoplepopulationandcommunity/birthsdeathsandmarriages/livebirths/bulletins/birthsummarytablesenglandandwales/2015-07-15). After that the numbers fell. The lowest year of the whole 20th century was 1977, with 569,259 births.
+So an Irish child born in 1980 is, on paper, the last of Generation X and part of the biggest birth year in the CSO's records until 2008. In Ireland, Gen X didn't fade out. It ended in a crowd.
 
-British Gen X, in other words, arrived just after the boom ended and grew up in noticeably smaller school years. The UK also has a claim on the name itself: according to Wikipedia, a 1964 book called *Generation X* by Jane Deverson and Charles Hamblett was [about British youth](https://en.wikipedia.org/wiki/Generation_X), and Billy Idol later borrowed the term for his punk band. The teenagers in that first book would today count as boomers.
-
-## Ireland: the boom came at the end
-
-Ireland turns the whole story upside down. Central Statistics Office figures show [68,713 births in 1973 and 74,064 in 1980](https://www.cso.ie/en/releasesandpublications/ep/p-ieu50/irelandandtheeuat50/society/births/), the highest year in the 1970s and 1980s.
-
-So in Ireland, the biggest birth year of that era fell at the very end of Gen X. If your Irish teenager wants to talk about a baby boom, the children born around 1980 are where to look.
-
-## Canada and Australia: same idea, slightly different dates
-
-Canada gave the generation its modern name. Wikipedia notes that the term took off after Canadian author [Douglas Coupland's 1991 novel](https://en.wikipedia.org/wiki/Generation_X). Statistics Canada draws its own line a year later than Pew, defining Gen X as people born from 1966 to 1980.
-
-In Australia, the research firm McCrindle uses yet another span. It defines [Baby Boomers as 1946 to 1964 and Gen X as 1965 to 1979](https://mccrindle.com.au/article/topic/demographics/the-generations-defined), with Gen Y starting in 1980. An Australian born in 1980 can therefore be Gen X in one country's charts and a Millennial in another's.
-
-## Singapore: generations named by the state
-
-Singapore does something unusual: the government has named the older generations itself, because they come with benefits attached. The Merdeka Generation Package covers citizens [born from 1 January 1950 to 31 December 1959](https://www.mof.gov.sg/news-resources/newsroom/close-to-500-000-eligible-seniors-will-receive-letters-on-the-merdeka-generation-package-by-end-april/); an earlier Pioneer Generation Package covers older citizens.
-
-That makes the Singapore version of the boomer conversation unusually precise. The first Singaporean Gen Xers were born in 1965, the year the [Proclamation of Singapore was signed on 9 August](https://en.wikipedia.org/wiki/Proclamation_of_Singapore). For them, growing up and the country growing up happened at the same time.
-
-## So what does make Gen X different?
-
-Not much that can be pinned to a single birth year, if Pew is right about continuums. The one image that sticks, recorded in most descriptions of the generation, is the latchkey kid: children [coming home from school to an empty house](https://en.wikipedia.org/wiki/Generation_X) and letting themselves in with their own key.
-
-That is a useful thing to tell a Gen Z kid. Not "you're wrong," but "here's what it was like." The label is a joke; the story behind it is the interesting part.
-
-What does your family get wrong about your generation, and what do the kids call you in your country? Reply and tell us.
+What year were you born, where, and which label do you actually answer to?
 
 *AI-assisted, edited by Arun.*

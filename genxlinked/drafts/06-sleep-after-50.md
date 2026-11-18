@@ -1,69 +1,45 @@
 ---
-title: "Sleep after 50: which country's Gen X sleeps worst?"
+title: "The midlife sleep dip: what surveys in six countries show"
 pillar: body
-tags: [body, USA, UK, Canada, Australia, Ireland, New Zealand, Philippines, Singapore]
-excerpt: "No survey ranks Gen X sleep across our eight countries. Here is what the national data does show, age group by age group, and why the answers don't line up."
+tags: [body, USA, Canada, Australia, New Zealand, Ireland, Singapore, sleep]
+excerpt: "No survey ranks midlife sleep across countries. But where national data splits by age, the shortest nights fall in the middle years, and mornings improve after 65."
 sources:
-  - "Short Sleep Duration and Sleep Difficulties Among Adults: United States, 2024 (NCHS Data Brief 559) — https://www.cdc.gov/nchs/products/databriefs/db559.htm"
-  - "Poor sleep is costing young Australians five days a week… (Sleep Health Foundation, Australian Sleep Report 2025) — https://www.sleephealthfoundation.org.au/news-and-articles/poor-sleep-is-costing-young-australians-five-days-a-week-in-lost-productivity-and-nearly-half-the-nation-turns-to-sleep-medication"
-  - "Nuffield Health's 2023 Healthier Nation Index: only 36% of employees get a good night's sleep — Work in Mind — https://workinmind.org/2023/09/08/nuffield-healths-2023-healthier-nation-index-only-36-of-employees-get-a-good-nights-sleep/"
-  - "World Sleep Day — Statistics Canada — https://www.statcan.gc.ca/o1/en/plus/581-world-sleep-day"
-  - "Why 'getting a good night's sleep' is linked to good health (TILDA) — Trinity College Dublin — https://www.tcd.ie/news_events/articles/why-getting-a-good-nights-sleep-is-linked-to-good-health"
-  - "Filipinos are the most sleep-deprived in Southeast Asia — GMA News — https://www.gmanetwork.com/news/scitech/science/915312/filipinos-are-the-most-sleep-deprived-in-southeast-asia-study/story"
-  - "YouGov Singapore sleep poll, December 2018 — YouGov — https://yougov.com/articles/22132-four-ten-singaporeans-not-getting-enough-sleep"
-  - "ResMed's Fifth Annual Global Sleep Survey Reveals a World Struggling with Poor Sleep — https://investor.resmed.com/news-events/press-releases/detail/395/resmeds-fifth-annual-global-sleep-survey-reveals-a-world-struggling-with-poor-sleep"
-  - "YouGov global sleep article, June 2023 — YouGov — https://yougov.com/articles/46791-global-which-countries-cant-sleep"
-  - "Smartphones uncover how the world sleeps — ScienceDaily (University of Michigan) — https://www.sciencedaily.com/releases/2016/05/160506160105.htm"
+  - "Trinity College Dublin — Why 'getting a good night's sleep' is linked to good health (TILDA, 3 October 2019) — https://www.tcd.ie/news_events/articles/why-getting-a-good-nights-sleep-is-linked-to-good-health"
+  - "CDC/NCHS — Short Sleep Duration and Sleep Difficulties Among Adults: United States, 2024 (Data Brief 559, April 2026) — https://www.cdc.gov/nchs/products/databriefs/db559.htm"
+  - "Statistics Canada — World Sleep Day (18 March 2022) — https://www.statcan.gc.ca/o1/en/plus/581-world-sleep-day"
+  - "Sleep Health Foundation — Australian Sleep Report 2025 release (11 August 2025) — https://www.sleephealthfoundation.org.au/news-and-articles/poor-sleep-is-costing-young-australians-five-days-a-week-in-lost-productivity-and-nearly-half-the-nation-turns-to-sleep-medication"
+  - "Health New Zealand — Meeting sleep guidelines 2024/25: New Zealand Health Survey — https://www.health.govt.nz/publications/meeting-sleep-guidelines-202425-new-zealand-health-survey"
+  - "Li, Tai, Pan, Koh — Association between sleep duration from midlife to late life and the risk of depressive symptoms: the Singapore Chinese Health Study, BJPsych Open (2024) — https://pmc.ncbi.nlm.nih.gov/articles/PMC11536263"
+  - "ONS — Time use in the UK dataset (March 2026 edition) — https://www.ons.gov.uk/peoplepopulationandcommunity/personalandhouseholdfinances/incomeandwealth/datasets/timeuseintheuk"
+  - "ResMed — Fifth annual global sleep survey (26 February 2025) — https://investor.resmed.com/news-events/press-releases/detail/395/resmeds-fifth-annual-global-sleep-survey-reveals-a-world-struggling-with-poor-sleep"
 ---
 
-It is the question that comes up at every reunion: are you sleeping? For a lot of us, the honest answer is "not like I used to."
+"Sleep duration is an important contributor to physical and mental health," Professor Rose Anne Kenny, who leads the Irish Longitudinal Study on Ageing (TILDA) at Trinity College Dublin, said in 2019. It applies to all ages, she added, "but particularly mature adults, almost one third of whom experience impaired sleep duration according to our recent data."
 
-We set out to answer a simple question: which of our eight countries has the worst-sleeping Gen X? The short answer is that no one has measured it. No survey we could find asks the same question of people aged roughly 45 to 60 in the USA, UK, Canada, Australia, Ireland, New Zealand, the Philippines and Singapore. What does exist is a patchwork of national surveys, each with its own age bands and its own idea of "bad sleep". Here is what each one actually measured.
+If you have lain awake at 3am doing sums about the gas bill, you are in large company. What no one has done is measure that company the same way across countries. So we went looking at the national surveys that do split sleep by age, and asked a smaller question: where in adult life are the nights shortest?
 
-## United States: the 50–64 group sleeps shortest
+The answer keeps landing in the middle.
 
-The best age-banded data in this piece comes from the US. The [2024 National Health Interview Survey](https://www.cdc.gov/nchs/products/databriefs/db559.htm), published by the CDC's statistics centre in April 2026, asked adults how many hours they sleep in a 24-hour period.
+In the United States, the 2024 National Health Interview Survey found that 34.5% of adults aged 50 to 64 slept less than seven hours in 24, the highest of any age group, against 27.2% of those 65 and over (NCHS, published April 2026). The 50–64s were also the group most likely to have trouble staying asleep on most days or every day, at 22.3%, though the over-65s were close behind at 21.7%. Trouble falling asleep went the other way, easing with every age band.
 
-Among Americans aged 50 to 64, 34.5% reported six hours or less, the highest of any age group. The figure for ages 35 to 49 was 33.4%, and for those 65 and over it was 27.2%.
+In Canada, Statistics Canada reported on World Sleep Day in March 2022 that people aged 35 to 49 got the least sleep of any age group, an average of 7.7 hours a night, "possibly because of increased work and family demands." Seniors slept 12 minutes longer than adults under 65.
 
-The 50–64 group also had the highest share with trouble *staying* asleep on most days or every day: 22.3%. Trouble *falling* asleep went the other way, falling steadily with age, to 14.5% at 50 to 64.
+In Australia, the Sleep Health Foundation's 2025 sleep report found that "short sleep (under 6 hours) is most common in middle-aged Australians (55-64)." The same report found that 4 in 10 women use sleep medication during perimenopause and menopause. The foundation's summary does not give the sample size.
 
-## Australia: short sleep peaks at 55–64
+In Singapore, the long-running Singapore Chinese Health Study asked people about their sleep when they joined, between 1993 and 1998. In the 14,361 participants analysed in a 2024 paper, whose average age at the start was 52, 7.9% slept five hours or less a day and another 24.0% slept six. That is old data from one ethnic group, but it is midlife data, and the only such figures we found for the region.
 
-The Sleep Health Foundation's [Australian Sleep Report 2025](https://www.sleephealthfoundation.org.au/news-and-articles/poor-sleep-is-costing-young-australians-five-days-a-week-in-lost-productivity-and-nearly-half-the-nation-turns-to-sleep-medication) found that seven hours is the most common sleep length across every age group. But "short sleep (under 6 hours) is most common in middle-aged Australians (55-64)." Note the different cut-off: under six hours here, against six hours or less in the US figures. The foundation's summary does not give the sample size.
+Two countries give a reassuring all-ages or over-50 picture. New Zealand's Health Survey for 2024/25 found adults averaged 7.3 hours, and 27.0% usually slept less than recommended. TILDA strapped devices on Irish adults aged 50 and over for a week and found an average of 7 hours 42 minutes a night, with about 14% sleeping less than recommended (published 2019). Sleep length rose with age.
 
-## United Kingdom: 45–54s rate their sleep worst
+A commercial survey adds the hormone angle. ResMed, which makes medical devices for people with sleep apnoea, commissioned a survey of 30,026 people in 13 markets, including the US, UK, Australia, New Zealand and Singapore, in December 2024. It found that 44% of menopausal women had trouble falling asleep at least three times a week, against 33% of women who were not menopausal.
 
-Nuffield Health's 2023 Healthier Nation Index surveyed 8,000 UK adults. As [reported by Work in Mind](https://workinmind.org/2023/09/08/nuffield-healths-2023-healthier-nation-index-only-36-of-employees-get-a-good-nights-sleep/), people aged 45 to 54 said they had the worst sleep of any age group: only 29% called their sleep "good", and they averaged 5.72 hours a night. The average across all ages was 5.91 hours. These are self-reported figures from one commercial survey, and we could only find them in secondary coverage.
+We couldn't find national midlife sleep figures for the UK or the Philippines: the Office for National Statistics' time-use survey counts "sleep and rest" as one activity, and Philippine figures we found were commercial polls or covered only the over-60s.
 
-## Canada: the youngest Gen Xers get the least
+One caveat: every survey here asked a different question, in a different year, with different cut-offs, so read the numbers side by side, not as a ranking.
 
-Statistics Canada's [World Sleep Day summary](https://www.statcan.gc.ca/o1/en/plus/581-world-sleep-day) does not split out ages 45 to 60. It says 77% of adults under 65 meet sleep guidelines, and that 18% sleep less than seven hours. The group with the shortest average sleep was people aged 35 to 49, at 7.7 hours a night. That band includes only the youngest Gen Xers today.
-
-## Ireland: over-50s, measured with devices
-
-Ireland's longitudinal study of ageing, TILDA, [tracked adults aged 50 and over](https://www.tcd.ie/news_events/articles/why-getting-a-good-nights-sleep-is-linked-to-good-health) for a week using fitted devices and self-reported records. It found they slept an average of 7 hours 42 minutes a night. The study was published in 2019 and does not separate people in their fifties from older adults.
-
-## The Philippines and Singapore: all ages only
-
-Neither country has age-banded figures we could find. For the Philippines, consumer data firm Milieu Insight found in 2023 that [56% of Filipinos get less than seven hours](https://www.gmanetwork.com/news/scitech/science/915312/filipinos-are-the-most-sleep-deprived-in-southeast-asia-study/story) of sleep a day, the highest share in Southeast Asia. In Singapore, a 2018 YouGov poll of 1,022 people found [44% get less than seven hours](https://yougov.com/articles/22132-four-ten-singaporeans-not-getting-enough-sleep) a night. The one age detail it gave runs in our favour: 45% of Singaporeans aged 55 and over described their sleep quality as good.
-
-## New Zealand: in the survey, not in the headlines
-
-ResMed's 2025 global survey included 1,000 New Zealanders among 30,026 people in 13 markets, with each country's sample matched to its population by age and gender. But the [published results](https://investor.resmed.com/news-events/press-releases/detail/395/resmeds-fifth-annual-global-sleep-survey-reveals-a-world-struggling-with-poor-sleep) give no New Zealand figure and no age breakdown. They do say Australians were the most likely to "just live with" poor sleep, at up to 41%, against 22% globally. One finding is directly relevant to many Gen X women: 44% of menopausal women said they had trouble falling asleep at least three times a week, compared with 33% of women who were not menopausal.
-
-## Two cross-country snapshots
-
-A [2023 YouGov article](https://yougov.com/articles/46791-global-which-countries-cant-sleep) found that 68% of Britons, 67% of Americans and 66% of Australians say they find it hard to fall asleep, against a global average of 53%. It gave no age breakdown for that question.
-
-A 2016 University of Michigan study used data from a jet-lag app in about 100 countries. It found that [middle-aged men get the least sleep](https://www.sciencedaily.com/releases/2016/05/160506160105.htm) and that women schedule about 30 minutes more sleep than men, a gap most pronounced between ages 30 and 60. National averages ran from about 7 hours 24 minutes in Singapore and Japan to 8 hours 12 minutes in the Netherlands. The users were a self-selected group of app users, not a national sample.
-
-## So who sleeps worst?
-
-On the numbers we have, we can't crown anyone. The US says its 50–64s are the shortest sleepers. Australia says its 55–64s are. The UK says its 45–54s rate their sleep worst. Each survey asked a different question, used different cut-offs and was carried out in a different year. What they share is the pattern: across the countries that do report by age, midlife keeps turning up near the bottom.
+The best news is at the end of the American data. Waking up feeling well-rested on most days was least common among 35-to-49-year-olds (50.1%), rose to 54.5% at 50 to 64, and reached 63.5% among those 65 and over.
 
 This is not medical advice; talk to your doctor about your own health.
 
-**How has your sleep changed since your forties, and where in the world are you reading this from?**
+How has your sleep changed since your forties, and where are you reading this from?
 
 *AI-assisted, edited by Arun.*

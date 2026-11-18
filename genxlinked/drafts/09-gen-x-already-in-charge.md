@@ -1,89 +1,93 @@
 ---
-title: "Gen X is already running things: the leaders born 1965–1980"
+title: "Gen X runs several governments. In US boardrooms, the older bosses are staying on"
 pillar: in-charge
-tags: [in-charge, USA, UK, Canada, Australia, Ireland, New Zealand, Philippines, Singapore]
-excerpt: "Four of our eight countries now have a Gen X head of government. Here is who was born 1965–1980, who wasn't, and what the CEO data shows."
+tags: [in-charge, USA, UK, Canada, Australia, Ireland, New Zealand, Philippines, Singapore, Argentina, Chile, Kenya, Senegal, Thailand]
+excerpt: "Four of our eight countries have a prime minister born 1965–1980. In US boardrooms, Korn Ferry finds the generation ahead of us holding on longer."
+recheck: "heads of government — verify on publication day"
 sources:
-  - "List of current heads of state and government — Wikipedia — https://en.wikipedia.org/wiki/List_of_current_heads_of_state_and_government"
-  - "Prime Minister of the United Kingdom — Wikipedia — https://en.wikipedia.org/wiki/Prime_Minister_of_the_United_Kingdom"
-  - "Andy Burnham — Wikipedia — https://en.wikipedia.org/wiki/Andy_Burnham"
-  - "Mark Carney — Wikipedia — https://en.wikipedia.org/wiki/Mark_Carney"
-  - "Christopher Luxon — Wikipedia — https://en.wikipedia.org/wiki/Christopher_Luxon"
-  - "2026 New Zealand general election — Wikipedia — https://en.wikipedia.org/wiki/2026_New_Zealand_general_election"
-  - "Lawrence Wong — Wikipedia — https://en.wikipedia.org/wiki/Lawrence_Wong"
-  - "Donald Trump — Wikipedia — https://en.wikipedia.org/wiki/Donald_Trump"
-  - "Charles III — Wikipedia — https://en.wikipedia.org/wiki/Charles_III"
-  - "Anthony Albanese — Wikipedia — https://en.wikipedia.org/wiki/Anthony_Albanese"
-  - "Micheál Martin — Wikipedia — https://en.wikipedia.org/wiki/Mich%C3%A9al_Martin"
-  - "Catherine Connolly — Wikipedia — https://en.wikipedia.org/wiki/Catherine_Connolly"
-  - "Bongbong Marcos — Wikipedia — https://en.wikipedia.org/wiki/Bongbong_Marcos"
-  - "Tharman Shanmugaratnam — Wikipedia — https://en.wikipedia.org/wiki/Tharman_Shanmugaratnam"
-  - "Emmanuel Macron — Wikipedia — https://en.wikipedia.org/wiki/Emmanuel_Macron"
-  - "Giorgia Meloni — Wikipedia — https://en.wikipedia.org/wiki/Giorgia_Meloni"
-  - "Pedro Sánchez — Wikipedia — https://en.wikipedia.org/wiki/Pedro_S%C3%A1nchez"
-  - "Volodymyr Zelenskyy — Wikipedia — https://en.wikipedia.org/wiki/Volodymyr_Zelenskyy"
-  - "Kyriakos Mitsotakis — Wikipedia — https://en.wikipedia.org/wiki/Kyriakos_Mitsotakis"
-  - "Alexander Stubb — Wikipedia — https://en.wikipedia.org/wiki/Alexander_Stubb"
-  - "Bart De Wever — Wikipedia — https://en.wikipedia.org/wiki/Bart_De_Wever"
-  - "Haakon, Crown Prince of Norway (now King Haakon VIII) — Wikipedia — https://en.wikipedia.org/wiki/Haakon,_Crown_Prince_of_Norway"
-  - "Hitting Your 50s—But Not As a CEO — Korn Ferry — https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze"
+  - "Hitting Your 50s—But Not As a CEO — Korn Ferry (2025) — https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze"
+  - "Prime Minister - GOV.UK — https://www.gov.uk/government/ministers/prime-minister"
+  - "The Right Honourable Mark Carney | Prime Minister of Canada — https://www.pm.gc.ca/en/cabinet/right-honourable-mark-carney"
+  - "Swearing-in of the 30th Canadian Ministry — Prime Minister of Canada (2025) — https://www.pm.gc.ca/en/news/news-releases/2025/03/14/swearing-30th-canadian-ministry"
+  - "NZ will have a caretaker government for weeks. What that means and how it works — RNZ (2026) — https://www.rnz.co.nz/news/politics_election-2026/2441235/nz-will-have-a-caretaker-government-for-weeks-what-that-means-and-how-it-works"
+  - "Mr Lawrence WONG | Prime Minister's Office Singapore — https://www.pmo.gov.sg/about-us/the-cabinet/mr-lawrence-wong/"
+  - "President Donald J. Trump — The White House — https://www.whitehouse.gov/administration/donald-j-trump/"
+  - "About the Prime Minister | Prime Minister of Australia — https://www.pm.gov.au/about-prime-minister"
+  - "Department of the Taoiseach — gov.ie — https://www.gov.ie/en/department-of-the-taoiseach/"
+  - "The President | Biography | President of Ireland — https://president.ie/en/the-president/biography"
+  - "The President | The Philippine Embassy in New Zealand — https://mail.philembassy.org.nz/about/the-president"
+  - "The King | The Royal Family — https://www.royal.uk/the-king"
+  - "Casa Rosada (Presidency of Argentina) — https://www.casarosada.gob.ar/"
+  - "The Official Website of the President of the Republic of Kenya – H.E. William Samoei Ruto — https://www.president.go.ke/"
+  - "Présidence du Sénégal — https://www.presidence.sn/fr/president/biographie"
+  - "Norway's King Harald V dies at 89 and his son becomes king — AP via ABC7 Chicago (2026) — https://abc7chicago.com/story/norways-king-harald-dies-89-son-becomes/19750576/"
+  - "List of current heads of state and government — Wikipedia (backup) — https://en.wikipedia.org/wiki/List_of_current_heads_of_state_and_government"
+  - "Andy Burnham — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Andy_Burnham"
+  - "Mark Carney — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Mark_Carney"
+  - "Christopher Luxon — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Christopher_Luxon"
+  - "Lawrence Wong — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Lawrence_Wong"
+  - "Donald Trump — Wikipedia (backup) — https://en.wikipedia.org/wiki/Donald_Trump"
+  - "Anthony Albanese — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Anthony_Albanese"
+  - "Micheál Martin — Wikipedia (backup) — https://en.wikipedia.org/wiki/Mich%C3%A9al_Martin"
+  - "Catherine Connolly — Wikipedia (backup) — https://en.wikipedia.org/wiki/Catherine_Connolly"
+  - "Bongbong Marcos — Wikipedia (backup, start date) — https://en.wikipedia.org/wiki/Bongbong_Marcos"
+  - "Tharman Shanmugaratnam — Wikipedia (backup) — https://en.wikipedia.org/wiki/Tharman_Shanmugaratnam"
+  - "Javier Milei — Wikipedia (backup) — https://en.wikipedia.org/wiki/Javier_Milei"
+  - "José Antonio Kast — Wikipedia (backup) — https://en.wikipedia.org/wiki/Jos%C3%A9_Antonio_Kast"
+  - "William Ruto — Wikipedia (backup) — https://en.wikipedia.org/wiki/William_Ruto"
+  - "Bassirou Diomaye Faye — Wikipedia (backup) — https://en.wikipedia.org/wiki/Bassirou_Diomaye_Faye"
+  - "Anutin Charnvirakul — Wikipedia (backup) — https://en.wikipedia.org/wiki/Anutin_Charnvirakul"
+  - "Emmanuel Macron — Wikipedia (backup) — https://en.wikipedia.org/wiki/Emmanuel_Macron"
+  - "Giorgia Meloni — Wikipedia (backup) — https://en.wikipedia.org/wiki/Giorgia_Meloni"
+  - "Pedro Sánchez — Wikipedia (backup) — https://en.wikipedia.org/wiki/Pedro_S%C3%A1nchez"
+  - "Volodymyr Zelenskyy — Wikipedia (backup) — https://en.wikipedia.org/wiki/Volodymyr_Zelenskyy"
+  - "Haakon, Crown Prince of Norway — Wikipedia (backup, birth date) — https://en.wikipedia.org/wiki/Haakon,_Crown_Prince_of_Norway"
 ---
 
-For most of our working lives, the people at the top were older than us. That has quietly changed. As of mid-November 2026, four of the eight countries GenX Linked covers have a head of government born between 1965 and 1980.
+For most of our working lives, the people at the top were older than us. In government, that has changed: as of mid-November 2026, four of the eight countries GenX Linked covers have a prime minister born between 1965 and 1980. In the US corner office, it is moving more slowly. "The reason boomers may be staying in their roles longer has mostly to do with the desire for continuing job stability," Joe Griesedieck, a vice chairman at the search firm Korn Ferry, [told the firm's *This Week in Leadership*](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) in 2025.
 
-A note on method. Every birth date and start date below comes from each leader's Wikipedia page, checked in November 2026, and the overall line-up comes from Wikipedia's [list of current heads of state and government](https://en.wikipedia.org/wiki/List_of_current_heads_of_state_and_government). Leadership changes fast, so if you are reading this later, some of it may already be out of date. This piece is about birth years only. It takes no view on anyone's politics.
+Leaders change fast, so check before you quote this. Who holds each office comes from the government's own website where we could reach it; birth dates, and a few start dates, come from Wikipedia. This piece is about birth years only and takes no view on anyone's politics.
 
-## The four Gen X heads of government
+## The four Gen X prime ministers
 
-**United Kingdom.** [Andy Burnham](https://en.wikipedia.org/wiki/Andy_Burnham), born 7 January 1970, has been Prime Minister [since 20 July 2026](https://en.wikipedia.org/wiki/Prime_Minister_of_the_United_Kingdom). He won his party's leadership unopposed after Keir Starmer announced his resignation.
+**United Kingdom.** Andy Burnham, born 7 January 1970, has been Prime Minister [since 20 July 2026](https://www.gov.uk/government/ministers/prime-minister).
 
-**Canada.** [Mark Carney](https://en.wikipedia.org/wiki/Mark_Carney), born 16 March 1965 in Fort Smith, Northwest Territories, has been Prime Minister since 14 March 2025. Born in March 1965, he only just makes the Gen X cut.
+**Canada.** [Mark Carney](https://www.pm.gc.ca/en/cabinet/right-honourable-mark-carney), born 16 March 1965 in Fort Smith, Northwest Territories, was [sworn in on 14 March 2025](https://www.pm.gc.ca/en/news/news-releases/2025/03/14/swearing-30th-canadian-ministry). Born in March 1965, he only just makes the cut.
 
-**New Zealand.** [Christopher Luxon](https://en.wikipedia.org/wiki/Christopher_Luxon), born 19 July 1970, has been Prime Minister since 27 November 2023. New Zealand held a [general election on 7 November 2026](https://en.wikipedia.org/wiki/2026_New_Zealand_general_election). On preliminary results it was close, and Luxon said the government would run under caretaker conventions until official results, due on 27 November 2026.
+**New Zealand.** Christopher Luxon, born 19 July 1970, has been Prime Minister since 27 November 2023. The 7 November 2026 general election was too close to call, and the result is still pending: official results, including special votes, [are due on 27 November](https://www.rnz.co.nz/news/politics_election-2026/2441235/nz-will-have-a-caretaker-government-for-weeks-what-that-means-and-how-it-works). Until a government is formed, Luxon leads a caretaker government.
 
-**Singapore.** [Lawrence Wong](https://en.wikipedia.org/wiki/Lawrence_Wong), born 18 December 1972, has been Prime Minister since 15 May 2024.
+**Singapore.** [Lawrence Wong](https://www.pmo.gov.sg/about-us/the-cabinet/mr-lawrence-wong/), born 18 December 1972, has been Prime Minister since 15 May 2024.
 
 ## Who isn't Gen X, yet
 
-The rest of our eight countries are led by people born before 1965.
-
-- **United States:** President [Donald Trump](https://en.wikipedia.org/wiki/Donald_Trump), born 14 June 1946, in office since 20 January 2025.
-- **Australia:** Prime Minister [Anthony Albanese](https://en.wikipedia.org/wiki/Anthony_Albanese), born 2 March 1963, in office since 23 May 2022.
-- **Ireland:** Taoiseach [Micheál Martin](https://en.wikipedia.org/wiki/Mich%C3%A9al_Martin), born 16 August 1960, in office since 23 January 2025. President [Catherine Connolly](https://en.wikipedia.org/wiki/Catherine_Connolly), born 5 November 1955, in office since 11 November 2025.
-- **Philippines:** President [Bongbong Marcos](https://en.wikipedia.org/wiki/Bongbong_Marcos), born 13 September 1957, in office since 30 June 2022.
+- **United States:** [President Donald Trump](https://www.whitehouse.gov/administration/donald-j-trump/), born 14 June 1946, in office since 20 January 2025.
+- **Australia:** [Prime Minister Anthony Albanese](https://www.pm.gov.au/about-prime-minister), born 2 March 1963, sworn in on 23 May 2022.
+- **Ireland:** [Taoiseach Micheál Martin](https://www.gov.ie/en/department-of-the-taoiseach/), born 16 August 1960, in office since 23 January 2025. [President Catherine Connolly](https://president.ie/en/the-president/biography), born 5 November 1955, in office since 11 November 2025.
+- **Philippines:** [President Ferdinand R. Marcos Jr.](https://mail.philembassy.org.nz/about/the-president), born 13 September 1957, in office since 30 June 2022.
 - **Singapore's head of state:** President [Tharman Shanmugaratnam](https://en.wikipedia.org/wiki/Tharman_Shanmugaratnam), born 25 February 1957, in office since 14 September 2023.
 
-King [Charles III](https://en.wikipedia.org/wiki/Charles_III), born 14 November 1948, is head of state of the UK, Canada, Australia and New Zealand. He has reigned since 8 September 2022.
+[King Charles III](https://www.royal.uk/the-king), born 14 November 1948, has been head of state of the UK, Canada, Australia and New Zealand since 8 September 2022.
 
-So the split is clean: in our four parliamentary countries with a Gen X leader, it is the prime minister. Every head of state across all eight is older.
+So in our eight countries, Gen X holds the prime minister's office and nothing above it. Every head of state is older.
 
 ## Elsewhere in the world
 
-Look further afield and Gen X is well represented. All of these were in office as of November 2026, according to their Wikipedia pages:
+Further afield, all of these were in office in November 2026:
 
-- **France:** President [Emmanuel Macron](https://en.wikipedia.org/wiki/Emmanuel_Macron), born 21 December 1977, in office since 14 May 2017.
-- **Italy:** Prime Minister [Giorgia Meloni](https://en.wikipedia.org/wiki/Giorgia_Meloni), born 15 January 1977, since 22 October 2022.
-- **Spain:** Prime Minister [Pedro Sánchez](https://en.wikipedia.org/wiki/Pedro_S%C3%A1nchez), born 29 February 1972, since 2 June 2018.
-- **Ukraine:** President [Volodymyr Zelenskyy](https://en.wikipedia.org/wiki/Volodymyr_Zelenskyy), born 25 January 1978, since 20 May 2019.
-- **Greece:** Prime Minister [Kyriakos Mitsotakis](https://en.wikipedia.org/wiki/Kyriakos_Mitsotakis), born 4 March 1968, in his current term since 26 June 2023.
-- **Finland:** President [Alexander Stubb](https://en.wikipedia.org/wiki/Alexander_Stubb), born 1 April 1968, since 1 March 2024.
-- **Belgium:** Prime Minister [Bart De Wever](https://en.wikipedia.org/wiki/Bart_De_Wever), born 21 December 1970, since 3 February 2025.
-- **Norway:** King [Haakon VIII](https://en.wikipedia.org/wiki/Haakon,_Crown_Prince_of_Norway), born 20 July 1973, became king on 28 August 2026 on the death of his father, Harald V. He is the one Gen X monarch on this list.
+- **Argentina:** [President Javier Milei](https://www.casarosada.gob.ar/), born 22 October 1970, since 10 December 2023.
+- **Chile:** President [José Antonio Kast](https://en.wikipedia.org/wiki/Jos%C3%A9_Antonio_Kast), born 18 January 1966, since 11 March 2026.
+- **Kenya:** [President William Ruto](https://www.president.go.ke/), born 21 December 1966, since 13 September 2022.
+- **Senegal:** [President Bassirou Diomaye Faye](https://www.presidence.sn/fr/president/biographie), born 25 March 1980, since 2 April 2024. Born in 1980, he is at the other edge of Gen X from Carney.
+- **Thailand:** Prime Minister [Anutin Charnvirakul](https://en.wikipedia.org/wiki/Anutin_Charnvirakul), born 13 September 1966, first appointed on 7 September 2025.
+- **Europe:** France's President [Emmanuel Macron](https://en.wikipedia.org/wiki/Emmanuel_Macron) (born 1977, in office since May 2017), Italy's Prime Minister [Giorgia Meloni](https://en.wikipedia.org/wiki/Giorgia_Meloni) (1977), Spain's Prime Minister [Pedro Sánchez](https://en.wikipedia.org/wiki/Pedro_S%C3%A1nchez) (1972) and Ukraine's President [Volodymyr Zelenskyy](https://en.wikipedia.org/wiki/Volodymyr_Zelenskyy) (1978).
+- **Norway:** King Harald V [died on 28 August 2026](https://abc7chicago.com/story/norways-king-harald-dies-89-son-becomes/19750576/) and his son became King Haakon VIII. Born on [20 July 1973](https://en.wikipedia.org/wiki/Haakon,_Crown_Prince_of_Norway), he is a Gen X monarch.
 
-Of this group, Macron has been in office longest, since May 2017.
+## The corner office
 
-## And in the corner office?
+We looked for a clean count of Gen X chief executives and didn't find one we trust; reports use different company lists and age cut-offs. The figure that holds up is about age. [Korn Ferry reports](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) that in 2025 only 43% of top bosses at US companies were in their fifties, down from 51% in 2017, when The Conference Board and ESGAUGE analysed about 3,000 mid-sized and large US companies. Someone in their fifties in 2025 was born between about 1965 and 1975.
 
-We looked for a clean count of how many big-company CEOs are Gen X, and didn't find one we trust. Different reports use different company lists and age cut-offs, and their headline numbers disagree.
+Over the same years, the share of chief executives under 50 stayed at 15%. The share aged 60 or over rose from 35% to 42%.
 
-The closest solid figure is about age, not birth year. [Korn Ferry reports](https://www.kornferry.com/insights/this-week-in-leadership/the-gen-x-ceo-squeeze) that only 43% of top bosses are now in their fifties. In 2017, data on about 3,000 mid-sized and large US companies put that share at 51%. Someone in their fifties today was born between about 1966 and 1976, which is the heart of Gen X. Over the same stretch, the share of CEOs aged 60 or over rose from 35% to 42%, and the share under 50 stayed at 15%.
-
-In other words, Gen X holds a large slice of US boardroom jobs, but the generation ahead of us is holding on longer than it used to.
-
-## Your turn
-
-Political offices change with every election. What doesn't change is that people born in our years are now the ones making the calls, in government and in business.
-
-**Who is the first person your own age you remember seeing in charge of something big, and how did it feel?**
+**Who is the first person your own age you remember seeing in charge of something big? Tell us the year, the country and the city.**
 
 *AI-assisted, edited by Arun.*

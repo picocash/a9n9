@@ -1,44 +1,52 @@
 ---
 title: "What was your first concert?"
 pillar: connection
-tags: [connection, USA, UK, Ireland, Australia, Canada, Japan]
-excerpt: "Live Aid, Springsteen's Born in the U.S.A. tour, Michael Jackson's Bad tour: the big shows of our youth crossed borders. Where was your first?"
+tags: ["#callout", connection, USA, UK, Ireland, Australia, Canada, Japan, China, Singapore]
+excerpt: "Live Aid, Springsteen in Sydney, Wham! in Beijing, Michael Jackson in Singapore: the big shows of our youth crossed borders. Where was your first?"
 sources:
   - "Live Aid — Wikipedia — https://en.wikipedia.org/wiki/Live_Aid"
+  - "How Harvey Goldsmith Helped Pull Together Live Aid In Just 10 Weeks (Q&A) — Pollstar (2025) — https://news.pollstar.com/2025/07/21/qa-how-harvey-goldsmith-pulled-together-live-aid-in-just-10-weeks/"
+  - "40 Jahre Live Aid – Ein Weltereignis und sein Widerhall — News (Austria, 2025) — https://www.news.at/menschen/40-jahre-live-aid-ein-weltereignis-und-sein-widerhall"
   - "Born in the U.S.A. Tour — Wikipedia — https://en.wikipedia.org/wiki/Born_in_the_U.S.A._Tour"
+  - "Wham! in China: Foreign Skies — Wikipedia — https://en.wikipedia.org/wiki/Wham!_in_China:_Foreign_Skies"
   - "Bad (tour) — Wikipedia — https://en.wikipedia.org/wiki/Bad_(tour)"
+  - "Dangerous World Tour — Wikipedia — https://en.wikipedia.org/wiki/Dangerous_World_Tour"
 ---
 
 Ask anyone born between 1965 and 1980 about their first concert and you usually get two answers at once: the band, and the place. A stadium, a town hall, a field outside a castle. The ticket stub may be long gone, but the venue sticks.
 
-Our generation came of age just as the big touring shows went global. The same tour that played your city often played cities on the other side of the world a few months later. Here are three that crossed a lot of the countries GenX Linked readers live in.
+Even the people running the big shows remember the small things. Forty years on, Live Aid's promoter, Harvey Goldsmith, [told Pollstar](https://news.pollstar.com/2025/07/21/qa-how-harvey-goldsmith-pulled-together-live-aid-in-just-10-weeks/): "I bought three crates of ice-cold beer, drove down to Wembley, which calmed the crew down."
+
+Our generation came of age just as big touring shows went global. Here are five that crossed a lot of the countries GenX Linked readers live in.
 
 ## Live Aid, 13 July 1985
 
-Live Aid was [held on Saturday, 13 July 1985](https://en.wikipedia.org/wiki/Live_Aid), in two stadiums at once: Wembley in London and John F. Kennedy Stadium in Philadelphia. About 72,000 people were at Wembley and 89,484 at JFK.
+Live Aid was [held on Saturday, 13 July 1985](https://en.wikipedia.org/wiki/Live_Aid), in two stadiums at once: Wembley in London, with about 72,000 people, and John F. Kennedy Stadium in Philadelphia, with 89,484. The broadcast reached an estimated 1.9 billion people in 150 nations, and concerts inspired by it were held the same day in Canada, Japan, Australia, the Soviet Union, Yugoslavia, Austria and West Germany. By 2025, the Band Aid Charitable Trust had collected around £150 million in donations, [the Austrian magazine *News* reported](https://www.news.at/menschen/40-jahre-live-aid-ein-weltereignis-und-sein-widerhall).
 
-Most people saw it on television, not in a stadium. The broadcast reached an estimated 1.9 billion people in 150 nations, and concerts inspired by it were held the same day in Canada, Japan, Australia, the Soviet Union, Yugoslavia, Austria and West Germany. Around £150 million has been raised for famine relief as a direct result of the concerts.
+Most of us watched Live Aid from the couch. It doesn't count, and you know it.
 
-So if you were a kid in Sydney, Toronto or Leeds that summer, Live Aid may count as your first concert even though you never left the lounge room.
+## Wham! in China, April 1985
+
+Three months earlier, Wham! played [Beijing's Workers' Gymnasium on 7 April 1985](https://en.wikipedia.org/wiki/Wham!_in_China:_Foreign_Skies) to a crowd of about 12,000, with tickets at about $1.75. Three days later they played Guangzhou to about 5,000. Two Hong Kong concerts came first. The China shows were played without a fee.
 
 ## Springsteen's Born in the U.S.A. Tour, 1984–85
 
-Bruce Springsteen's [Born in the U.S.A. Tour](https://en.wikipedia.org/wiki/Born_in_the_U.S.A._Tour) ran from 29 June 1984 in Saint Paul, Minnesota, to 2 October 1985 in Los Angeles. It played 156 shows to a total audience of 3.9 million.
+Bruce Springsteen's [Born in the U.S.A. Tour](https://en.wikipedia.org/wiki/Born_in_the_U.S.A._Tour) ran from 29 June 1984 in Saint Paul, Minnesota, to 2 October 1985 in Los Angeles: 156 shows to a total audience of 3.9 million.
 
-It covered a lot of our map. A show at Toronto's CNE Stadium in July 1984 drew 68,187 people. The tour played eight concerts in Australia, starting in Sydney in March 1985, and eight in Japan, the only time Springsteen and the E Street Band have fronted a tour there. The European leg opened at Slane Castle in Ireland on 1 June 1985, then went on to England, including Wembley Stadium, St James' Park in Newcastle and Roundhay Park in Leeds.
+A show at Toronto's CNE Stadium in July 1984 drew 68,187 people. The tour played eight concerts in Australia, starting in Sydney in March 1985, and eight in Japan, the only time Springsteen and the E Street Band have fronted a tour there. The European leg opened at Slane Castle in Ireland on 1 June 1985, then went on to England, including Wembley Stadium, St James' Park in Newcastle and Roundhay Park in Leeds.
 
 ## Michael Jackson's Bad tour, 1987–89
 
-Michael Jackson's [Bad tour](https://en.wikipedia.org/wiki/Bad_(tour)) opened in Japan on 12 September 1987 and closed in Los Angeles on 27 January 1989: 123 shows in 15 countries, grossing $125 million.
+The [Bad tour](https://en.wikipedia.org/wiki/Bad_(tour)) opened in Japan on 12 September 1987 and closed in Los Angeles on 27 January 1989: 123 shows in 15 countries, grossing $125 million. In November 1987 Jackson played five concerts in Melbourne, Sydney and Brisbane; a planned New Zealand leg was cancelled. In 1988 he played seven sold-out nights at Wembley for 504,000 people, and he stopped in Cork, Ireland, on 30 July 1988.
 
-Between 13 and 28 November 1987 he played five concerts in Melbourne, Sydney and Brisbane. A planned New Zealand leg, with dates in Wellington and Auckland, was cancelled. In 1988 he played seven sold-out shows at Wembley for a total of 504,000 people, which put him in the Guinness World Records. The tour also stopped in Cardiff, Leeds, Liverpool and Milton Keynes, and in Cork, Ireland, on 30 July 1988.
+## Michael Jackson's Dangerous tour in Singapore, 1993
+
+On the [Dangerous World Tour](https://en.wikipedia.org/wiki/Dangerous_World_Tour), Jackson sold out two nights at Singapore's National Stadium, 94,000 tickets in all. The first was on 29 August 1993. The second was set for 30 August and moved to 1 September after he collapsed before the show; the tour records give exhaustion as the reason. The same Asian run went through Bangkok, Taipei and Fukuoka.
 
 ## Now it's your turn
 
-These are only three tours, and they skew to stadiums. Plenty of us started smaller: a school gym, a pub back room, a local band at a fair. Those count too. If you grew up in Manila, Singapore or Auckland, we would especially like to hear what came through town, because the big tour histories often leave those cities out.
+These skew to stadiums. Plenty of us started smaller: a school hall, a pub back room, a local band at a fair. Those count too. If you grew up in Manila or Auckland, we especially want to hear what came through town; the big tour histories mostly leave those cities out.
 
-Tell us the band, the year and the venue. If you remember what the ticket cost or how you got home, add that too.
-
-**What was your first concert, and where did you see it?**
+**What was your first concert? Tell us the band, the year, the venue, the city and the country.**
 
 *AI-assisted, edited by Arun.*
