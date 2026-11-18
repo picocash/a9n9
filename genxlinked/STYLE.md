@@ -97,4 +97,6 @@ result: 0-3 | Grasshopper | You'd be in the supermarket queue with everyone else
 result: 4-8 | Sensible | ...
 :::
 ```
-Pillars (tag slugs): connection, sandwich, body, bucket-list, in-charge, analog-life.
+Pillars (tag slugs): connection, sandwich, body, bucket-list, in-charge, analog-life, work-money.
+
+Reader threads (r/GenX, r/GenXWomen) may inspire a piece: paraphrase only, "a post in an online Gen X forum", no usernames, links or word-for-word quotes, no intimate or identifying details, unless Arun has the poster's permission. Mark the front matter `consent: "Reddit thread paraphrased; ask before quoting"`.

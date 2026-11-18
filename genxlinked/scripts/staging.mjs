@@ -29,6 +29,7 @@ const PILLARS = [
   ['bucket-list', 'Bucket list', 'The places we promised ourselves.'],
   ['in-charge', 'Gen X in charge', 'The generation now running things.'],
   ['analog-life', 'Analog life', 'Paperbacks, landlines and the gadgets we refuse to download an app for.'],
+  ['work-money', 'Work & money', 'Jobs after 50, retirement and our own bank accounts, country by country.'],
 ];
 const s = await api('GET', '/settings/');
 await api('PUT', '/settings/', { settings: [
