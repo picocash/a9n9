@@ -5,6 +5,43 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { marked } from 'marked';
 
+
+// ---- GenX Linked blocks: ::: stats | ::: stat | ::: chart | ::: poll ... ::: (each becomes a Ghost HTML card) ----
+const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const card = (html) => `\n\n<!--kg-card-begin: html-->\n${html}\n<!--kg-card-end: html-->\n\n`;
+const split = (l) => l.split('|').map((x) => x.trim());
+function kv(lines) { const o = {}, rest = []; for (const l of lines) { const m = l.match(/^(\w+):\s*(.*)$/); if (m && !l.includes('|')) o[m[1]] = m[2]; else rest.push(l); } return [o, rest]; }
+function stats(lines) {
+  const items = lines.map(split).map(([n, label, src]) => `<div class="gxl-stat"><span class="gxl-stat-n">${esc(n)}</span><span class="gxl-stat-l">${esc(label || '')}</span>${src ? `<span class="gxl-stat-s">${esc(src)}</span>` : ''}</div>`);
+  return card(`<div class="gxl-stats">${items.join('')}</div>`);
+}
+function stat(lines) { const [n, label, src] = split(lines.join(' ')); return card(`<div class="gxl-pullstat"><span class="gxl-stat-n">${esc(n)}</span><span class="gxl-stat-l">${esc(label || '')}</span>${src ? `<span class="gxl-stat-s">${esc(src)}</span>` : ''}</div>`); }
+function chart(lines) {
+  const [o, rows] = kv(lines);
+  const data = rows.map(split).filter((r) => r.length >= 2 && r[1] !== '' && !isNaN(parseFloat(r[1]))).map(([label, v, note]) => ({ label, v: parseFloat(v), shown: v, note }));
+  if (!data.length) throw new Error('chart without rows');
+  const unit = o.unit || '', max = Math.max(...data.map((d) => d.v), o.max ? parseFloat(o.max) : 0) || 1;
+  const W = 640, L = 150, R = 70, rowH = 34, top = 8, H = top + data.length * rowH + 4, bw = W - L - R;
+  const bars = data.map((d, i) => { const y = top + i * rowH, w = Math.max(2, (d.v / max) * bw), hi = o.highlight && d.label === o.highlight;
+    return `<g class="gxl-bar${hi ? ' is-hi' : ''}"><text class="gxl-bar-label" x="${L - 10}" y="${y + 21}" text-anchor="end">${esc(d.label)}</text><rect x="${L}" y="${y + 6}" width="${w.toFixed(1)}" height="22" rx="2"/><text class="gxl-bar-value" x="${(L + w + 8).toFixed(1)}" y="${y + 22}">${esc(d.shown)}${esc(unit)}</text></g>`; }).join('');
+  const svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title || 'Chart')}">${bars}</svg>`;
+  const table = `<table class="gxl-sr"><caption>${esc(o.title || '')}</caption>${data.map((d) => `<tr><th>${esc(d.label)}</th><td>${esc(d.shown)}${esc(unit)}</td></tr>`).join('')}</table>`;
+  return card(`<figure class="gxl-chart"><figcaption class="gxl-chart-title">${esc(o.title || '')}</figcaption>${o.subtitle ? `<p class="gxl-chart-sub">${esc(o.subtitle)}</p>` : ''}${svg}${table}${o.source ? `<p class="gxl-chart-src">Source: ${esc(o.source)}</p>` : ''}</figure>`);
+}
+function poll(lines) {
+  const [o, rest] = kv(lines);
+  const opts = rest.filter((l) => l.startsWith('- ')).map((l) => l.slice(2).trim());
+  if (!/^[a-z0-9-]{3,64}$/.test(o.id || '') || opts.length < 2 || opts.length > 6) throw new Error(`poll needs id (a-z0-9-) and 2-6 options: ${o.id}`);
+  return card(`<div class="gxl-poll" data-poll="${esc(o.id)}"><p class="gxl-poll-kicker">Quick poll</p><p class="gxl-poll-q">${esc(o.question || '')}</p><div class="gxl-poll-opts">${opts.map((t, i) => `<button type="button" class="gxl-poll-opt" data-i="${i}"><span class="gxl-poll-t">${esc(t)}</span><span class="gxl-poll-bar"></span><span class="gxl-poll-pct"></span></button>`).join('')}</div><p class="gxl-poll-note">One tap. Anonymous. Results show after you vote.</p></div>`);
+}
+const BLOCKS = { stats, stat, chart, poll };
+function blocks(md) {
+  return md.replace(/^:::[ \t]*(\w+)[ \t]*\n([\s\S]*?)\n:::[ \t]*$/gm, (m, kind, body) => {
+    const f = BLOCKS[kind]; if (!f) throw new Error(`unknown block ::: ${kind}`);
+    return f(body.split('\n').map((l) => l.trim()).filter(Boolean));
+  });
+}
+
 const unq = (s) => s.trim().replace(/^["']|["']$/g, '');
 function parse(file) {
   const raw = fs.readFileSync(file, 'utf8');
@@ -26,7 +63,7 @@ function parse(file) {
   const md = `${body}\n\n${src.length ? `## Sources\n\n${src.join('\n')}\n\n` : ''}${ai}\n`;
   const slug = path.basename(file, '.md').replace(/^\d+-/, '');
   const tags = [...new Set([fm.pillar, ...(fm.tags || [])].filter(Boolean))].map((name) => ({ name }));
-  return { title: fm.title, slug, html: marked.parse(md), custom_excerpt: (fm.excerpt || '').slice(0, 300) || undefined, tags, status: 'draft' };
+  return { title: fm.title, slug, html: marked.parse(blocks(md)), custom_excerpt: (fm.excerpt || '').slice(0, 300) || undefined, tags, status: 'draft' };
 }
 const files = process.argv.slice(2);
 if (!files.length) { console.error('usage: ghost-payload.mjs file.md ...'); process.exit(2); }

@@ -12,7 +12,7 @@
   --color-lighter-gray: #E6D8BA;
   --font-sans: var(--gxl-serif);
   --font-serif: var(--gxl-serif);
-  --font-serif-alt: var(--gxl-display);
+  --font-serif-alt: var(--gxl-serif);
   --font-mono: var(--gxl-mono);
   --ghost-accent-color: var(--gxl-rust);
 }
@@ -140,3 +140,41 @@ body { font-family: var(--gxl-serif); }
   .gxl-nav-actions .gxl-btn-ghost { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---- Article blocks: stat strip, pull-stat, chart, poll ---- */
+.gh-content .gxl-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0; border-top: 3px solid var(--gxl-ink); border-bottom: 3px solid var(--gxl-ink); margin: 0 0 3.2rem; }
+.gxl-stat { padding: 16px 16px 14px; border-right: 1px solid var(--gxl-rule); display: flex; flex-direction: column; gap: 6px; }
+.gxl-stat:last-child { border-right: none; }
+.gxl-stat-n { font-family: var(--gxl-display); font-weight: 800; font-size: clamp(4rem, 6vw, 5.6rem); line-height: .9; color: var(--gxl-rust); font-variant-numeric: tabular-nums; }
+.gxl-stat-l { font-family: var(--gxl-serif); font-size: 1.55rem; line-height: 1.35; color: var(--gxl-ink); }
+.gxl-stat-s { font-family: var(--gxl-mono); font-size: 1.1rem; text-transform: uppercase; letter-spacing: .05em; color: var(--gxl-ink-2); }
+.gh-content .gxl-pullstat { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 22px; padding: 22px 0; border-top: 1px solid var(--gxl-ink); border-bottom: 1px solid var(--gxl-ink); margin: 3.6rem 0; }
+.gxl-pullstat .gxl-stat-n { font-size: clamp(6rem, 11vw, 9.6rem); grid-row: span 2; color: var(--gxl-teal); }
+.gxl-pullstat .gxl-stat-l { font-family: var(--gxl-display); font-weight: 700; font-size: 2.6rem; line-height: 1.1; }
+
+.gh-content .gxl-chart { margin: 3.6rem 0; padding: 20px 20px 14px; background: var(--gxl-paper); border: 1.5px solid var(--gxl-ink); }
+.gxl-chart-title { font-family: var(--gxl-display); font-weight: 800; font-size: 2.6rem; line-height: 1.05; margin: 0 0 4px; text-align: left; color: var(--gxl-ink); }
+.gxl-chart-sub { font-size: 1.5rem; margin: 0 0 10px; color: var(--gxl-ink-2); }
+.gxl-chart svg { width: 100%; height: auto; display: block; margin-top: 8px; }
+.gxl-bar rect { fill: var(--gxl-denim); }
+.gxl-bar.is-hi rect { fill: var(--gxl-rust); }
+.gxl-bar-label { font-family: var(--gxl-mono); font-size: 14px; fill: var(--gxl-ink); }
+.gxl-bar-value { font-family: var(--gxl-display); font-weight: 800; font-size: 19px; fill: var(--gxl-ink); }
+.gxl-chart-src { font-family: var(--gxl-mono); font-size: 1.1rem; text-transform: uppercase; letter-spacing: .04em; color: var(--gxl-ink-2); margin: 10px 0 0; }
+.gxl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.gh-content .gxl-poll { margin: 3.6rem 0; padding: 22px; background: var(--gxl-mustard); color: var(--gxl-ink); border: 2px solid var(--gxl-ink); box-shadow: 6px 6px 0 var(--gxl-ink); }
+.gxl-poll-kicker { font-family: var(--gxl-mono); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; letter-spacing: .1em; margin: 0 0 6px; }
+.gh-content .gxl-poll-q { font-family: var(--gxl-display); font-weight: 800; font-size: 2.8rem; line-height: 1.05; margin: 0 0 14px; }
+.gxl-poll-opts { display: grid; gap: 8px; }
+.gxl-poll-opt { position: relative; overflow: hidden; display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; background: var(--gxl-cream); border: 1.5px solid var(--gxl-ink); color: var(--gxl-ink); font-family: var(--gxl-serif); font-size: 1.65rem; text-align: left; cursor: pointer; }
+.gxl-poll-opt:hover:not(:disabled) { background: var(--gxl-paper); transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--gxl-ink); }
+.gxl-poll-opt:disabled { cursor: default; }
+.gxl-poll-t, .gxl-poll-pct { position: relative; z-index: 1; }
+.gxl-poll-pct { font-family: var(--gxl-display); font-weight: 800; font-size: 2rem; }
+.gxl-poll-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #E8C77A; transition: width .6s ease; }
+.gxl-poll-opt.is-mine { font-weight: 600; }
+.gxl-poll-opt.is-mine .gxl-poll-bar { background: var(--gxl-rust); opacity: .35; }
+.gxl-poll-note { font-family: var(--gxl-mono); font-size: 1.15rem; margin: 12px 0 0; }
+@media (max-width: 680px) { .gh-content .gxl-pullstat { grid-template-columns: 1fr; } .gxl-pullstat .gxl-stat-n { grid-row: auto; } }
+@media (prefers-reduced-motion: reduce) { .gxl-poll-bar { transition: none; } }
