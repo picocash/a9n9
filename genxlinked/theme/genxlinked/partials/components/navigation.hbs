@@ -7,7 +7,7 @@
             {{#if @site.members_enabled}}
                 {{#unless @member}}
                     <a class="gxl-btn gxl-btn-ghost" href="#/portal/signin" data-portal="signin">{{t "Sign in"}}</a>
-                    <a class="gxl-btn" href="#/portal/signup" data-portal="signup">{{t "Subscribe"}}</a>
+                    <a class="gxl-btn" href="#join" data-gxl-join>{{t "Subscribe"}}</a>
                 {{else}}
                     <a class="gxl-btn" href="#/portal/account" data-portal="account">{{t "Account"}}</a>
                 {{/unless}}

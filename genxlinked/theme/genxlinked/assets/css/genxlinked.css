@@ -346,3 +346,26 @@ h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans
   .gxl-nav-actions .gxl-btn { padding: 7px 10px; font-size: 1.1rem; }
 }
 .gxl-logo .gxl-logo-b { color: var(--gxl-rust); } .gxl-footer .gxl-logo .gxl-logo-b { color: var(--gxl-cream); }
+
+/* Join modal */
+.gxl-noscroll { overflow: hidden; }
+.gxl-join { position: fixed; inset: 0; z-index: 100; background: rgba(43, 38, 34, .55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.gxl-join[hidden] { display: none; }
+.gxl-join-box { position: relative; width: 100%; max-width: 440px; background: var(--gxl-cream); border: 3px solid var(--gxl-ink); box-shadow: 8px 8px 0 var(--gxl-rust); padding: 28px 26px 22px; color: var(--gxl-ink); }
+.gxl-join-box h2 { font-family: var(--gxl-display); font-weight: 800; font-size: 3.4rem; line-height: 1; margin: 0 0 8px; }
+.gxl-join-sub { font-size: 1.55rem; margin: 0 0 16px; color: var(--gxl-ink-2); }
+.gxl-join-x { position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 2.8rem; line-height: 1; color: var(--gxl-ink); cursor: pointer; }
+.gxl-join form { display: grid; gap: 6px; }
+.gxl-join label { font-family: var(--gxl-mono); font-weight: 700; font-size: 1.15rem; text-transform: uppercase; letter-spacing: .06em; margin-top: 6px; }
+.gxl-join label span { font-weight: 400; text-transform: none; }
+.gxl-join input { width: 100%; padding: 12px 14px; font-size: 1.7rem; font-family: var(--gxl-serif); border: 2px solid var(--gxl-ink); background: #fff; color: var(--gxl-ink); }
+.gxl-join input:focus { outline: 3px solid var(--gxl-mustard); outline-offset: 0; }
+#gxl-join-code { font-family: var(--gxl-mono); font-size: 2.6rem; letter-spacing: .4em; text-align: center; }
+.gxl-join .gxl-btn { margin-top: 12px; padding: 13px; font-size: 1.4rem; justify-content: center; text-align: center; }
+.gxl-join-err { color: #A33A12; font-size: 1.4rem; min-height: 1em; margin: 6px 0 0; }
+.gxl-join-alt { margin: 14px 0 0; font-size: 1.35rem; }
+.gxl-join-alt button { background: none; border: none; padding: 0; color: var(--gxl-rust); text-decoration: underline; cursor: pointer; font: inherit; }
+.gxl-join-google { margin-bottom: 14px; }
+.gxl-join-gbtn { display: flex; justify-content: center; min-height: 44px; }
+.gxl-join-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; font-family: var(--gxl-mono); font-size: 1.15rem; text-transform: uppercase; color: var(--gxl-ink-2); }
+.gxl-join-or::before, .gxl-join-or::after { content: ""; flex: 1; border-top: 1px solid var(--gxl-rule); }

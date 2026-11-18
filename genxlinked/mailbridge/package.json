@@ -1,0 +1,1 @@
+{ "name": "gxl-mailbridge", "private": true, "type": "module", "dependencies": { "smtp-server": "^3.13.0", "mailparser": "^3.7.0" } }

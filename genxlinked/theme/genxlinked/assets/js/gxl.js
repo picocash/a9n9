@@ -132,3 +132,99 @@
   if (!btn || !nav) return;
   btn.addEventListener('click', function () { var open = nav.classList.toggle('is-open'); btn.setAttribute('aria-expanded', String(open)); btn.textContent = open ? 'Close' : 'Sections'; });
 })();
+/* Join with a code (like beatthechefs): email -> 6-digit code -> signed in and subscribed. No password, no link to click.
+   /gxl-api/join creates the member unsubscribed; Ghost's own sign-in sends the code (OTC); after the code checks out,
+   the signed-in member subscribes themselves to the newsletter. */
+(function () {
+  var NEWSLETTER = '6afda7bc4d15660001e2b1df';
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+  function el(html) { var d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstChild; }
+  var modal = el('<div class="gxl-join" role="dialog" aria-modal="true" aria-labelledby="gxl-join-h" hidden><div class="gxl-join-box">' +
+    '<button type="button" class="gxl-join-x" aria-label="Close">&times;</button>' +
+    '<div class="gxl-join-step" data-step="1"><p class="gxl-poll-kicker">Free, one letter a week</p><h2 id="gxl-join-h">Join GenXLinked</h2>' +
+    '<p class="gxl-join-sub">No password. We email you a 6-digit code.</p>' +
+    '<div class="gxl-join-google" hidden></div>' +
+    '<form class="gxl-join-f1"><label for="gxl-join-email">Email</label><input id="gxl-join-email" type="email" autocomplete="email" required placeholder="you@example.com">' +
+    '<label for="gxl-join-name">First name <span>(optional)</span></label><input id="gxl-join-name" type="text" autocomplete="given-name" maxlength="80">' +
+    '<button type="submit" class="gxl-btn">Send me a code</button><p class="gxl-join-err" role="alert"></p></form></div>' +
+    '<div class="gxl-join-step" data-step="2" hidden><p class="gxl-poll-kicker">Check your email</p><h2>Enter your code</h2>' +
+    '<p class="gxl-join-sub">We sent a 6-digit code to <b class="gxl-join-to"></b>. It may take a minute; check spam too.</p>' +
+    '<form class="gxl-join-f2"><label for="gxl-join-code">Code</label><input id="gxl-join-code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" required>' +
+    '<button type="submit" class="gxl-btn">Sign in</button><p class="gxl-join-err" role="alert"></p></form>' +
+    '<p class="gxl-join-alt"><button type="button" class="gxl-join-back">Use a different email</button> &middot; <button type="button" class="gxl-join-resend">Send a new code</button></p></div>' +
+    '</div></div>');
+  document.body.appendChild(modal);
+  var state = { email: '', ref: '' }, lastFocus = null;
+  function show(step) { modal.querySelectorAll('.gxl-join-step').forEach(function (s) { s.hidden = s.getAttribute('data-step') !== String(step); }); var f = modal.querySelector('.gxl-join-step:not([hidden]) input'); if (f) setTimeout(function () { f.focus(); }, 30); }
+  function open() { lastFocus = document.activeElement; modal.hidden = false; document.documentElement.classList.add('gxl-noscroll'); show(state.ref ? 2 : 1); }
+  function close() { modal.hidden = true; document.documentElement.classList.remove('gxl-noscroll'); if (lastFocus) lastFocus.focus(); if (location.hash === '#join') history.replaceState(null, '', location.pathname + location.search); }
+  function err(form, msg) { form.querySelector('.gxl-join-err').textContent = msg || ''; }
+  function busy(form, on) { var b = form.querySelector('button[type=submit]'); b.disabled = on; b.dataset.label = b.dataset.label || b.textContent; b.textContent = on ? 'One moment…' : b.dataset.label; }
+  function sendCode() {
+    return fetch('/members/api/integrity-token/', { credentials: 'same-origin' }).then(function (r) { return r.text(); }).then(function (tok) {
+      return fetch('/members/api/send-magic-link/', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: state.email, emailType: 'signin', includeOTC: true, integrityToken: tok, honeypot: '' }) });
+    }).then(function (r) { if (r.status === 429) throw new Error('Too many tries for this address. Wait a few minutes, then try again.'); if (!r.ok) throw new Error('send'); return r.json(); }).then(function (j) { state.ref = j.otc_ref || ''; return j; });
+  }
+  modal.querySelector('.gxl-join-f1').addEventListener('submit', function (e) {
+    e.preventDefault(); var f = e.target; err(f); busy(f, true);
+    state.email = f.querySelector('#gxl-join-email').value.trim();
+    fetch('/gxl-api/join', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: state.email, name: f.querySelector('#gxl-join-name').value.trim() }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || 'Something went wrong. Try again.'); }); })
+      .then(sendCode).then(function () {
+        modal.querySelector('.gxl-join-to').textContent = state.email;
+        if (!state.ref) { modal.querySelector('[data-step="2"] .gxl-join-sub').innerHTML = 'We emailed a sign-in link to <b>' + esc(state.email) + '</b>. Open it on this device to finish.'; modal.querySelector('.gxl-join-f2').hidden = true; }
+        try { localStorage.setItem('gxl-join-sub', '1'); } catch (x) {}
+        show(2);
+      }).catch(function (x) { err(f, x.message === 'send' ? 'We could not send the code. Check the address and try again.' : x.message); }).then(function () { busy(f, false); });
+  });
+  modal.querySelector('.gxl-join-f2').addEventListener('submit', function (e) {
+    e.preventDefault(); var f = e.target; err(f); busy(f, true);
+    var otc = f.querySelector('#gxl-join-code').value.trim();
+    fetch('/members/api/integrity-token/', { credentials: 'same-origin' }).then(function (r) { return r.text(); })
+      .then(function (tok) { return fetch('/members/api/verify-otc/', { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ otc: otc, otcRef: state.ref, integrityToken: tok }) }); })
+      .then(function (r) { if (r.status === 429) throw new Error('Too many tries. Wait a few minutes, then send a new code.'); return r.json().then(function (j) { if (!r.ok || !j.redirectUrl) throw new Error('That code did not work. Check it, or send a new one.'); location.href = j.redirectUrl; }); })
+      .catch(function (x) { err(f, x.message); busy(f, false); });
+  });
+  modal.querySelector('.gxl-join-back').addEventListener('click', function () { state.ref = ''; show(1); });
+  modal.querySelector('.gxl-join-resend').addEventListener('click', function (e) { var b = e.target; b.disabled = true; sendCode().then(function () { b.textContent = 'Sent'; }).catch(function () { b.textContent = 'Try again'; b.disabled = false; }); });
+  modal.querySelector('.gxl-join-x').addEventListener('click', close);
+  modal.addEventListener('click', function (e) { if (e.target === modal) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) close(); });
+  document.addEventListener('click', function (e) { var t = e.target.closest('[data-gxl-join]'); if (t) { e.preventDefault(); open(); } });
+  if (location.hash === '#join' || location.hash === '#/portal/signup') open();
+  // After the code: subscribe the now signed-in member to the weekly letter, once.
+  var flag = null; try { flag = localStorage.getItem('gxl-join-sub'); } catch (x) {}
+  if (document.body.getAttribute('data-gxl-member') === '1' && flag) {
+    fetch('/members/api/member/', { method: 'PUT', credentials: 'same-origin', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ newsletters: [{ id: NEWSLETTER }] }) })
+      .then(function (r) { if (r.ok) { try { localStorage.removeItem('gxl-join-sub'); } catch (x) {} var t = document.createElement('div'); t.className = 'gxl-toast'; t.textContent = "You're in. One letter a week, free."; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3500); } });
+  }
+  window.gxlJoin = { open: open, close: close, state: state, show: show };
+})();
+/* Continue with Google (only when /gxl-api/config returns a client ID). Google's script loads only when the join box opens. */
+(function () {
+  var box = document.querySelector('.gxl-join-google'); if (!box || !window.gxlJoin) return;
+  var loaded = false, origOpen = window.gxlJoin.open;
+  function onCred(resp) {
+    var err = document.querySelector('.gxl-join-f1 .gxl-join-err'); if (err) err.textContent = '';
+    fetch('/gxl-api/google', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ credential: resp.credential }) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok || !j.url) throw new Error(j.error || 'Google sign-in failed. Use the email code.'); location.href = j.url; }); })
+      .catch(function (x) { if (err) err.textContent = x.message; });
+  }
+  function setup() {
+    if (loaded) return; loaded = true;
+    fetch('/gxl-api/config').then(function (r) { return r.json(); }).then(function (c) {
+      if (!c.googleClientId) return;
+      var s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+      s.onload = function () {
+        google.accounts.id.initialize({ client_id: c.googleClientId, callback: onCred, auto_select: false, itp_support: true, use_fedcm_for_prompt: true });
+        box.hidden = false; box.innerHTML = '<div class="gxl-join-gbtn"></div><p class="gxl-join-or"><span>or use your email</span></p>';
+        google.accounts.id.renderButton(box.querySelector('.gxl-join-gbtn'), { theme: 'outline', size: 'large', text: 'continue_with', shape: 'rectangular', width: Math.min(380, box.clientWidth || 340) });
+        google.accounts.id.prompt();
+      };
+      document.head.appendChild(s);
+    }).catch(function () {});
+  }
+  window.gxlJoin.open = function () { origOpen(); setup(); };
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-gxl-join]')) setup(); }, true);
+  if (location.hash === '#join') setup();
+})();
