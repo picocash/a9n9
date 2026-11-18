@@ -18,12 +18,13 @@ function teaser(p) {
   const link = `${p.url}?utm_source=substack&utm_medium=newsletter&utm_campaign=${p.slug}`;
   const interactive = /gxl-quiz/.test(p.html) ? 'take the quiz' : /gxl-poll/.test(p.html) ? 'answer the one-tap poll' : 'see the charts';
   return [
-    `<p><em>Originally published at <a href="${link}">GenXLinked</a>.</em></p>`,
+    p.custom_excerpt ? `<p><em>${x(p.custom_excerpt)}</em></p>` : '',
     p.feature_image ? `<p><img src="${p.feature_image}" alt="${x(p.feature_image_alt || p.title)}"></p>` : '',
     ...paras.map((t) => `<p>${t}</p>`),
     ig[1] ? `<p><img src="${ig[1]}" alt="${x(ig[2])}"></p>` : '',
     `<p><strong><a href="${link}">Read the full story on GenXLinked, and ${interactive} →</a></strong></p>`,
     `<p>Same year, different country: tell us yours in the comments (your birth year, country and city).</p>`,
+    `<p><em>Originally published at <a href="${link}">GenXLinked</a>.</em></p>`,
   ].filter(Boolean).join('\n');
 }
 const items = posts.map((p) => `<item><title>${x(p.title)}</title><link>${x(p.url)}</link><guid isPermaLink="false">genxlinked-${p.id}</guid><pubDate>${new Date(p.published_at).toUTCString()}</pubDate><description>${cdata(p.custom_excerpt || '')}</description><content:encoded>${cdata(teaser(p))}</content:encoded></item>`).join('\n');
