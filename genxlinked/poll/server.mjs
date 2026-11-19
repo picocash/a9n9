@@ -63,8 +63,9 @@ function limited(ip) { const now = Date.now(), h = hits.get(ip) || [0, now]; if 
 const send = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': 'https://genxlinked.com' }); res.end(JSON.stringify(obj)); };
 const view = (id) => { const p = db.polls[id] || { counts: [] }; return { id, counts: p.counts, total: p.counts.reduce((a, b) => a + b, 0) }; };
 http.createServer((req, res) => {
-  if (req.method === 'GET' && /^\/gxl-api\/feed\/substack\.xml(\?.*)?$/.test(req.url)) {
-    try { res.writeHead(200, { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'max-age=300' }); return res.end(fs.readFileSync(`${DIR}/substack.xml`)); }
+  if (req.method === 'GET' && /^\/gxl-api\/feed\/substack(-next)?\.xml(\?.*)?$/.test(req.url)) {
+    const f = req.url.includes('substack-next') ? 'substack-next.xml' : 'substack.xml'; // -next = one-off batch built by hand for Arun
+    try { const body = fs.readFileSync(`${DIR}/${f}`); res.writeHead(200, { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'max-age=300' }); return res.end(body); }
     catch { res.writeHead(503); return res.end('feed not built yet'); }
   }
   if (req.method === 'GET' && req.url.split('?')[0] === '/gxl-api/config') return send(res, 200, { googleClientId: GOOGLE_CLIENT_ID || null });
