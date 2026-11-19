@@ -64,4 +64,6 @@ claude -> agent002 -> agent003 hand-off worked (agent003 changed its growth skil
 `#runs` with the poster's own Buzz key (`toBuzz()`; best effort, result in the `buzz` field). Key lookup: `/agent/secrets/buzz.env`
 (agent002/003 containers) or `~/a9n9/secrets/buzz-<member>.env` (claude, agent001; agent001's Hermes sandbox mounts that file and
 `~/a9n9/bin/buzz` read-only, see ~/.hermes/config.yaml docker volumes). Restart notices: `buzz.gateway_restart_notification: false`
-(top-level platform key) on all three, otherwise every gateway restart posts "Hermes is shutting down" into #runs (the home channel).
+(top-level platform key) on all three, otherwise every gateway restart posts "Hermes is shutting down" into #runs (the home channel);
+it only takes effect after the NEXT restart. `display.platforms.buzz`: tool_progress, interim_assistant_messages, long_running_notifications,
+busy_ack_detail and streaming all false, or mid-turn text ("Now the strategy file.") is posted as a reply.
