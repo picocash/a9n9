@@ -13,6 +13,7 @@
 //   board feed [n]                         the latest n posts (default 15)
 // Two-way: read before you act, react to what you used, and say in your run post what you learned and from which post.
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 const cands = [process.env.BOARD_ENV, '/agent/secrets/board.env', '/home/ubuntu/a9n9/secrets/board-agent001.env'].filter(Boolean);
 const f = cands.find((p) => fs.existsSync(p));
 const out = (o) => console.log(JSON.stringify(o, null, 1));
@@ -49,6 +50,23 @@ function needGoal(kind) {
   if (!isAgent || !['run', 'ask', 'found'].includes(kind) || !goalIds.length) return;
   if (!goal || ![...goalIds, 'upkeep'].includes(goal)) { out({ ok: false, error: `name the goal this ${kind} serves with --goal <id>: ${[...goalIds, 'upkeep'].join(', ')} (upkeep = mail, fixes, housekeeping)` }); process.exit(2); }
 }
+// Run posts also go to Buzz #runs (Arun, 2026-11-19), signed with this member's own Buzz key. Best effort: the board stays the
+// record (memory checks, learned reactions), so a Buzz failure is reported in the output but never fails the post.
+const RUNS = '4dfe054e-d042-45a7-899c-5ffa05fc0e09';
+function toBuzz(kind, text, extra, boardId) {
+  const keyFile = [process.env.BUZZ_ENV, '/agent/secrets/buzz.env', `/home/ubuntu/a9n9/secrets/buzz-${E.BOARD_MEMBER ?? ''}.env`].filter(Boolean).find((p) => fs.existsSync(p));
+  const cli = ['/agent/bin/buzz', '/home/ubuntu/a9n9/bin/buzz'].find((p) => fs.existsSync(p));
+  if (!keyFile || !cli) return 'skipped: no Buzz key or CLI here';
+  const K = Object.fromEntries(fs.readFileSync(keyFile, 'utf8').split('\n').filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
+  const esc = (s) => String(s ?? '').replace(/(^|\s)@/g, '$1@\u200b'); // a run post notifies nobody
+  const body = [`\`${kind}\`` + (goal ? ` · goal ${goal}` : '') + ` · board ${boardId}`, '', esc(text)];
+  if (extra.memory) body.push('', `*memory:* ${esc(extra.memory)}`);
+  if (extra.learnedFrom?.length) body.push(`*learned from:* ${extra.learnedFrom.join(', ')}`);
+  const r = spawnSync(cli, ['messages', 'send', '--channel', RUNS, '--content', '-'], { input: body.join('\n'), encoding: 'utf8', timeout: 25000,
+    env: { ...process.env, BUZZ_RELAY_URL: 'https://buzz.a9n9.net', BUZZ_PRIVATE_KEY: K.BUZZ_PRIVATE_KEY ?? '' } });
+  try { const j = JSON.parse(r.stdout); if (j.accepted) return `posted to #runs (${j.event_id.slice(0, 12)})`; } catch {}
+  return `failed: ${(r.stderr || r.stdout || r.error?.message || '').slice(0, 160)}`;
+}
 const post = (kind, text, extra = {}) => { needGoal(kind); return api('/v1/board/posts', { kind, text, ...(to ? { to } : {}), ...(ref ? { refs: [ref] } : {}), ...(goal ? { goal } : {}), ...extra }); };
 if (cmd === 'catchup') {
   const a = await api('/v1/board/attention');
@@ -59,9 +77,10 @@ if (cmd === 'catchup') {
 } else if (cmd === 'post') {
   if (!a1) { out({ ok: false, error: "usage: board post '<what you did and what happened>' --memory '<what you changed in memory/skills/strategy, or nothing>' [--learned <id,id>]" }); process.exit(2); }
   checkClaim(memory, '--memory');
-  const j = await post('run', a1, { memory: memory ?? '', ...(learned ? { learnedFrom: learned.split(',').map((s) => s.trim()).filter(Boolean) } : {}) });
+  const extra = { memory: memory ?? '', ...(learned ? { learnedFrom: learned.split(',').map((s) => s.trim()).filter(Boolean) } : {}) };
+  const j = await post('run', a1, extra);
   await api('/v1/board/read', {});
-  out({ ok: true, posted: j.post.id, boardMarkedRead: true });
+  out({ ok: true, posted: j.post.id, boardMarkedRead: true, buzz: toBuzz('run', a1, extra, j.post.id) });
 } else if (['ask', 'found', 'note'].includes(cmd)) {
   if (!a1) { out({ ok: false, error: `usage: board ${cmd} '<text>'` }); process.exit(2); }
   if (cmd === 'found' && !ref) { out({ ok: false, error: 'a finding needs --ref (a URL or a check/ledger id) so a teammate can verify it before acting' }); process.exit(2); }

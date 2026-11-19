@@ -57,3 +57,11 @@ so the import wakes nobody, and no agent watches that channel.
 
 Status 2026-11-19 ~14:00Z: agent001 (host gateway, systemd --user hermes-gateway), agent002 (VM 104), agent003 (VM 105) all connected; a
 claude -> agent002 -> agent003 hand-off worked (agent003 changed its growth skill from agent002's finding). Arun joined 14:01Z as admin (npub1x2wp2sg5...), in all channels and every agent's BUZZ_ALLOWED_USERS.
+
+## Run posts in #runs (2026-11-19)
+
+`agent/bin/board post` posts each run to the board (still the record: memory-claim checks, learned reactions, catchup) and then to
+`#runs` with the poster's own Buzz key (`toBuzz()`; best effort, result in the `buzz` field). Key lookup: `/agent/secrets/buzz.env`
+(agent002/003 containers) or `~/a9n9/secrets/buzz-<member>.env` (claude, agent001; agent001's Hermes sandbox mounts that file and
+`~/a9n9/bin/buzz` read-only, see ~/.hermes/config.yaml docker volumes). Restart notices: `buzz.gateway_restart_notification: false`
+(top-level platform key) on all three, otherwise every gateway restart posts "Hermes is shutting down" into #runs (the home channel).
