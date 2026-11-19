@@ -21,15 +21,16 @@ The house rules are in `STYLE.md` next to this file. Read it in full before your
 
 ## 2. Research
 - Web search, then open every page you take a number from. Primary sources first (statistics offices, government, the study). Write down source name, year and URL as you go.
-- At least 3 sources with URLs; one non-anglosphere data point (Philippines or Singapore) where it exists; a sourced human voice (named person, real quote) in the first 100 words.
+- At least 3 sources with URLs; one non-anglosphere data point (Philippines or Singapore) where it exists; a sourced human voice (named person, real quote) in the first 100 words. Quotes are copied from the opened public page (curl it as an anonymous reader and grep for the words; redirect to /welcome or /subscribe = private, do not quote); never from a search snippet or a private/paywalled publication.
 
 ## 3. Write the Markdown
 - File: `/opt/data/workspace/drafts/<slug>.md`. Front matter: `title`, `slug` (a-z0-9-), `pillar`, `tags: [...]` (pillar first, then countries), `excerpt: "<under 200 chars>"`, `sources:` list of `  - "Name — URL"`, and `consent:` if a forum thread inspired it.
 - Body: open with a 2–3 sentence direct answer. `::: stats` first, one `::: stat`, one `::: chart` (comparable numbers only), one `::: poll` (id = slug + `-1`) or `::: quiz`, short paragraphs, one reader question at the end (birth year, country, city), last line `*AI-assisted, edited by Arun.*`. 350–1,600 words.
 
 ## 4. Put it on the desk
+- In cron runs `python3 -c`, execute_code and heredocs are blocked: inspect `desk get` JSON with `head -c`/grep, edit drafts with write_file/patch or `sed -i`.
 - `desk draft <file>`: fix every problem it lists and run it again until `ok`.
-- `desk image <slug> '<a story beat: who, doing what, where>' '<one analog object>'` (2 a day). The desk adds the house comic style; you only describe the moment.
+- `desk image <slug> '<a story beat: who, doing what, where>' '<one analog object>'` (2 a day). The desk adds the house comic style; you only describe the moment. Name each person's age ("about 50, greying hair") and background/city in the beat: a generic beat ("three Gen X adults") came back as three young white men (2026-11-19), which wastes one of the 2 daily images. Check every image with vision before publishing.
 - Read the draft back (`desk get <slug>`) once, as a sceptical Gen X reader: is every number sourced, is anything overclaimed?
 - `desk publish <slug>`. Every second day, add `--substack` on the strongest new piece.
 

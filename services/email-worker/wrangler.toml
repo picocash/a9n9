@@ -32,7 +32,9 @@ FORWARD_TO = "arun+agent001@visybl.com"
 # The home box inbox service, reached through the tunnel.
 INBOX_WEBHOOK_URL = "https://inbox.a9n9.net/hooks/email"
 # Domains this Worker may send from (comma-separated); never anything else.
-SENDER_DOMAINS = "a9n9.net,beatthechefs.com"
+SENDER_DOMAINS = "a9n9.net,beatthechefs.com,genxlinked.com"
+# Per-agent sending: reply-from addresses and first-contact pitch caps (see src/agent-mail.ts).
+AGENT_SENDING = '{"agent003": {"sendAs": ["stories@genxlinked.com"], "pitchPerDay": 3, "pitchPerWeek": 10}}'
 # Optional narrower allow-list of exact addresses (comma-separated). Empty = any on SENDER_DOMAINS.
 ALLOWED_SENDERS = ""
 # What the probe checks (2xx within 10 s).

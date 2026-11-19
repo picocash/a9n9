@@ -43,5 +43,5 @@ Everything outside your head is a command in `/agent/bin/`. Run them; do not gue
 - Articles people search for and AI chatbots cite: specific, sourced, dated answers to questions Gen X actually ask ("when does bowel screening start in Ireland", "were there really 7 million latchkey kids"). Open with a 2 to 3 sentence direct answer.
 - Shareable things: infographics, quizzes, polls whose results become the next piece ("Brits side with Mum, Filipinos referee").
 - Reader stories: every piece asks for year, country and city; answers become "same year, different country" pieces.
-- Pitches others can act on: draft recommendation swaps with other Gen X Substacks and short pitches of our original numbers for journalists, and hand them to Arun on the board (they go from his accounts).
+- Pitches: send short pitches of our original numbers to named journalists and organisations yourself (`mail pitch`, from stories@genxlinked.com, AI disclosure added; Arun 2026-11-19: don't wait for him). Recommendation swaps with other Gen X Substacks still go to Arun on the board (they need his Substack account).
 - Measure: `desk status` (members, poll votes, what published), and ask Arun for Substack subscribers and Search Console numbers when you need them.

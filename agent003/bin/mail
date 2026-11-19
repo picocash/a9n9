@@ -5,8 +5,13 @@
 //   mail reply <id> --file <path> [--operator '<what the operator must do>']
 //                                           reply from the address it was sent to (threaded); marks it handled
 //   mail done <id> '<why no reply>' [--operator '<what the operator must do>']
-// The mail service only shows mail sent to your addresses and only lets you REPLY to a message you received,
-// so you can never email anyone first. 20 replies a day. The signature and disclosure are added for you.
+//   mail pitch <to-address> --subject '<subject>' --file <path>
+//                                           FIRST-CONTACT email to one outside person (press, partner orgs), from
+//                                           stories@genxlinked.com. Caps: 3/day, 10/week, one pitch per person per
+//                                           30 days, no follow-ups (if they reply, answer with mail reply). Must link
+//                                           the genxlinked.com page. The AI-disclosure footer is added by the service.
+//   mail suppress <address> '<why>'         never pitch this address again (they said no / asked to stop)
+// The mail service only shows mail sent to your addresses. Replies: 20 a day; signature and disclosure added for you.
 import fs from 'node:fs';
 import { HOME, out, env, paused } from './_kit.mjs';
 const argv = process.argv.slice(2);
@@ -35,16 +40,27 @@ if (cmd === 'list') {
   let body = fs.readFileSync(file, 'utf8').trim();
   if (body.length < 20) { out({ ok: false, error: 'reply is too short to be useful' }); process.exit(2); }
   const desk = /@genxlinked\.com$/i.test(msg.to);
-  body += game
+  body += desk
     ? '\n\n—\nThe GenXLinked desk (https://genxlinked.com)\nThis reply was written by agent003, an AI agent working with Arun, not by Arun himself. Arun reads every message too.'
     : '\n\n—\nagent003, the GenXLinked desk: an AI agent run by a9n9 (a Visybl Inc service) for https://genxlinked.com, not a person.';
   const j = await call(`/v1/agent/mail/${id}/reply`, { text: body, ...(operator ? { operator } : {}) });
   fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'reply', id, to: j.to, from: j.from, subject: j.subject, operator: operator ?? null }) + '\n');
+  out(j);
+} else if (cmd === 'pitch' && id && file) {
+  if (paused()) { out({ ok: false, error: `paused: ${paused()}` }); process.exit(4); }
+  const subject = take('--subject') ?? argv[2];
+  const text = fs.readFileSync(file, 'utf8').trim();
+  const j = await call('/v1/agent/pitch', { to: id, subject, text });
+  fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'pitch', to: j.to, from: j.from, subject: j.subject, id: j.id }) + '\n');
+  out(j);
+} else if (cmd === 'suppress' && id && note) {
+  const j = await call('/v1/agent/suppress', { to: id, note });
+  fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'suppress', to: id, note }) + '\n');
   out(j);
 } else if (cmd === 'done' && isId(id) && note) {
   const j = await call(`/v1/agent/mail/${id}/done`, { note, ...(operator ? { operator } : {}) });
   fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'done', id, note, operator: operator ?? null }) + '\n');
   out(j);
 } else {
-  out({ ok: false, error: "usage: mail list [--all] | mail read <id> | mail reply <id> --file <path> [--operator '<ask>'] | mail done <id> '<why>' [--operator '<ask>']" }); process.exit(2);
+  out({ ok: false, error: "usage: mail list [--all] | mail read <id> | mail reply <id> --file <path> [--operator '<ask>'] | mail done <id> '<why>' [--operator '<ask>'] | mail pitch <to> --subject '<s>' --file <path> | mail suppress <address> '<why>'" }); process.exit(2);
 }
