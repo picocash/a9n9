@@ -2,7 +2,7 @@
 // GenXLinked publishing desk: the ONLY way agent003 touches Ghost. Bearer DESK_TOKEN. Runs next to ghost on VM 105.
 //   POST /desk/draft    {markdown}            validate house rules, render infographic, create/update the Ghost DRAFT
 //   GET  /desk/draft/<slug>                    current markdown
-//   POST /desk/image    {slug, beat, object}   comic header panel in the house style (cap 2/day), attached to the draft
+//   POST /desk/image    {slug, beat, object}   comic header panel in the house style (cap 5/day), attached to the draft
 //   POST /desk/publish  {slug, substack?}      publish a draft now (cap 2/day); substack:true adds #substack
 //   GET  /desk/status                          recent posts, drafts, members, poll totals, today's usage
 //   POST /desk/letter   {markdown}             create/update the weekly newsletter (email-only draft, tag #newsletter)
@@ -14,7 +14,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 const ROOT = '/app/genxlinked', D = `${ROOT}/drafts`, IG = `${ROOT}/infographics`, LOG = '/data/desk-log.jsonl';
 const TOKEN = process.env.DESK_TOKEN || '', [GK_ID, GK_SECRET] = (process.env.GHOST_ADMIN_KEY || ':').split(':'), XAI = process.env.XAI_API_KEY || '';
-const GHOST = 'http://ghost:2368/ghost/api/admin', CAP_PUB = 2, CAP_IMG = 2;
+const GHOST = 'http://ghost:2368/ghost/api/admin', CAP_PUB = 2, CAP_IMG = 5;
 const b64u = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
 const jwt = () => { const n = Math.floor(Date.now() / 1000), h = b64u({ alg: 'HS256', typ: 'JWT', kid: GK_ID }), b = b64u({ iat: n, exp: n + 300, aud: '/admin/' }); return `${h}.${b}.${crypto.createHmac('sha256', Buffer.from(GK_SECRET, 'hex')).update(`${h}.${b}`).digest('base64url')}`; };
 const H = () => ({ Authorization: `Ghost ${jwt()}`, 'Accept-Version': 'v6.0', 'X-Forwarded-Proto': 'https' });

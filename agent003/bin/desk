@@ -3,7 +3,7 @@
 //   desk status                                   what is published, drafts, members, poll votes, today's usage
 //   desk draft <file.md>                          create/update a Ghost DRAFT from Markdown (house rules checked, infographic built)
 //   desk get <slug>                               the current Markdown of a draft
-//   desk image <slug> '<story beat>' '<object>'   comic header panel in the house style (2 a day)
+//   desk image <slug> '<story beat>' '<object>'   comic header panel in the house style (5 a day)
 //   desk publish <slug> [--substack]              publish a draft now (2 a day); --substack queues it for Arun's Substack import
 //   desk letter <file.md>                         create/update the weekly newsletter (email-only draft)
 //   desk letter-schedule <slug>                   schedule it to every member for Friday 12:00 New York time (once a week)

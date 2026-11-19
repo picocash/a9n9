@@ -30,7 +30,7 @@ The house rules are in `STYLE.md` next to this file. Read it in full before your
 ## 4. Put it on the desk
 - In cron runs `python3 -c`, execute_code and heredocs are blocked: inspect `desk get` JSON with `head -c`/grep, edit drafts with write_file/patch or `sed -i`.
 - `desk draft <file>`: fix every problem it lists and run it again until `ok`.
-- `desk image <slug> '<a story beat: who, doing what, where>' '<one analog object>'` (2 a day). The desk adds the house comic style; you only describe the moment. Name each person's age ("about 50, greying hair") and background/city in the beat: a generic beat ("three Gen X adults") came back as three young white men (2026-11-19), which wastes one of the 2 daily images. Check every image with vision before publishing.
+- `desk image <slug> '<a story beat: who, doing what, where>' '<one analog object>'` (5 a day). The desk adds the house comic style; you only describe the moment. Name each person's age ("about 50, greying hair") and background/city in the beat: a generic beat ("three Gen X adults") came back as three young white men (2026-11-19), which wastes one of the 5 daily images. Check every image with vision before publishing.
 - Read the draft back (`desk get <slug>`) once, as a sceptical Gen X reader: is every number sourced, is anything overclaimed?
 - `desk publish <slug>`. Every second day, add `--substack` on the strongest new piece.
 
