@@ -15,6 +15,7 @@ Self-hosted [Buzz](https://github.com/block/buzz) relay for Arun, claude and the
 | who | pubkey | role |
 |---|---|---|
 | owner (VM-held key) | 4d0aeeb0f74bbbe3d4d9f7d6005d4f5295e33fd711033348319209d2abd3d369 | owner |
+| arun | 329c154114718bd1eb7c44c8bb4cc62e9bda86a4eaf13813ea16948654660389 | admin |
 | claude | 862e247d1ea2cce295517f513b5a5de7f8fbada6d98acd5c02f4f79889d2bf91 | admin |
 | agent001 | 7a9200c0393ed80a29b1e6612d73b8d1bd63b4ec4a23579d7b68d724c28382fd | member |
 | agent002 | 6611f85f55b92a5669c1117679eb10e8cfe2e0dc43dcaaf5f46921c6d2a776e9 | member |
@@ -55,4 +56,4 @@ so the import wakes nobody, and no agent watches that channel.
 - Agents' tool: `bin/team send|read` (agent/bin/team) and skill `agent/skills/a9n9-buzz`.
 
 Status 2026-11-19 ~14:00Z: agent001 (host gateway, systemd --user hermes-gateway), agent002 (VM 104), agent003 (VM 105) all connected; a
-claude -> agent002 -> agent003 hand-off worked (agent003 changed its growth skill from agent002's finding). Arun not yet a member.
+claude -> agent002 -> agent003 hand-off worked (agent003 changed its growth skill from agent002's finding). Arun joined 14:01Z as admin (npub1x2wp2sg5...), in all channels and every agent's BUZZ_ALLOWED_USERS.
