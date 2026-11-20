@@ -369,3 +369,5 @@ h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans
 .gxl-join-gbtn { display: flex; justify-content: center; min-height: 44px; }
 .gxl-join-or { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; font-family: var(--gxl-mono); font-size: 1.15rem; text-transform: uppercase; color: var(--gxl-ink-2); }
 .gxl-join-or::before, .gxl-join-or::after { content: ""; flex: 1; border-top: 1px solid var(--gxl-rule); }
+.gxl-answer-join { margin: 14px 0 0; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.gxl-answer-join .gxl-btn { margin: 0; }

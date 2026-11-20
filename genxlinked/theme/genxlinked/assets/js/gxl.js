@@ -115,6 +115,14 @@
     b.addEventListener('click', function () { window.gxlShare(textFn()); });
     box.appendChild(b);
   }
+  // ...and, for readers who are not members yet, the signup at the same moment (the results-by-country promise lives in the letter)
+  var isMember = document.body.getAttribute('data-gxl-member') === '1';
+  function addJoin(box) {
+    if (isMember || box.querySelector('.gxl-answer-join')) return;
+    var p = document.createElement('p'); p.className = 'gxl-answer-join';
+    p.innerHTML = 'Get the results by country in Friday’s letter. <button type="button" class="gxl-btn" data-gxl-join>Join GenXLinked free</button>';
+    box.appendChild(p);
+  }
   new MutationObserver(function () {
     document.querySelectorAll('.gxl-poll.is-voted').forEach(function (el) {
       addShare(el, function () { var m = el.querySelector('.gxl-poll-opt.is-mine .gxl-poll-t'), q = el.querySelector('.gxl-poll-q'); return (q ? q.textContent + ' ' : '') + 'My answer: ' + (m ? m.textContent : '') + '. What’s yours?'; });
@@ -124,6 +132,8 @@
       addShare(out, function () { var r = el.querySelector('.gxl-quiz-r:not([hidden]) .gxl-quiz-name'), t = el.querySelector('.gxl-quiz-title'); return (t ? t.textContent + ' ' : '') + 'I got: ' + (r ? r.textContent : '') + '. Take it:'; });
       var btn = out.querySelector('.gxl-answer-share'); if (btn) btn.textContent = 'Share my result';
     });
+    document.querySelectorAll('.gxl-poll.is-voted').forEach(function (el) { addJoin(el); });
+    document.querySelectorAll('.gxl-quiz.is-done .gxl-quiz-out').forEach(function (out) { addJoin(out); });
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 })();
 /* Phone menu: "Sections" button opens the full list */
