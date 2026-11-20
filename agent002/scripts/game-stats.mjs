@@ -6,7 +6,10 @@
 // not people. The log is kept 90 days, so totals are "since counting began, last 90 days".
 import fs from 'node:fs';
 export const GAME_DATA = process.env.GAME_DATA || '/home/ubuntu/source/a9n9/apps/cookgame/data';
-const AGENT_TAG = /^(bsky|pin)(-|$)/;
+// "agent" = every tag agent002 puts on a link (bsky-*, catalogue tags like gameslash, ref-<listing host>), i.e. everything except the
+// operator's tags (rd-*, gads-*, selftest) and referrals from search engines and social sites. Same rule as predict and outcomes.mjs.
+const OPERATOR_TAG = /^(rd-|gads-|selftest)/, PASSIVE_REF = /^ref-(.*-)?(google|bing|duckduckgo|yahoo|yandex|baidu|ecosia|brave|search|reddit|t-co|facebook|instagram|linkedin|x-com|twitter)/;
+const isAgentTag = (t) => !OPERATOR_TAG.test(t) && !PASSIVE_REF.test(t);
 // A visit with no ?s= tag but a referring site is counted as src:ref-<host> (dots become dashes, www. dropped, 31 chars at most), so a
 // listing that links us untagged (e.g. ilovewebgames.com -> src:ref-ilovewebgames-com) can still be measured. Only the host is kept.
 export const refTag = (ref) => { const h = String(ref).toLowerCase().replace(/:\d+$/, '').replace(/^www\./, '').replace(/\./g, '-').replace(/[^a-z0-9-]/g, ''); return /^[a-z0-9]/.test(h) && !/(^|-)beatthechefs-com$/.test(h) ? `ref-${h}`.slice(0, 31).replace(/-+$/, '') : ''; };
@@ -19,7 +22,7 @@ export function gameStats(dataDir = GAME_DATA, { any = process.env.GAME_STATS_AN
     else if (e.e === 'start') s.start = 1; else if (e.e === 'plated' && e.official !== false) s.plated += 1; else if (e.e === 'share') s.share += 1; else if (e.e === 'claim' && e.step === 'pin' && e.ok) s.claim = 1; }
   const zero = () => ({ visits: 0, started: 0, plated: 0, shared: 0, claimed: 0 }); const by = { all: zero(), agent: zero() };
   const put = (k, s) => { const b = (by[k] ??= zero()); b.visits += s.view; b.started += s.start; b.plated += s.plated; b.shared += Math.min(s.share, s.plated); b.claimed += s.claim; };
-  for (const s of sessions.values()) { if (!any && !s.c) continue; put('all', s); if (s.src) { put(`src:${s.src}`, s); if (AGENT_TAG.test(s.src)) put('agent', s); } }
+  for (const s of sessions.values()) { if (!any && !s.c) continue; put('all', s); if (s.src) { put(`src:${s.src}`, s); if (isAgentTag(s.src)) put('agent', s); } }
   return { files: files.length, firstDay: files[0]?.slice(0, 10) ?? null, lastDay: files.at(-1)?.slice(0, 10) ?? null, countedOnlyPublic: !any, by };
 }
 if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(gameStats(), null, 1));
