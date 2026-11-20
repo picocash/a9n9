@@ -27,7 +27,7 @@ const goalIds = JSON.parse(fs.readFileSync(`${process.env.AGENT_HOME || '/agent'
 if (!goalIds.includes(goal)) fail(`--goal must name the rung of your goal ladder this change serves: ${goalIds.join(', ')} (goals shows them)`);
 if (!METRICS[metric]) fail(`unknown metric ${metric}; predict metrics lists them`);
 if (!subject) fail('--subject is required (article id, repo name, or for game metrics: agent or src:<tag>)');
-if (metric.startsWith('game.') && !/^(agent|src:((bsky|pin)(-[a-z0-9]{1,12})?|playlin|gameslash|ilovewebgames))$/.test(subject)) fail('for game metrics --subject is agent (all your links) or src:<tag> exactly as the link carries it, e.g. src:bsky-noodles, src:playlin, src:gameslash');
+if (metric.startsWith('game.') && (!/^(agent|src:[a-z0-9][a-z0-9-]{0,30})$/.test(subject) || /^src:(rd-|gads-|selftest)/.test(subject))) fail('for game metrics --subject is agent (all your links) or src:<tag> exactly as your link carries it (any tag, e.g. src:bsky-noodles, src:playlin, src:ottersplay); src:rd-*, src:gads-* and src:selftest are the operator\'s, not yours');
 if (metric.startsWith('devto.') && !readJsonl(`${STATE}/devto.jsonl`).some((x) => String(x.id) === String(subject))) fail(`article ${subject} is not one you published with devto-post`);
 if (metric.startsWith('github.') && !readJsonl(`${STATE}/github.jsonl`).some((x) => x.op === 'create' && x.repo === subject)) fail(`repo ${subject} was not created with github create`);
 if (!Number.isFinite(atLeast) || atLeast < 0) fail('--at-least must be a number (the value you expect the metric to reach by the date)');

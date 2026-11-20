@@ -16,7 +16,7 @@ def at(cut):
   best={}
   for r in rows:
     if r['at']<=cut: best[r['subject']]=r['value']
-  own=sum(v for s,v in best.items() if s=='agent' or s.startswith(('src:bsky','src:playlin','src:gameslash','src:ilovewebgames')))
+  own=sum(v for s,v in best.items() if s=='agent' or (s.startswith('src:') and not s.startswith(('src:rd-','src:gads-','src:selftest'))))
   return best.get('all',0),own
 now=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()); old=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime(time.time()-259200))
 print(json.dumps({'now':at(now+'Z'),'then':at(old+'Z')}))`;
