@@ -238,3 +238,15 @@
   document.addEventListener('click', function (e) { if (e.target.closest('[data-gxl-join]')) setup(); }, true);
   if (location.hash === '#join') setup();
 })();
+/* Visit count: one beacon per page load to /gxl-api/hit (path, referring site, ?ref= tag, phone-or-not, member-or-not).
+   No cookie, no id, nothing stored in the browser; skipped when the browser sends Do Not Track or Global Privacy Control. */
+(function () {
+  try {
+    if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl) return;
+    var r = ''; try { r = document.referrer ? new URL(document.referrer).hostname : ''; } catch (x) {}
+    var q = new URLSearchParams(location.search), t = (q.get('ref') || q.get('utm_source') || '').toLowerCase().slice(0, 40);
+    var body = JSON.stringify({ p: location.pathname.toLowerCase().slice(0, 160), r: r, t: t, mob: matchMedia('(pointer: coarse)').matches ? 1 : 0, mem: document.body.getAttribute('data-gxl-member') === '1' ? 1 : 0 });
+    if (navigator.sendBeacon) navigator.sendBeacon('/gxl-api/hit', new Blob([body], { type: 'application/json' }));
+    else fetch('/gxl-api/hit', { method: 'POST', body: body, keepalive: true, headers: { 'content-type': 'application/json' } });
+  } catch (x) {}
+})();

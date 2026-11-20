@@ -62,7 +62,43 @@ setInterval(() => { const now = Date.now(); for (const [k, h] of hits) if (now -
 function limited(ip) { const now = Date.now(), h = hits.get(ip) || [0, now]; if (now - h[1] > 600e3) { h[0] = 0; h[1] = now; } h[0]++; hits.set(ip, h); return h[0] > 30; }
 const send = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': 'https://genxlinked.com' }); res.end(JSON.stringify(obj)); };
 const view = (id) => { const p = db.polls[id] || { counts: [] }; return { id, counts: p.counts, total: p.counts.reduce((a, b) => a + b, 0) }; };
+// --- Visits: one line per page load, sent by the theme (navigator.sendBeacon) unless the browser asks not to be tracked.
+// Kept: time, path, referring host, ?ref= tag, country (Cloudflare), phone-or-not, member-or-not. No IP, no cookie, no visitor id,
+// so a reload counts again: this measures interest, not people. Files /data/hits/<day>.jsonl, kept 90 days.
+// GET /gxl-api/stats?days=N answers only internal callers (no Cloudflare header): the desk and the operator.
+const HITS = `${DIR}/hits`; try { fs.mkdirSync(HITS, { recursive: true }); } catch {}
+const hitRate = new Map(); setInterval(() => hitRate.clear(), 600e3).unref();
+const BOT = /bot|crawl|spider|slurp|preview|headless|python|curl|wget|facebookexternalhit|embedly|monitor/i;
+function hit(req, j) {
+  const ip = String(req.headers['cf-connecting-ip'] || req.socket.remoteAddress || ''); const n = (hitRate.get(ip) || 0) + 1; hitRate.set(ip, n); if (n > 120) return;
+  const p = String(j.p || ''), r = String(j.r || '').toLowerCase(), tag = String(j.t || '').toLowerCase();
+  if (!/^\/[a-z0-9\-\/]{0,160}$/.test(p) || p.startsWith('/ghost')) return;
+  const line = { t: new Date().toISOString(), p, ...(/^[a-z0-9.-]{3,100}$/.test(r) && r !== 'genxlinked.com' && r !== 'www.genxlinked.com' ? { r } : {}), ...(/^[a-z0-9-]{1,40}$/.test(tag) ? { tag } : {}),
+    c: String(req.headers['cf-ipcountry'] || '').slice(0, 2) || undefined, mob: j.mob ? 1 : undefined, mem: j.mem ? 1 : undefined, bot: BOT.test(req.headers['user-agent'] || '') ? 1 : undefined };
+  fs.appendFile(`${HITS}/${line.t.slice(0, 10)}.jsonl`, JSON.stringify(line) + '\n', () => {});
+}
+function pruneHits() { const cut = new Date(Date.now() - 90 * 86400e3).toISOString().slice(0, 10); try { for (const f of fs.readdirSync(HITS)) if (f.slice(0, 10) < cut) fs.unlinkSync(`${HITS}/${f}`); } catch {} }
+pruneHits(); setInterval(pruneHits, 86400e3).unref();
+function stats(days) {
+  const since = new Date(Date.now() - days * 86400e3).toISOString(); const out = { days, visits: 0, members: 0, bots: 0, byTag: {}, byRef: {}, byCountry: {}, byPath: {} };
+  const inc = (o, k) => { o[k] = (o[k] || 0) + 1; };
+  let files = []; try { files = fs.readdirSync(HITS).filter((f) => f.slice(0, 10) >= since.slice(0, 10)).sort(); } catch {}
+  for (const f of files) for (const l of fs.readFileSync(`${HITS}/${f}`, 'utf8').split('\n')) { if (!l) continue; let e; try { e = JSON.parse(l); } catch { continue; } if (e.t < since) continue;
+    if (e.bot) { out.bots++; continue; } if (e.mem) { out.members++; continue; }
+    out.visits++; inc(out.byPath, e.p); if (e.tag) inc(out.byTag, e.tag); if (e.r) inc(out.byRef, e.r); if (e.c) inc(out.byCountry, e.c); }
+  const top = (o, n) => Object.fromEntries(Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n));
+  return { ...out, byTag: top(out.byTag, 30), byRef: top(out.byRef, 30), byCountry: top(out.byCountry, 20), byPath: top(out.byPath, 30), note: 'visits = non-member, non-bot page loads; a reload counts again' };
+}
 http.createServer((req, res) => {
+  if (req.method === 'POST' && req.url.split('?')[0] === '/gxl-api/hit') {
+    let body = ''; req.on('data', (c) => { body += c; if (body.length > 600) req.destroy(); });
+    req.on('end', () => { try { hit(req, JSON.parse(body || '{}')); } catch {} res.writeHead(204, { 'cache-control': 'no-store' }); res.end(); });
+    return;
+  }
+  if (req.method === 'GET' && req.url.split('?')[0] === '/gxl-api/stats') {
+    if (req.headers['cf-connecting-ip'] || req.headers['cf-ray']) return send(res, 404, { error: 'not found' });
+    const d = Math.min(90, Math.max(1, Number(new URL(req.url, 'http://x').searchParams.get('days')) || 7)); return send(res, 200, stats(d));
+  }
   if (req.method === 'GET' && /^\/gxl-api\/feed\/substack(-next)?\.xml(\?.*)?$/.test(req.url)) {
     const f = req.url.includes('substack-next') ? 'substack-next.xml' : 'substack.xml'; // -next = one-off batch built by hand for Arun
     try { const body = fs.readFileSync(`${DIR}/${f}`); res.writeHead(200, { 'content-type': 'application/rss+xml; charset=utf-8', 'cache-control': 'max-age=300' }); return res.end(body); }

@@ -125,6 +125,10 @@ async function scheduleLetter(slug) {
   log({ kind: 'letter-schedule', ok: st < 300, slug, at: at.toISOString() });
   return st < 300 ? [200, { ok: true, slug, sendsAt: at.toISOString(), to: 'all members' }] : [500, { error: 'ghost refused (bulk email may not be set up yet: tell the operator)', detail: JSON.stringify(j).slice(0, 300) }];
 }
+// Site visits from the poll service's cookieless counter (non-member, non-bot page loads; a reload counts again).
+async function visitStats() { const get = async (d) => { try { const r = await fetch(`http://gxl-poll:2370/gxl-api/stats?days=${d}`, { signal: AbortSignal.timeout(5000) }); return r.ok ? await r.json() : null; } catch { return null; } };
+  const [d1, d7] = await Promise.all([get(1), get(7)]); if (!d7) return null;
+  return { last24h: d1?.visits ?? null, last7d: d7.visits, byTag7d: d7.byTag, byRef7d: d7.byRef, byCountry7d: d7.byCountry, topPages7d: Object.fromEntries(Object.entries(d7.byPath).slice(0, 10)), note: d7.note + '; counting began 2026-11-20 22:50Z' }; }
 async function status() {
   const [, pub] = await admin('GET', '/posts/?limit=15&order=published_at%20desc&filter=status:published&fields=title,slug,published_at,url&include=tags');
   const [, dr] = await admin('GET', '/posts/?limit=15&filter=status:draft&fields=title,slug,updated_at,feature_image');
@@ -132,7 +136,7 @@ async function status() {
   const [, mem] = await admin('GET', '/members/?limit=1');
   let polls = {}; try { polls = JSON.parse(fs.readFileSync('/poll-data/polls.json', 'utf8')).polls; } catch {}
   const pollTotals = Object.fromEntries(Object.entries(polls).map(([k, v]) => [k, (v.counts || []).reduce((a, b) => a + b, 0)]));
-  return [200, { published: (pub.posts || []).map((p) => ({ title: p.title, slug: p.slug, date: p.published_at?.slice(0, 10), substack: p.tags?.some((t) => t.name === '#substack') })), drafts: (dr.posts || []).map((p) => ({ title: p.title, slug: p.slug, image: !!p.feature_image })), scheduled: (sc.posts || []).map((p) => ({ title: p.title, slug: p.slug, sendsAt: p.published_at, emailOnly: p.email_only, text: (p.plaintext || '').slice(0, 4000) })), members: mem.meta?.pagination?.total ?? null, pollVotes: pollTotals, today: { published: usage('publish'), images: usage('image'), caps: { publish: CAP_PUB, image: CAP_IMG } } }];
+  return [200, { published: (pub.posts || []).map((p) => ({ title: p.title, slug: p.slug, date: p.published_at?.slice(0, 10), substack: p.tags?.some((t) => t.name === '#substack') })), drafts: (dr.posts || []).map((p) => ({ title: p.title, slug: p.slug, image: !!p.feature_image })), scheduled: (sc.posts || []).map((p) => ({ title: p.title, slug: p.slug, sendsAt: p.published_at, emailOnly: p.email_only, text: (p.plaintext || '').slice(0, 4000) })), members: mem.meta?.pagination?.total ?? null, visits: await visitStats(), pollVotes: pollTotals, today: { published: usage('publish'), images: usage('image'), caps: { publish: CAP_PUB, image: CAP_IMG } } }];
 }
 http.createServer((req, res) => {
   if ((req.headers.authorization || '') !== `Bearer ${TOKEN}` || !TOKEN) return send(res, 401, { error: 'unauthorized' });

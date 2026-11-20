@@ -7,7 +7,7 @@ const LOG = `${process.env.HOME}/a9n9/state/outcomes-snapshots.jsonl`;
 const sh = (c) => execSync(c, { encoding: 'utf8', timeout: 60000, stdio: ['ignore', 'pipe', 'ignore'] });
 const now = Date.now(), H72 = 72 * 3600e3;
 const snap = { at: new Date(now).toISOString() };
-try { snap.agent003_members = JSON.parse(sh(`ssh genxlinked 'docker exec a9n9-agent003 /agent/bin/desk status'`)).members; } catch { snap.agent003_members = null; }
+try { const d = JSON.parse(sh(`ssh genxlinked 'docker exec a9n9-agent003 /agent/bin/desk status'`)); snap.agent003_members = d.members; if (d.visits) { snap.agent003_visits_24h = d.visits.last24h; snap.agent003_visits_7d = d.visits.last7d; } } catch { snap.agent003_members = null; }   // visits = cookieless site counter, from 2026-11-20 22:50Z
 try {
   // agent002: visits from all sources and from its own links (sum of its non-operator src:* tags; not the 'agent' subject, whose definition widened 11-20 so its history is not comparable), now vs 72 h ago, from its hash-chained KPI facts
   const py = `import json,sys,time,re
