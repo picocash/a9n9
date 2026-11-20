@@ -128,10 +128,11 @@ async function scheduleLetter(slug) {
 async function status() {
   const [, pub] = await admin('GET', '/posts/?limit=15&order=published_at%20desc&filter=status:published&fields=title,slug,published_at,url&include=tags');
   const [, dr] = await admin('GET', '/posts/?limit=15&filter=status:draft&fields=title,slug,updated_at,feature_image');
+  const [, sc] = await admin('GET', '/posts/?limit=10&filter=status:scheduled&formats=plaintext&fields=title,slug,published_at,email_only,plaintext');
   const [, mem] = await admin('GET', '/members/?limit=1');
   let polls = {}; try { polls = JSON.parse(fs.readFileSync('/poll-data/polls.json', 'utf8')).polls; } catch {}
   const pollTotals = Object.fromEntries(Object.entries(polls).map(([k, v]) => [k, (v.counts || []).reduce((a, b) => a + b, 0)]));
-  return [200, { published: (pub.posts || []).map((p) => ({ title: p.title, slug: p.slug, date: p.published_at?.slice(0, 10), substack: p.tags?.some((t) => t.name === '#substack') })), drafts: (dr.posts || []).map((p) => ({ title: p.title, slug: p.slug, image: !!p.feature_image })), members: mem.meta?.pagination?.total ?? null, pollVotes: pollTotals, today: { published: usage('publish'), images: usage('image'), caps: { publish: CAP_PUB, image: CAP_IMG } } }];
+  return [200, { published: (pub.posts || []).map((p) => ({ title: p.title, slug: p.slug, date: p.published_at?.slice(0, 10), substack: p.tags?.some((t) => t.name === '#substack') })), drafts: (dr.posts || []).map((p) => ({ title: p.title, slug: p.slug, image: !!p.feature_image })), scheduled: (sc.posts || []).map((p) => ({ title: p.title, slug: p.slug, sendsAt: p.published_at, emailOnly: p.email_only, text: (p.plaintext || '').slice(0, 4000) })), members: mem.meta?.pagination?.total ?? null, pollVotes: pollTotals, today: { published: usage('publish'), images: usage('image'), caps: { publish: CAP_PUB, image: CAP_IMG } } }];
 }
 http.createServer((req, res) => {
   if ((req.headers.authorization || '') !== `Bearer ${TOKEN}` || !TOKEN) return send(res, 401, { error: 'unauthorized' });
