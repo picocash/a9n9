@@ -60,7 +60,7 @@ try {
 try {
   const g = gameStats(); const body = JSON.stringify(g); const receipt = sha(body); if (!fs.existsSync(`${RAW}/${receipt}.json`)) fs.writeFileSync(`${RAW}/${receipt}.json`, body);
   add({ t: 'receipt', at, run, source: 'game', url: 'apps/cookgame/data/events (summary)', receipt });
-  for (const [subject, v] of Object.entries(g.by)) for (const m of ['visits', 'started', 'plated', 'shared', 'claimed']) fact(receipt, `game.${m}`, subject, v[m], 'cumulative');
+  for (const [subject, v] of Object.entries(g.by)) for (const m of ['visits', 'newcomers', 'started', 'plated', 'shared', 'claimed']) fact(receipt, `game.${m}`, subject, v[m], 'cumulative');
 } catch (e) { add({ t: 'gap', at, run, source: 'game', reason: e.message }); }
 add({ t: 'run', at, run, facts: lines.length });
 fs.appendFileSync(FACTS, lines.join('\n') + '\n');
