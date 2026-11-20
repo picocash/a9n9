@@ -10,13 +10,13 @@ const snap = { at: new Date(now).toISOString() };
 try { snap.agent003_members = JSON.parse(sh(`ssh genxlinked 'docker exec a9n9-agent003 /agent/bin/desk status'`)).members; } catch { snap.agent003_members = null; }
 try {
   // agent002: visits from all sources and from its own links (agent + bsky/playlin/gameslash tags), now vs 72 h ago, from its hash-chained KPI facts
-  const py = `import json,sys,time
+  const py = `import json,sys,time,re
 rows=[json.loads(l) for l in open('/home/ubuntu/a9n9/agent002/kpi/facts.jsonl') if '"game.visits"' in l]
 def at(cut):
   best={}
   for r in rows:
     if r['at']<=cut: best[r['subject']]=r['value']
-  own=sum(v for s,v in best.items() if s=='agent' or (s.startswith('src:') and not s.startswith(('src:rd-','src:gads-','src:selftest'))))
+  own=sum(v for s,v in best.items() if s=='agent' or (s.startswith('src:') and not s.startswith(('src:rd-','src:gads-','src:selftest')) and not re.match(r'src:ref-(.*-)?(google|bing|duckduckgo|yahoo|yandex|baidu|ecosia|brave|search|reddit|t-co|facebook|instagram|linkedin|x-com|twitter)', s)))
   return best.get('all',0),own
 now=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()); old=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime(time.time()-259200))
 print(json.dumps({'now':at(now+'Z'),'then':at(old+'Z')}))`;
