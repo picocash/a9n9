@@ -8,6 +8,10 @@ const sh = (c) => execSync(c, { encoding: 'utf8', timeout: 60000, stdio: ['ignor
 const now = Date.now(), H72 = 72 * 3600e3;
 const snap = { at: new Date(now).toISOString() };
 try { const d = JSON.parse(sh(`ssh genxlinked 'docker exec a9n9-agent003 /agent/bin/desk status'`)); snap.agent003_members = d.members; if (d.visits) { snap.agent003_visits_24h = d.visits.last24h; snap.agent003_visits_7d = d.visits.last7d; } } catch { snap.agent003_members = null; }   // visits = cookieless site counter, from 2026-11-20 22:50Z
+try { // newest Ghost signup, straight from the DB: the flat-72h test must not depend on how far back the snapshot log goes
+  const out = sh(`ssh genxlinked 'docker exec ghost-db sh -c "mysql -N -u root -p\\"\\$MYSQL_ROOT_PASSWORD\\" -e \\"select max(created_at) from members\\" \\$(mysql -N -u root -p\\"\\$MYSQL_ROOT_PASSWORD\\" -e \\"show databases\\" 2>/dev/null | grep -i ghost | head -1)" 2>/dev/null'`).trim();
+  if (/^\d{4}-/.test(out)) { snap.agent003_last_signup = out.replace(' ', 'T') + 'Z'; snap.agent003_hours_since_signup = Math.round((now - Date.parse(snap.agent003_last_signup)) / 36e5); }
+} catch {}
 try {
   // agent002: visits from all sources and from its own links (sum of its non-operator src:* tags; not the 'agent' subject, whose definition widened 11-20 so its history is not comparable), now vs 72 h ago, from its hash-chained KPI facts
   const py = `import json,sys,time,re
@@ -28,6 +32,6 @@ fs.appendFileSync(LOG, JSON.stringify(snap) + '\n');
 const old = fs.readFileSync(LOG, 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((s) => now - Date.parse(s.at) >= H72).pop();
 if (old && snap.agent003_members != null && old.agent003_members != null) snap.agent003_members_72h = snap.agent003_members - old.agent003_members;
 const flags = [];
-if (snap.agent003_members_72h === 0) flags.push('agent003: members flat 72h');
+if (snap.agent003_members_72h === 0 || snap.agent003_hours_since_signup >= 72) flags.push('agent003: members flat 72h');
 if (snap.agent002_visits_own_72h === 0) flags.push('agent002: 0 visits from its own links in 72h');
 console.log(JSON.stringify({ ...snap, flags }, null, 1));
