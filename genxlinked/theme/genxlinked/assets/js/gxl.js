@@ -140,7 +140,7 @@
    Skipped when the post already asks near the top (newer drafts carry their own line). */
 (function () {
   if (document.body.getAttribute('data-gxl-member') === '1') return;
-  function line() { var p = document.createElement('p'); p.className = 'gxl-answer-join gxl-first-join'; p.innerHTML = 'One email every Friday: how Gen X is living it in eight countries. <button type="button" class="gxl-btn" data-gxl-join>Join GenXLinked free</button>'; return p; }
+  function line() { var p = document.createElement('p'); p.className = 'gxl-answer-join gxl-first-join'; p.innerHTML = 'Join free and get the Gen X age card in Friday&rsquo;s letter: when screening, the shingles jab, the pension and the bus pass start in your country, all 8 countries on one page. <button type="button" class="gxl-btn" data-gxl-join>Get the age card</button>'; return p; }
   var c = document.body.classList;
   if (c.contains('post-template')) {
     var body = document.querySelector('.gh-content'); if (!body) return;
