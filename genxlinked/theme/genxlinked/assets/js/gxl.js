@@ -136,6 +136,22 @@
     document.querySelectorAll('.gxl-quiz.is-done .gxl-quiz-out').forEach(function (out) { addJoin(out); });
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 })();
+/* First-screen join line for non-members: under a post's summary, and under a tag page's header.
+   Skipped when the post already asks near the top (newer drafts carry their own line). */
+(function () {
+  if (document.body.getAttribute('data-gxl-member') === '1') return;
+  function line() { var p = document.createElement('p'); p.className = 'gxl-answer-join gxl-first-join'; p.innerHTML = 'One email every Friday: how Gen X is living it in eight countries. <button type="button" class="gxl-btn" data-gxl-join>Join GenXLinked free</button>'; return p; }
+  var c = document.body.classList;
+  if (c.contains('post-template')) {
+    var body = document.querySelector('.gh-content'); if (!body) return;
+    var kids = Array.prototype.slice.call(body.children, 0, 5);
+    if (kids.some(function (k) { return k.querySelector && (k.matches('[data-gxl-join]') || k.querySelector('[data-gxl-join], a[href*="#/portal"]')); })) return;
+    var ex = document.querySelector('.gh-article-header .gh-article-excerpt');   // under the summary, above the feature image: the body's first paragraph is ~2 screens down
+    if (ex) ex.insertAdjacentElement('afterend', line()); else body.insertBefore(line(), body.firstElementChild);
+  } else if (c.contains('tag-template')) {
+    var h = document.querySelector('.gh-archive-wrapper'); if (h) h.appendChild(line());
+  }
+})();
 /* Phone menu: "Sections" button opens the full list */
 (function () {
   var btn = document.querySelector('.gxl-menu-toggle'), nav = document.getElementById('gxl-menu');
