@@ -84,7 +84,7 @@ function stats(days) {
   const inc = (o, k) => { o[k] = (o[k] || 0) + 1; };
   let files = []; try { files = fs.readdirSync(HITS).filter((f) => f.slice(0, 10) >= since.slice(0, 10)).sort(); } catch {}
   for (const f of files) for (const l of fs.readFileSync(`${HITS}/${f}`, 'utf8').split('\n')) { if (!l) continue; let e; try { e = JSON.parse(l); } catch { continue; } if (e.t < since) continue;
-    if (e.bot) { out.bots++; continue; } if (e.mem) { out.members++; continue; }
+    if (e.bot || e.tag === 'selftest') { out.bots++; continue; } if (e.mem) { out.members++; continue; }
     out.visits++; inc(out.byPath, e.p); if (e.tag) inc(out.byTag, e.tag); if (e.r) inc(out.byRef, e.r); if (e.c) inc(out.byCountry, e.c); }
   const top = (o, n) => Object.fromEntries(Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, n));
   return { ...out, byTag: top(out.byTag, 30), byRef: top(out.byRef, 30), byCountry: top(out.byCountry, 20), byPath: top(out.byPath, 30), note: 'visits = non-member, non-bot page loads; a reload counts again' };
