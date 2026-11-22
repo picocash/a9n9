@@ -6,7 +6,7 @@
  * only this service holds. Each paid call is reported to the inbox as a
  * tools.call event — the agent's spend and the platform's revenue in one line.
  */
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { Hono, type Context } from 'hono';
 import { Mppx } from 'mppx/hono';
 import { Credential } from 'mppx';
@@ -78,6 +78,20 @@ export async function createToolsApp(opts: ToolsOptions) {
   };
   const parallel = (path: string, init: RequestInit & { timeoutMs?: number } = {}) => fetchImpl(`https://api.parallel.ai${path}`, { ...init, headers: { 'content-type': 'application/json', 'x-api-key': opts.vendorKeys.PARALLEL_API_KEY!, ...((init.headers as Record<string, string>) ?? {}) }, signal: AbortSignal.timeout(init.timeoutMs ?? 45_000) });
   const PARALLEL_TOOLS = new Set(['search', 'extract', 'decide', 'task', 'findall', 'monitor']);
+  // Agent keys (2026-11-22): agents without a picocash wallet (agent002, agent003) buy Parallel calls with a per-agent key
+  // instead of eCash. TOOLS_AGENT_KEYS = "name:sha256hex(key):usdPerDay,..." (only key hashes live here). Parallel tools only;
+  // each agent has its own daily cap on top of the vendor budget, and every call is a tools.call event with rail agent-key.
+  const agentKeys = new Map<string, { name: string; usdPerDay: number }>();
+  for (const part of String(process.env.TOOLS_AGENT_KEYS ?? '').split(',').map((x) => x.trim()).filter(Boolean)) {
+    const [name, hash, usd] = part.split(':');
+    if (name && /^[0-9a-f]{64}$/.test(hash ?? '')) agentKeys.set(hash!, { name, usdPerDay: Number(usd) > 0 ? Number(usd) : 1.5 });
+  }
+  const agentSpend = new Map<string, { day: string; usd: number }>();
+  const agentOver = (name: string, cap: number, cost: number): string | null => {
+    const day = new Date().toISOString().slice(0, 10); let s = agentSpend.get(name);
+    if (!s || s.day !== day) agentSpend.set(name, (s = { day, usd: 0 }));
+    return s.usd + cost > cap ? `${name}: daily Parallel budget reached ($${s.usd.toFixed(2)} of $${cap} used today); try tomorrow` : null;
+  };
 
   if (x402) {
     // Ledger, outermost: a PAYMENT-RESPONSE on the way out is a settlement (or a settlement failure) to record.
@@ -296,6 +310,20 @@ export async function createToolsApp(opts: ToolsOptions) {
         const res = await fetchImpl(`https://api.search.brave.com/res/v1/web/search?${braveQuery(body)}`, { headers: { accept: 'application/json', 'x-subscription-token': opts.vendorKeys.BRAVE_API_KEY! }, signal: AbortSignal.timeout(20_000) });
         return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
       };
+      const agentAuth = c.req.header('authorization') ?? '';
+      if (agentAuth.startsWith('Agent ')) {
+        const who = agentKeys.get(createHash('sha256').update(agentAuth.slice(6).trim()).digest('hex'));
+        if (!who) return c.json({ error: 'unknown agent key' }, 401);
+        if (!PARALLEL_TOOLS.has(tool.name)) return c.json({ error: 'agent keys buy Parallel tools only (search, extract, decide, task, findall, monitor)' }, 403);
+        const price = Number(tool.price); const over = agentOver(who.name, who.usdPerDay, price);
+        if (over) return c.json({ error: over }, 429);
+        const started = Date.now(); stats.calls++;
+        let res: Response;
+        try { res = await run(); } catch (err) { stats.failed++; res = Response.json({ error: 'vendor call failed', detail: err instanceof Error ? err.message : String(err) }, { status: 502 }); }
+        if (res.status < 300) agentSpend.get(who.name)!.usd += price;
+        void report({ id: `tools:${crypto.randomUUID()}`, type: 'tools.call', channel: 'tools', tool: tool.name, price: tool.price, unit: 'usd', rail: 'agent-key', buyer: who.name, vendorStatus: res.status, ms: Date.now() - started, at: new Date().toISOString() });
+        return new Response(res.body, { status: res.status, headers: { 'content-type': res.headers.get('content-type') ?? 'application/json', 'X-Price': tool.price } });
+      }
       // Protocol switch, in the route's own context (mppx scopes a challenge to the route that issued it):
       // x402 retry → verify, handler, settle; MPP retry → the gate below; unpaid → one merged 402 with both rails.
       // The x402 challenge names the public resource URL; a buyer reaching the service by its LAN address (the agent's own

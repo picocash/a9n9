@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+// parallel <search|extract|decide|task|findall|monitor|monitors|events> … — Parallel.ai web research through the a9n9 tools service,
+// bought with this agent's own key (/agent/secrets/parallel.env, PARALLEL_AGENT_KEY). Same tool and guards as agent001's:
+// $1.50 a day (also enforced by the service), 5 monitors at most. Excerpts are leads, not proof: open the page before you quote it.
+//   parallel search '<objective>' [--queries 'q1|q2'] [--max N] [--domains a.com] [--after YYYY-MM-DD]   $0.01
+//   parallel extract <url> [<url>...] [--objective '<what to pull>'] [--full]                         $0.01
+//   parallel findall '<objective>' --match 'name=what makes it a match' [--limit N]                  $1.20 (a whole list in one call)
+//   parallel monitor '<what to watch for>' [--weekly] [--label '<name>']                              $0.20 (then events are free)
+//   parallel events <monitor_id>  ·  parallel monitors  ·  parallel task '<input>' --schema '<fields>'  ·  parallel decide …
+import fs from 'node:fs';
+import { parseArgs, budget, usage, FALLBACK_PRICE, DEFAULT_DAILY_USD, MAX_MONITORS } from './_parallel.mjs';
+const HOME = process.env.AGENT_HOME || '/agent';
+const TOOLS = process.env.TOOLS_URL ?? 'http://10.0.1.101:8860';
+const LOG = `${HOME}/state/parallel-usage.jsonl`, MON = `${HOME}/state/parallel-monitors.json`;
+const out = (o) => console.log(JSON.stringify(o, null, 1));
+const rd = (f, fb) => { try { return fs.existsSync(f) ? JSON.parse(fs.readFileSync(f, 'utf8')) : fb; } catch { return fb; } };
+const key = (() => { try { return fs.readFileSync(`${HOME}/secrets/parallel.env`, 'utf8').match(/^PARALLEL_AGENT_KEY=(.+)$/m)?.[1]?.trim(); } catch { return null; } })();
+const argv = process.argv.slice(2);
+if (!argv.length || argv[0] === '--help' || argv[0] === '-h') { out({ ok: true, usage: usage(), prices: FALLBACK_PRICE, dailyCapUsd: DEFAULT_DAILY_USD }); process.exit(0); }
+if (fs.existsSync(`${HOME}/state/PAUSED`)) { out({ ok: false, error: 'agent is PAUSED by the operator; do nothing further' }); process.exit(3); }
+if (!key) { out({ ok: false, error: 'no Parallel key for this agent (secrets/parallel.env); ask claude on the board' }); process.exit(2); }
+const p = parseArgs(argv);
+if (p.error) { out({ ok: false, error: p.error }); process.exit(2); }
+if (p.cmd === 'monitors') { out({ ok: true, monitors: rd(MON, []) }); process.exit(0); }
+if (p.cmd === 'events') {
+  const r = await fetch(`${TOOLS}/v1/monitor/${p.id}/events${p.group ? `?event_group_id=${encodeURIComponent(p.group)}` : ''}`);
+  const j = await r.json().catch(() => null);
+  out({ ok: r.ok, status: r.status, ...(j ?? {}), howTo: 'open the cited pages with parallel extract before you repeat a claim' }); process.exit(r.ok ? 0 : 1);
+}
+if (p.cmd === 'monitor' && rd(MON, []).filter((m) => m.active !== false).length >= MAX_MONITORS) { out({ ok: false, error: `you already watch ${MAX_MONITORS} things; ask claude to cancel one first` }); process.exit(4); }
+const price = FALLBACK_PRICE[p.cmd];
+const entries = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
+const b = budget(entries, price, DEFAULT_DAILY_USD);
+if (!b.ok) { out({ ok: false, error: `Parallel budget: $${b.spent} of $${DEFAULT_DAILY_USD} spent today; ${p.cmd} costs $${price}. Try tomorrow.`, budget: b }); process.exit(4); }
+const timeout = p.cmd === 'findall' ? 330_000 : p.cmd === 'task' ? 180_000 : 120_000;
+let r, res = {};
+try {
+  r = await fetch(`${TOOLS}${p.path}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Agent ${key}` }, body: JSON.stringify(p.body), signal: AbortSignal.timeout(timeout) });
+  res = await r.json().catch(() => ({}));
+} catch (e) { out({ ok: false, error: `${p.cmd} failed: ${e.message}` }); process.exit(1); }
+fs.mkdirSync(`${HOME}/state`, { recursive: true });
+fs.appendFileSync(LOG, JSON.stringify({ at: new Date().toISOString(), cmd: p.cmd, usd: r.status < 300 ? Number(price) : 0, status: r.status }) + '\n');
+if (r.status >= 300) { out({ ok: false, error: `${p.cmd} failed`, status: r.status, detail: res }); process.exit(1); }
+let summary = {};
+const cut = (e, n) => String(e).slice(0, n);
+if (p.cmd === 'search') summary = { results: (res.results ?? []).map((x) => ({ url: x.url, title: x.title, publish_date: x.publish_date, excerpts: (x.excerpts ?? []).map((e) => cut(e, 700)) })) };
+else if (p.cmd === 'extract') summary = { results: (res.results ?? []).map((x) => ({ url: x.url, title: x.title, publish_date: x.publish_date, excerpts: (x.excerpts ?? []).map((e) => cut(e, 1500)), ...(x.full_content ? { full_content: cut(x.full_content, 12000) } : {}) })) };
+else if (p.cmd === 'decide') summary = { answers: res.answers, citations: (res.citations ?? []).slice(0, 10).map((c) => ({ url: c.url, title: c.title })) };
+else if (p.cmd === 'task') summary = r.status === 202 ? { status: 'pending', run_id: res.run_id, note: res.note } : { status: res.run?.status, output: res.output?.content, basis: (res.output?.basis ?? []).map((x) => ({ field: x.field, confidence: x.confidence, citations: (x.citations ?? []).slice(0, 3).map((c) => c.url) })) };
+else if (p.cmd === 'findall') {
+  fs.mkdirSync(`${HOME}/state/datasets`, { recursive: true });
+  const file = `${HOME}/state/datasets/findall-${Date.now()}.json`; fs.writeFileSync(file, JSON.stringify({ request: p.body, result: res }, null, 1));
+  const cands = res.candidates ?? [];
+  summary = { file, status: res.run?.status, matched: cands.filter((c) => c.match_status === 'matched').map((c) => ({ name: c.name, url: c.url, description: cut(c.description ?? '', 200) })), candidates: cands.length, note: res.note ?? null };
+} else if (p.cmd === 'monitor') {
+  if (res.monitor_id) { const mons = rd(MON, []); mons.push({ monitor_id: res.monitor_id, query: p.body.query, frequency: p.body.frequency, label: p.body.label ?? null, created: new Date().toISOString(), active: true }); fs.writeFileSync(MON, JSON.stringify(mons, null, 1)); }
+  summary = { monitor_id: res.monitor_id, status: res.status, frequency: res.frequency, note: res.note };
+}
+out({ ok: true, cmd: p.cmd, paid_usd: Number(price), ...summary });
