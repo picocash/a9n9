@@ -16,6 +16,13 @@ Created 2026-11-22. Proxmox VM 107 `agent004` (10.0.1.46, 8 vCPU / 32 GB / 200 G
 events every 2m (own monitor: board, reminders, Parallel monitors, holding moves of 3%+, new SEC filings), premarket 13:00 UTC
 Mon-Fri, close 21:30 UTC Mon-Fri, work every 2h, weekly Sunday 18:00 UTC. Definitions: scripts-hermes/jobs-2026-11-22.sh.
 
+## Market monitors moved here (2026-11-22)
+Arun's Financial-Modeling-Prep-MCP-Server folder (FMP MCP server plus his market monitors) moved from the home box to the VM at
+`/home/ubuntu/Financial-Modeling-Prep-MCP-Server` (old copy archived on the home box in ~/archive). Its 6 cron jobs run on the
+VM's host crontab, unchanged: market conditions every 15 min 9-16 Mon-Fri, daily summary 20:40 Mon-Fri, weekend summary Sat 10:00,
+MSTR monitor 12:00 and 16:00, NAKA monitor every 15 min. The VM clock is America/New_York (as on the home box), so these are
+Eastern times; the agent's container stays on UTC. Node 22.22.1 is in /usr/local on the VM. Not mounted into the agent yet.
+
 ## Waiting on Arun
 1. LLM login (as agent003: an Anthropic setup-token in hermes/), then resume the five jobs.
 2. The portfolio to track.
