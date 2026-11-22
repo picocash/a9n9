@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+// remind — reminders you set for yourself. When one comes due, your events job wakes you within a couple of minutes with
+// "reminder <id> <what>"; do it, then mark it done. Use it for every follow-up instead of hoping a later run notices:
+//   remind add <when> '<what to do>'     when = +30m | +2h | +3d | 2026-11-25T09:00Z | tomorrow 09:00   (UTC)
+//   remind list                          open reminders, soonest first
+//   remind done <id> ['<what happened>'] close it (a due reminder keeps showing until you do)
+//   remind snooze <id> <when>            move it
+// Limits: 30 open reminders, nothing sooner than 10 minutes or later than 60 days.
+import fs from 'node:fs';
+const STATE = `${process.env.AGENT_HOME || '/agent'}/state`, F = `${STATE}/reminders.json`;
+const out = (o) => console.log(JSON.stringify(o, null, 1));
+const load = () => { try { return JSON.parse(fs.readFileSync(F, 'utf8')); } catch { return []; } };
+const save = (rs) => { fs.mkdirSync(STATE, { recursive: true }); fs.writeFileSync(F, JSON.stringify(rs, null, 1)); };
+function when(s) {
+  s = String(s ?? '').trim(); const now = Date.now(); let m;
+  if ((m = s.match(/^\+(\d+)\s*([mhd])$/))) return new Date(now + Number(m[1]) * { m: 60e3, h: 3600e3, d: 864e5 }[m[2]]);
+  if ((m = s.match(/^tomorrow(?:\s+(\d\d):(\d\d))?$/i))) { const d = new Date(now + 864e5); d.setUTCHours(Number(m[1] ?? 9), Number(m[2] ?? 0), 0, 0); return d; }
+  const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : `${s}Z`); return Number.isNaN(d.getTime()) ? null : d;
+}
+const [cmd, a1, ...rest] = process.argv.slice(2);
+const rs = load();
+if (cmd === 'add') {
+  const at = when(a1), what = rest.join(' ').trim();
+  if (!at || !what) { out({ ok: false, error: "usage: remind add <+2h|+1d|2026-11-25T09:00Z|tomorrow 09:00> '<what to do>'" }); process.exit(2); }
+  const dt = at.getTime() - Date.now();
+  if (dt < 10 * 60e3 || dt > 60 * 864e5) { out({ ok: false, error: 'a reminder must be 10 minutes to 60 days away' }); process.exit(2); }
+  if (rs.filter((r) => !r.done).length >= 30) { out({ ok: false, error: '30 open reminders already: close or merge some (remind list)' }); process.exit(2); }
+  const r = { id: Math.random().toString(36).slice(2, 8), at: at.toISOString(), what: what.slice(0, 300), created: new Date().toISOString(), done: false };
+  rs.push(r); save(rs); out({ ok: true, reminder: r });
+} else if (cmd === 'done' || cmd === 'snooze') {
+  const r = rs.find((x) => x.id === a1); if (!r) { out({ ok: false, error: `no reminder ${a1}` }); process.exit(2); }
+  if (cmd === 'done') { r.done = true; r.closed = new Date().toISOString(); if (rest.length) r.result = rest.join(' ').slice(0, 300); }
+  else { const at = when(rest.join(' ')); if (!at) { out({ ok: false, error: 'usage: remind snooze <id> <when>' }); process.exit(2); } r.at = at.toISOString(); }
+  save(rs); out({ ok: true, reminder: r });
+} else if (!cmd || cmd === 'list') {
+  const open = rs.filter((r) => !r.done).sort((x, y) => Date.parse(x.at) - Date.parse(y.at));
+  out({ ok: true, now: new Date().toISOString(), due: open.filter((r) => Date.parse(r.at) <= Date.now()), upcoming: open.filter((r) => Date.parse(r.at) > Date.now()) });
+} else { out({ ok: false, error: 'commands: add <when> <what> | list | done <id> [result] | snooze <id> <when>' }); process.exit(2); }
