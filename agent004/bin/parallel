@@ -27,6 +27,15 @@ if (p.cmd === 'events') {
   const j = await r.json().catch(() => null);
   out({ ok: r.ok, status: r.status, ...(j ?? {}), howTo: 'open the cited pages with parallel extract before you repeat a claim' }); process.exit(r.ok ? 0 : 1);
 }
+if (p.cmd === 'findall-result') {
+  const r = await fetch(`${TOOLS}/v1/findall/${p.id}/result`, { signal: AbortSignal.timeout(60_000) }).catch((e) => ({ ok: false, status: 0, json: async () => ({ error: e.message }) }));
+  const j = await r.json().catch(() => ({}));
+  let file = `${HOME}/state/datasets/${p.id}-result-${Date.now()}.json`;
+  try { fs.mkdirSync(`${HOME}/state/datasets`, { recursive: true }); fs.writeFileSync(file, JSON.stringify(j, null, 1)); } catch (e) { file = `NOT SAVED (${e.code ?? e.message})`; }
+  const cands = j.candidates ?? [];
+  out({ ok: r.ok, status: r.status, file, run_status: j.run?.status ?? null, matched: cands.filter((c) => c.match_status === 'matched').map((c) => ({ name: c.name, url: c.url, description: String(c.description ?? '').slice(0, 200) })), candidates: cands.length, note: j.note ?? j.error ?? null });
+  process.exit(r.ok ? 0 : 1);
+}
 if (p.cmd === 'monitor' && rd(MON, []).filter((m) => m.active !== false).length >= MAX_MONITORS) { out({ ok: false, error: `you already watch ${MAX_MONITORS} things; ask claude to cancel one first` }); process.exit(4); }
 const price = FALLBACK_PRICE[p.cmd];
 const entries = fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').split('\n').filter(Boolean).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean) : [];
@@ -52,7 +61,7 @@ else if (p.cmd === 'findall') {
   let file = `${HOME}/state/datasets/findall-${Date.now()}.json`;
   try { fs.mkdirSync(`${HOME}/state/datasets`, { recursive: true }); fs.writeFileSync(file, JSON.stringify({ request: p.body, result: res }, null, 1)); } catch (e) { file = `NOT SAVED (${e.code ?? e.message}): copy the matched list below into your workspace now`; }
   const cands = res.candidates ?? [];
-  summary = { file, status: res.run?.status, matched: cands.filter((c) => c.match_status === 'matched').map((c) => ({ name: c.name, url: c.url, description: cut(c.description ?? '', 200) })), candidates: cands.length, note: res.note ?? null };
+  summary = { file, findall_id: res.run?.findall_id ?? null, status: res.run?.status, matched: cands.filter((c) => c.match_status === 'matched').map((c) => ({ name: c.name, url: c.url, description: cut(c.description ?? '', 200) })), candidates: cands.length, note: res.note ?? null };
 } else if (p.cmd === 'monitor') {
   if (res.monitor_id) { const mons = rd(MON, []); mons.push({ monitor_id: res.monitor_id, query: p.body.query, frequency: p.body.frequency, label: p.body.label ?? null, created: new Date().toISOString(), active: true }); fs.writeFileSync(MON, JSON.stringify(mons, null, 1)); }
   summary = { monitor_id: res.monitor_id, status: res.status, frequency: res.frequency, note: res.note };

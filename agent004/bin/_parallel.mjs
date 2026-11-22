@@ -11,7 +11,8 @@ parallel task '<input>' --schema '<fields wanted, in words>' [--json '<json sche
 parallel findall '<objective>' [--type companies] --match 'name=what makes it a match' [--match ...] [--generator preview|base] [--limit N]
 parallel monitor '<what to watch for>' [--weekly] [--label '<short name>'] [--domains ...]
 parallel monitors                       (what you are watching, from state/parallel-monitors.json)
-parallel events <monitor_id> [--group <event_group_id>]   (free)`;
+parallel events <monitor_id> [--group <event_group_id>]   (free)
+parallel findall-result <findall_id>    (free: the full list of a run that was still going when findall returned)`;
 export const usage = () => USAGE;
 /** argv → { cmd, body, path } or { error }. No network, no files. */
 export function parseArgs(argv) {
@@ -69,6 +70,7 @@ export function parseArgs(argv) {
       return { cmd, path: PATHS.monitor, body: { query: text, frequency: flags.weekly ? '1w' : '1d', ...(flags.label ? { label: flags.label } : {}), ...policy() } };
     }
     case 'monitors': return { cmd };
+    case 'findall-result': { const id = rest[0]; if (!/^findall_[a-z0-9]{8,64}$/.test(id ?? '')) return { error: 'findall-result needs a run id (findall_…, shown by findall and in its dataset file)' }; return { cmd, id }; }
     case 'events': { const id = rest[0]; if (!/^monitor_[a-z0-9]{8,64}$/.test(id ?? '')) return { error: 'events needs a monitor id (monitor_…)' }; return { cmd, id, ...(flags.group ? { group: flags.group } : {}) }; }
     default: return { error: `usage:\n${USAGE}` };
   }

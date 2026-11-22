@@ -191,6 +191,14 @@ export async function createToolsApp(opts: ToolsOptions) {
     const res = await parallel(`/v1/monitors/${id}/events${q.size ? `?${q}` : ''}`, { timeoutMs: 20_000 });
     return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
   });
+  // A paid FindAll keeps running after the 4-minute wait; reading its result later is free (the start paid); the id is unguessable.
+  app.get('/v1/findall/:id/result', async (c) => {
+    const id = c.req.param('id');
+    if (!/^findall_[a-z0-9]{8,64}$/.test(id) || !opts.vendorKeys.PARALLEL_API_KEY) return c.json({ error: 'unknown findall run' }, 404);
+    const res = await parallel(`/v1beta/findall/runs/${id}/result`, { timeoutMs: 30_000 });
+    const rj = (await res.json().catch(() => ({}))) as { run?: { status?: { is_active?: boolean } } };
+    return c.json({ ...rj, note: rj.run?.status?.is_active ? 'still running: this is a snapshot; read it again later' : undefined }, res.ok ? 200 : (res.status as 404));
+  });
   app.get('/v1/video/:id', async (c) => {
     const id = c.req.param('id');
     if (!/^[0-9a-f-]{36}$/.test(id) || !opts.vendorKeys.XAI_API_KEY) return c.json({ error: 'unknown request' }, 404);
