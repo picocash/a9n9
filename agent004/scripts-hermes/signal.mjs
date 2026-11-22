@@ -1,5 +1,6 @@
 // agent004's event monitor for its "events" job. Hermes runs it every 2 minutes and wakes agent004 only when the output
 // CHANGES, so a quiet check costs no model call. It reports:
+//   mail <id>                                mail to agent004@a9n9.net not yet handled
 //   board-ask <id> · board-reply <id>        something written to agent004 on the team board
 //   reminder <id> <what>                     a reminder agent004 set with bin/remind came due (prediction checks, follow-ups)
 //   monitor <monitor_id> <events>            a Parallel monitor found something new about a holding
@@ -15,7 +16,13 @@ const rd = (f, fb) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } c
 const t = (ms = 15000) => AbortSignal.timeout(ms);
 const lines = [];
 
-// 1. board
+// 1. mail and board
+try {
+  const e = kv(`${HOME}/secrets/mail.env`);
+  const r = await fetch(`${e.MAIL_URL}/v1/agent/mail`, { headers: { authorization: `Bearer ${e.MAIL_KEY}` }, signal: t() });
+  const j = await r.json();
+  if (r.ok) for (const m of j.mail ?? []) lines.push(`mail ${m.id}`);
+} catch { /* a failed check is not an event */ }
 try {
   const b = kv(`${HOME}/secrets/board.env`);
   const a = await (await fetch(`${b.BOARD_URL}/v1/board/attention`, { headers: { authorization: `Bearer ${b.BOARD_KEY}` }, signal: t() })).json();

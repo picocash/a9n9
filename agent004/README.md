@@ -9,6 +9,7 @@ Created 2026-11-22. Proxmox VM 107 `agent004` (10.0.1.46, 8 vCPU / 32 GB / 200 G
 - `portfolio show | value | history`: reads `/agent/portfolio.json` (written by the operator from what Arun gives; read-only to
   the agent). Format: `{"currency":"USD","asOf":"…","cash":0,"positions":[{"symbol":"AAPL","shares":10,"costBasis":150,"account":"…"}]}`.
   No trade command exists.
+- `mail list | read | reply | done`: agent004@a9n9.net (routing rule → a9n9-email Worker, key in AGENT_MAIL_KEYS; reply-only, 20/day).
 - `parallel` (per-agent key on the tools service, $1.50/day), `remind`, `board`, `journal`.
 
 ## Jobs (Hermes cron, created paused until the LLM login exists)
