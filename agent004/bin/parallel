@@ -38,8 +38,9 @@ try {
   r = await fetch(`${TOOLS}${p.path}`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Agent ${key}` }, body: JSON.stringify(p.body), signal: AbortSignal.timeout(timeout) });
   res = await r.json().catch(() => ({}));
 } catch (e) { out({ ok: false, error: `${p.cmd} failed: ${e.message}` }); process.exit(1); }
-fs.mkdirSync(`${HOME}/state`, { recursive: true });
-fs.appendFileSync(LOG, JSON.stringify({ at: new Date().toISOString(), cmd: p.cmd, usd: r.status < 300 ? Number(price) : 0, status: r.status }) + '\n');
+// A paid answer must never be lost to a local file problem: log failures are reported, not thrown.
+let logError = null;
+try { fs.mkdirSync(`${HOME}/state`, { recursive: true }); fs.appendFileSync(LOG, JSON.stringify({ at: new Date().toISOString(), cmd: p.cmd, usd: r.status < 300 ? Number(price) : 0, status: r.status }) + '\n'); } catch (e) { logError = `usage log not written (${e.code ?? e.message}); tell claude on the board`; }
 if (r.status >= 300) { out({ ok: false, error: `${p.cmd} failed`, status: r.status, detail: res }); process.exit(1); }
 let summary = {};
 const cut = (e, n) => String(e).slice(0, n);
@@ -48,12 +49,12 @@ else if (p.cmd === 'extract') summary = { results: (res.results ?? []).map((x) =
 else if (p.cmd === 'decide') summary = { answers: res.answers, citations: (res.citations ?? []).slice(0, 10).map((c) => ({ url: c.url, title: c.title })) };
 else if (p.cmd === 'task') summary = r.status === 202 ? { status: 'pending', run_id: res.run_id, note: res.note } : { status: res.run?.status, output: res.output?.content, basis: (res.output?.basis ?? []).map((x) => ({ field: x.field, confidence: x.confidence, citations: (x.citations ?? []).slice(0, 3).map((c) => c.url) })) };
 else if (p.cmd === 'findall') {
-  fs.mkdirSync(`${HOME}/state/datasets`, { recursive: true });
-  const file = `${HOME}/state/datasets/findall-${Date.now()}.json`; fs.writeFileSync(file, JSON.stringify({ request: p.body, result: res }, null, 1));
+  let file = `${HOME}/state/datasets/findall-${Date.now()}.json`;
+  try { fs.mkdirSync(`${HOME}/state/datasets`, { recursive: true }); fs.writeFileSync(file, JSON.stringify({ request: p.body, result: res }, null, 1)); } catch (e) { file = `NOT SAVED (${e.code ?? e.message}): copy the matched list below into your workspace now`; }
   const cands = res.candidates ?? [];
   summary = { file, status: res.run?.status, matched: cands.filter((c) => c.match_status === 'matched').map((c) => ({ name: c.name, url: c.url, description: cut(c.description ?? '', 200) })), candidates: cands.length, note: res.note ?? null };
 } else if (p.cmd === 'monitor') {
   if (res.monitor_id) { const mons = rd(MON, []); mons.push({ monitor_id: res.monitor_id, query: p.body.query, frequency: p.body.frequency, label: p.body.label ?? null, created: new Date().toISOString(), active: true }); fs.writeFileSync(MON, JSON.stringify(mons, null, 1)); }
   summary = { monitor_id: res.monitor_id, status: res.status, frequency: res.frequency, note: res.note };
 }
-out({ ok: true, cmd: p.cmd, paid_usd: Number(price), ...summary });
+out({ ok: true, cmd: p.cmd, paid_usd: Number(price), ...(logError ? { warning: logError } : {}), ...summary });

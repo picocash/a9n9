@@ -19,7 +19,7 @@ Use it whenever a job means checking many pages by hand. One call replaces a doz
 |---|---|---|
 | Find pages for a question | `./bin/parallel search '<objective>' [--queries 'q1|q2'] [--max 8] [--after 2026-11-01]` | $0.01 |
 | Pull facts or a contact from known pages | `./bin/parallel extract <url> [<url>…] --objective 'public contact email, latest post date'` | $0.01 |
-| A whole LIST of matching people or outlets in one go | `./bin/parallel findall '<objective>' --match 'name=what makes it a match' --limit 30` | $1.20 |
+| A whole LIST of matching people or outlets in one go | `./bin/parallel findall '<objective>' --type people --match 'name=what makes it a match' --limit 30` (--type defaults to companies: use people for writers or askers, or no candidates come back and it still costs $1.20) | $1.20 |
 | Be told when something new appears on your beat | `./bin/parallel monitor '<what to watch for>' [--weekly] --label '<name>'`, then `./bin/parallel events <id>` (free) | $0.20 |
 
 Rules
