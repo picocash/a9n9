@@ -1,0 +1,33 @@
+#!/usr/bin/env node
+// portfolio — Arun's portfolio as given to agent004 (/agent/portfolio.json, read-only: only the operator changes holdings).
+//   portfolio show                 the holdings as given (symbol, shares, cost basis, account, notes)
+//   portfolio value                live value: price, day change, market value, weight, unrealized gain/loss, totals;
+//                                  saves a snapshot to state/portfolio-history.jsonl (at most one an hour)
+//   portfolio history [days]       saved snapshots, newest last (default 30 days)
+// There is NO trade command. Trading needs Arun's brokerage access and written rules first; until then, recommendations
+// go to Arun on the board, clearly marked as analysis, never as orders.
+import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { HOME, STATE, out, readJsonl, append, paused } from './_kit.mjs';
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(3); }
+const F = `${HOME}/portfolio.json`, H = `${STATE}/portfolio-history.jsonl`;
+let pf; try { pf = JSON.parse(fs.readFileSync(F, 'utf8')); } catch { out({ ok: false, error: 'no portfolio yet: Arun has not given one. Ask on the board (board ask ... --to arun) and meanwhile build your watch process on a few large US stocks and ETFs.' }); process.exit(4); }
+const pos = pf.positions ?? [];
+const [cmd = 'show', a1] = process.argv.slice(2);
+if (cmd === 'show') { out({ ok: true, asOf: pf.asOf ?? null, currency: pf.currency ?? 'USD', cash: pf.cash ?? null, positions: pos, notes: pf.notes ?? null }); process.exit(0); }
+if (cmd === 'history') { const since = Date.now() - Number(a1 || 30) * 864e5; out({ ok: true, snapshots: readJsonl(H).filter((s) => Date.parse(s.at) >= since) }); process.exit(0); }
+if (cmd !== 'value') { out({ ok: false, error: 'usage: portfolio show | value | history [days]' }); process.exit(2); }
+const syms = [...new Set(pos.map((x) => x.symbol))];
+let q; try { q = JSON.parse(execFileSync(process.execPath, [new URL('./market', import.meta.url).pathname, 'quote', ...syms], { encoding: 'utf8' })); } catch (e) { out({ ok: false, error: `market quote failed: ${e.message.slice(0, 200)}` }); process.exit(1); }
+const bySym = Object.fromEntries((q.quotes ?? []).map((x) => [x.symbol?.toUpperCase(), x]));
+const rows = pos.map((x) => {
+  const k = bySym[x.symbol.toUpperCase()] ?? {}; const mv = k.price != null ? k.price * x.shares : null;
+  const cost = x.costBasis != null ? x.costBasis * x.shares : null;
+  return { symbol: x.symbol, account: x.account ?? null, shares: x.shares, price: k.price ?? null, currency: k.currency ?? null, dayChangePct: k.changePct ?? null, dayChange: k.change != null ? +(k.change * x.shares).toFixed(2) : null, marketValue: mv != null ? +mv.toFixed(2) : null, costBasis: x.costBasis ?? null, unrealized: mv != null && cost != null ? +(mv - cost).toFixed(2) : null, unrealizedPct: mv != null && cost ? +((mv / cost - 1) * 100).toFixed(2) : null, error: k.error ?? null };
+});
+const total = rows.reduce((s, r) => s + (r.marketValue ?? 0), 0) + Number(pf.cash ?? 0);
+for (const r of rows) r.weightPct = r.marketValue != null && total ? +((r.marketValue / total) * 100).toFixed(2) : null;
+const sum = (k) => +rows.reduce((s, r) => s + (r[k] ?? 0), 0).toFixed(2);
+const snap = { at: new Date().toISOString(), total: +total.toFixed(2), cash: pf.cash ?? 0, dayChange: sum('dayChange'), unrealized: sum('unrealized'), missingPrices: rows.filter((r) => r.price == null).map((r) => r.symbol) };
+const last = readJsonl(H).at(-1); if (!last || Date.now() - Date.parse(last.at) > 3600e3) append(H, { ...snap, positions: rows.map(({ symbol, price, marketValue }) => ({ symbol, price, marketValue })) });
+out({ ok: true, ...snap, currency: pf.currency ?? 'USD', positions: rows, note: 'prices from market quote (Yahoo chart data, may be delayed); mixed currencies are not converted' });

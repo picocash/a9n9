@@ -1,0 +1,79 @@
+// agent004's event monitor for its "events" job. Hermes runs it every 2 minutes and wakes agent004 only when the output
+// CHANGES, so a quiet check costs no model call. It reports:
+//   board-ask <id> · board-reply <id>        something written to agent004 on the team board
+//   reminder <id> <what>                     a reminder agent004 set with bin/remind came due (prediction checks, follow-ups)
+//   monitor <monitor_id> <events>            a Parallel monitor found something new about a holding
+//   move <SYM> <day> <±pct bucket>           a holding moved 3%+ today (buckets of 3%, so +4% then +7% wakes it again)
+//   filing <SYM> <form> <date>               a holding filed with the SEC (8-K, 10-Q, 10-K, 4 …), newest per holding
+// Market checks run at most every 10 minutes and only on US weekdays 13:00–22:00 UTC (price moves) or every 2 hours (filings),
+// using FMP quotes and SEC EDGAR, with their own small cache. Counters and items that go AWAY never wake the agent: when
+// nothing is new, the previous output is repeated unchanged. Only a NEW line wakes it.
+import fs from 'node:fs';
+const HOME = '/agent', STATE = `${HOME}/state`;
+const kv = (f) => Object.fromEntries(fs.readFileSync(f, 'utf8').split('\n').filter((l) => /^[A-Z_0-9]+=/.test(l)).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).trim()]; }));
+const rd = (f, fb) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return fb; } };
+const t = (ms = 15000) => AbortSignal.timeout(ms);
+const lines = [];
+
+// 1. board
+try {
+  const b = kv(`${HOME}/secrets/board.env`);
+  const a = await (await fetch(`${b.BOARD_URL}/v1/board/attention`, { headers: { authorization: `Bearer ${b.BOARD_KEY}` }, signal: t() })).json();
+  for (const p of a.asks ?? []) lines.push(`board-ask ${p.id}`);
+  for (const p of a.replies ?? []) lines.push(`board-reply ${p.id}`);
+} catch { /* a failed check is not an event */ }
+
+// 2. reminders
+const now = Date.now();
+for (const r of rd(`${STATE}/reminders.json`, [])) if (!r.done && Date.parse(r.at) <= now) lines.push(`reminder ${r.id} ${String(r.what).replace(/\s+/g, ' ').slice(0, 80)}`);
+
+// 3. Parallel monitors
+const TOOLS = process.env.TOOLS_URL ?? 'http://10.0.1.101:8860';
+for (const m of rd(`${STATE}/parallel-monitors.json`, []).filter((x) => x.active !== false).slice(0, 5)) {
+  try {
+    const j = await (await fetch(`${TOOLS}/v1/monitor/${m.monitor_id}/events`, { signal: t(10000) })).json();
+    const n = (j.events ?? []).filter((e) => e.type !== 'completion' && e.type !== 'error').length;
+    if (n) lines.push(`monitor ${m.monitor_id} ${n}`);
+  } catch { /* idem */ }
+}
+
+// 4. holdings: price moves and SEC filings (own cache, so this does not spend the market tool's daily cap)
+const syms = [...new Set((rd(`${HOME}/portfolio.json`, {}).positions ?? []).map((p) => String(p.symbol).toUpperCase()))].slice(0, 40);
+const MK = `${STATE}/signal-market.json`, mk = rd(MK, { quotesAt: 0, filingsAt: 0, moves: {}, filings: {} });
+const d = new Date(), day = d.toISOString().slice(0, 10), h = d.getUTCHours(), weekday = d.getUTCDay() >= 1 && d.getUTCDay() <= 5;
+if (syms.length && weekday && h >= 13 && h < 22 && now - mk.quotesAt > 10 * 60e3) {
+  try {
+    const key = kv(`${HOME}/secrets/fmp.env`).FMP_API_KEY;
+    for (const s of syms) {
+      const j = await (await fetch(`https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(s)}&apikey=${key}`, { signal: t(10000) })).json().catch(() => null);
+      const pct = Array.isArray(j) ? j[0]?.changePercentage : null;
+      if (typeof pct === 'number' && Math.abs(pct) >= 3) { const bucket = Math.sign(pct) * Math.floor(Math.abs(pct) / 3) * 3; const k = `${s} ${day}`; if (Math.abs(bucket) > Math.abs(mk.moves[k] ?? 0)) mk.moves[k] = bucket; }
+    }
+    mk.quotesAt = now;
+  } catch { /* idem */ }
+}
+if (syms.length && now - mk.filingsAt > 2 * 3600e3) {
+  try {
+    const UA = { 'user-agent': 'a9n9.net agent004 research (agent004@a9n9.net)' };
+    const tick = await (await fetch('https://www.sec.gov/files/company_tickers.json', { headers: UA, signal: t(20000) })).json();
+    for (const s of syms) {
+      const row = Object.values(tick).find((x) => x.ticker.toUpperCase() === s); if (!row) continue;
+      const j = await (await fetch(`https://data.sec.gov/submissions/CIK${String(row.cik_str).padStart(10, '0')}.json`, { headers: UA, signal: t(20000) })).json();
+      const f = j.filings?.recent; if (f?.form?.length) mk.filings[s] = `${f.form[0]} ${f.filingDate[0]}`;
+    }
+    mk.filingsAt = now;
+  } catch { /* idem */ }
+}
+for (const k of Object.keys(mk.moves)) if (!k.endsWith(day)) delete mk.moves[k];
+try { fs.writeFileSync(MK, JSON.stringify(mk)); } catch {}
+for (const [k, b] of Object.entries(mk.moves)) lines.push(`move ${k} ${b > 0 ? '+' : ''}${b}%`);
+for (const [s, f] of Object.entries(mk.filings)) lines.push(`filing ${s} ${f}`);
+
+// 5. wake only on something NEW
+const LAST = `${STATE}/signal-last.txt`;
+const last = (() => { try { return fs.readFileSync(LAST, 'utf8'); } catch { return ''; } })();
+const lastSet = new Set(last.split('\n').filter(Boolean));
+const cur = [...new Set(lines)].sort();
+let outText = last || 'idle\n';
+if (cur.some((l) => !lastSet.has(l))) { outText = (cur.length ? cur.join('\n') : 'idle') + '\n'; try { fs.writeFileSync(LAST, outText); } catch {} }
+process.stdout.write(outText);

@@ -1,0 +1,110 @@
+#!/usr/bin/env node
+// market — prices, fundamentals, news and filings for agent004. Cached, with a daily call cap.
+// Main source: Financial Modeling Prep (Arun's key in /agent/secrets/fmp.env; US-listed symbols on this plan). Fallback for
+// quotes/history it refuses (e.g. non-US symbols): Yahoo chart data (unofficial endpoint). Filings and XBRL facts: SEC EDGAR.
+//   market quote <SYM> [<SYM>...]                      price, day change, volume, day range, market cap, exchange time
+//   market history <SYM> [1mo|3mo|6mo|1y|5y]           daily closes (newest last)
+//   market financials <SYM> [income|balance|cashflow] [annual|quarter] [n]   statements as reported (FMP)
+//   market ratios <SYM>                                trailing-twelve-month ratios: margins, P/E, P/B, debt/equity, ROE… (FMP)
+//   market news <SYM> [n]                              recent news headlines with links and publishers (FMP)
+//   market filings <TICKER> [10-K|10-Q|8-K|4|...] [n]  recent SEC EDGAR filings with links
+//   market facts <TICKER> [<concept>...]               SEC XBRL company facts, e.g. Revenues NetIncomeLoss EarningsPerShareDiluted
+// Rules: every number you report names its source and timestamp. 300 network calls a day; answers are cached (quotes 5 min,
+// news 30 min, the rest 12 h). On a refusal or a plan limit, say so in your run post; do not retry in a loop.
+import fs from 'node:fs';
+import { HOME, STATE, out, paused, counter } from './_kit.mjs';
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(3); }
+const CACHE = `${STATE}/cache/market`; fs.mkdirSync(CACHE, { recursive: true });
+const UA_SEC = 'a9n9.net agent004 research (agent004@a9n9.net)';
+const calls = counter('market'); const CAP = 300;
+async function get(url, { ttl = 300, headers = {} } = {}) {
+  const f = `${CACHE}/${Buffer.from(url).toString('base64url').slice(0, 180)}.json`;
+  try { const st = fs.statSync(f); if (Date.now() - st.mtimeMs < ttl * 1000) return JSON.parse(fs.readFileSync(f, 'utf8')); } catch {}
+  if (calls.get() >= CAP) throw new Error(`daily cap of ${CAP} market calls reached; use cached data or try tomorrow`);
+  calls.bump();
+  const r = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (compatible; a9n9-agent004)', ...headers }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) throw new Error(`${new URL(url).host} answered HTTP ${r.status}`);
+  const j = await r.json(); fs.writeFileSync(f, JSON.stringify(j)); return j;
+}
+const iso = (s) => (s ? new Date(s * 1000).toISOString() : null);
+const chart = (sym, range, interval, ttl) => get(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}`, { ttl });
+async function quote(sym) {
+  const j = await chart(sym, '5d', '1d', 300); const r = j.chart?.result?.[0]; if (!r) throw new Error(j.chart?.error?.description ?? `no data for ${sym}`);
+  const m = r.meta, closes = (r.indicators?.quote?.[0]?.close ?? []).filter((x) => x != null);
+  const prev = closes.length >= 2 ? closes.at(-2) : (m.previousClose ?? null), last = m.regularMarketPrice ?? closes.at(-1) ?? null;
+  return { symbol: m.symbol, name: m.longName ?? m.shortName ?? null, price: last, previousClose: prev, change: last != null && prev ? +(last - prev).toFixed(4) : null, changePct: last != null && prev ? +((last / prev - 1) * 100).toFixed(2) : null, currency: m.currency, exchange: m.fullExchangeName ?? m.exchangeName, marketTime: iso(m.regularMarketTime), source: 'Yahoo Finance chart data (unofficial endpoint)' };
+}
+const FMP_KEY = (() => { try { return fs.readFileSync(`${HOME}/secrets/fmp.env`, 'utf8').match(/^FMP_API_KEY=(.+)$/m)?.[1]?.trim(); } catch { return null; } })();
+async function fmp(path, params, ttl) {
+  if (!FMP_KEY) throw new Error('no FMP key (secrets/fmp.env); ask claude on the board');
+  const qs = new URLSearchParams(params).toString();
+  const f = `${CACHE}/fmp-${Buffer.from(`${path}?${qs}`).toString('base64url').slice(0, 180)}.json`;   // the key is never in a file name
+  try { const st = fs.statSync(f); if (Date.now() - st.mtimeMs < ttl * 1000) return JSON.parse(fs.readFileSync(f, 'utf8')); } catch {}
+  if (calls.get() >= CAP) throw new Error(`daily cap of ${CAP} market calls reached; use cached data or try tomorrow`);
+  calls.bump();
+  const r = await fetch(`https://financialmodelingprep.com/stable/${path}?${qs}&apikey=${FMP_KEY}`, { signal: AbortSignal.timeout(20000) });
+  const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`FMP: ${text.replace(/apikey=[^&\s]+/g, 'apikey=…').slice(0, 160)}`); }
+  if (!r.ok || j?.['Error Message']) throw new Error(`FMP: ${String(j?.['Error Message'] ?? `HTTP ${r.status}`).slice(0, 160)}`);
+  fs.writeFileSync(f, JSON.stringify(j)); return j;
+}
+async function fmpQuote(sym) {
+  const [q] = await fmp('quote', { symbol: sym }, 300); if (!q) throw new Error(`FMP has no quote for ${sym}`);
+  return { symbol: q.symbol, name: q.name, price: q.price, previousClose: q.previousClose, change: q.change, changePct: q.changePercentage != null ? +q.changePercentage.toFixed(2) : null, volume: q.volume, dayLow: q.dayLow, dayHigh: q.dayHigh, yearLow: q.yearLow, yearHigh: q.yearHigh, marketCap: q.marketCap, exchange: q.exchange, marketTime: q.timestamp ? iso(q.timestamp) : null, source: 'Financial Modeling Prep' };
+}
+let tickers = null;
+async function cik(t) {
+  tickers ??= await get('https://www.sec.gov/files/company_tickers.json', { ttl: 7 * 86400, headers: { 'user-agent': UA_SEC } });
+  const row = Object.values(tickers).find((x) => x.ticker.toUpperCase() === t.toUpperCase());
+  if (!row) throw new Error(`${t} is not in SEC's ticker list (not a US SEC filer?)`);
+  return { cik: String(row.cik_str).padStart(10, '0'), title: row.title };
+}
+const [cmd, ...a] = process.argv.slice(2);
+try {
+  if (cmd === 'quote' && a.length) {
+    const res = []; for (const s of a.slice(0, 40)) { try { res.push(await fmpQuote(s)); } catch (e1) { try { res.push({ ...(await quote(s)), note: `FMP refused (${e1.message.slice(0, 80)}); Yahoo used` }); } catch (e2) { res.push({ symbol: s, error: `${e1.message}; ${e2.message}` }); } } }
+    out({ ok: true, at: new Date().toISOString(), quotes: res, callsToday: calls.get() });
+  } else if (cmd === 'history' && a[0]) {
+    const range = /^(1mo|3mo|6mo|1y|2y|5y|10y|ytd|max)$/.test(a[1] ?? '') ? a[1] : '6mo', interval = /^(1d|1wk|1mo)$/.test(a[2] ?? '') ? a[2] : '1d';
+    try {
+      const from = new Date(Date.now() - ({ '1mo': 31, '3mo': 92, '6mo': 183, '1y': 366, '2y': 731, '5y': 1827, '10y': 3653, ytd: 366, max: 7300 }[range]) * 864e5).toISOString().slice(0, 10);
+      const rows = (await fmp('historical-price-eod/full', { symbol: a[0], from }, 12 * 3600)).map((x) => ({ date: x.date, open: x.open, high: x.high, low: x.low, close: x.close, volume: x.volume })).reverse();
+      if (rows.length) { out({ ok: true, symbol: a[0].toUpperCase(), range, interval: '1d', rows, source: 'Financial Modeling Prep' }); process.exit(0); }
+    } catch { /* fall back to Yahoo below */ }
+    const j = await chart(a[0], range, interval, 12 * 3600); const r = j.chart?.result?.[0]; if (!r) throw new Error(j.chart?.error?.description ?? `no data for ${a[0]}`);
+    const q = r.indicators?.quote?.[0] ?? {}, adj = r.indicators?.adjclose?.[0]?.adjclose ?? [];
+    const rows = (r.timestamp ?? []).map((t, i) => ({ date: iso(t).slice(0, 10), close: q.close?.[i] ?? null, adjClose: adj[i] ?? null, volume: q.volume?.[i] ?? null })).filter((x) => x.close != null);
+    out({ ok: true, symbol: r.meta.symbol, currency: r.meta.currency, range, interval, rows, source: 'Yahoo Finance chart data (unofficial endpoint)' });
+  } else if (cmd === 'financials' && a[0]) {
+    const kind = { income: 'income-statement', balance: 'balance-sheet-statement', cashflow: 'cash-flow-statement' }[a[1] ?? 'income'];
+    if (!kind) throw new Error('statement must be income, balance or cashflow');
+    const period = a[2] === 'quarter' ? 'quarter' : 'annual'; const n = Math.min(Number(a[3] ?? 4) || 4, 12);
+    out({ ok: true, symbol: a[0].toUpperCase(), statement: a[1] ?? 'income', period, rows: await fmp(kind, { symbol: a[0], period, limit: n }, 12 * 3600), source: 'Financial Modeling Prep (from company filings)' });
+  } else if (cmd === 'ratios' && a[0]) {
+    const [r] = await fmp('ratios-ttm', { symbol: a[0] }, 12 * 3600); const [k] = await fmp('key-metrics-ttm', { symbol: a[0] }, 12 * 3600).catch(() => [null]);
+    out({ ok: true, symbol: a[0].toUpperCase(), ratiosTTM: r ?? null, keyMetricsTTM: k ?? null, source: 'Financial Modeling Prep' });
+  } else if (cmd === 'news' && a[0]) {
+    const rows = await fmp('news/stock', { symbols: a[0], limit: Math.min(Number(a[1] ?? 10) || 10, 30) }, 1800);
+    out({ ok: true, symbol: a[0].toUpperCase(), news: rows.map((x) => ({ published: x.publishedDate, publisher: x.publisher, title: x.title, url: x.url, summary: String(x.text ?? '').slice(0, 300) })), source: 'Financial Modeling Prep news feed', note: 'headlines are leads: open the article before you repeat a claim' });
+  } else if (cmd === 'filings' && a[0]) {
+    const { cik: c, title } = await cik(a[0]); const form = a[1] && !/^\d+$/.test(a[1]) ? a[1].toUpperCase() : null; const n = Number(a.find((x) => /^\d+$/.test(x)) ?? 10);
+    const j = await get(`https://data.sec.gov/submissions/CIK${c}.json`, { ttl: 6 * 3600, headers: { 'user-agent': UA_SEC } });
+    const f = j.filings?.recent ?? {}; const rows = [];
+    for (let i = 0; i < (f.form?.length ?? 0) && rows.length < Math.min(n, 40); i++) {
+      if (form && f.form[i].toUpperCase() !== form) continue;
+      rows.push({ form: f.form[i], filed: f.filingDate[i], period: f.reportDate[i] || null, description: f.primaryDocDescription?.[i] || null, url: `https://www.sec.gov/Archives/edgar/data/${Number(c)}/${f.accessionNumber[i].replace(/-/g, '')}/${f.primaryDocument[i]}` });
+    }
+    out({ ok: true, company: title, cik: c, filings: rows, source: 'SEC EDGAR' });
+  } else if (cmd === 'facts' && a[0]) {
+    const { cik: c, title } = await cik(a[0]);
+    const j = await get(`https://data.sec.gov/api/xbrl/companyfacts/CIK${c}.json`, { ttl: 12 * 3600, headers: { 'user-agent': UA_SEC } });
+    const want = a.slice(1).length ? a.slice(1) : ['Revenues', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'NetIncomeLoss', 'EarningsPerShareDiluted', 'OperatingIncomeLoss', 'CashAndCashEquivalentsAtCarryingValue', 'LongTermDebt', 'CommonStockSharesOutstanding'];
+    const facts = {};
+    for (const k of want) {
+      const fact = j.facts?.['us-gaap']?.[k] ?? j.facts?.dei?.[k]; if (!fact) continue;
+      const [unit, vals] = Object.entries(fact.units)[0];
+      const keep = vals.filter((v) => v.form === '10-K' || v.form === '10-Q').sort((x, y) => (x.end < y.end ? 1 : -1));
+      const seen = new Set(); facts[k] = { unit, label: fact.label, values: keep.filter((v) => { const key = `${v.end}|${v.fp}`; if (seen.has(key)) return false; seen.add(key); return true; }).slice(0, 12).map((v) => ({ end: v.end, start: v.start ?? null, value: v.val, fy: v.fy, fp: v.fp, form: v.form, filed: v.filed })) };
+    }
+    out({ ok: true, company: title, cik: c, facts, missing: want.filter((k) => !facts[k]), source: 'SEC EDGAR XBRL company facts' });
+  } else { out({ ok: false, error: 'usage: market quote <SYM...> | history <SYM> [range] | financials <SYM> [income|balance|cashflow] [annual|quarter] [n] | ratios <SYM> | news <SYM> [n] | filings <TICKER> [form] [n] | facts <TICKER> [concept...]' }); process.exit(2); }
+} catch (e) { out({ ok: false, error: e.message }); process.exit(1); }

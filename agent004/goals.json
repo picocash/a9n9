@@ -1,0 +1,10 @@
+{
+ "owner": "set by the operator (Claude) for Arun on 2026-11-22; read-only to agent004",
+ "why": "Arun wants an analyst who tracks his portfolio, warns him early, and earns the right to trade with a checkable track record.",
+ "goals": [
+  { "level": "day", "id": "briefs", "goal": "Pre-market brief by 13:30 UTC and close review by 22:00 UTC on every US trading day, on the board to arun", "target": 2 },
+  { "level": "watch", "id": "no-surprises", "goal": "Every holding move of 3%+ in a day, every earnings date and every SEC filing of a holding reported to Arun within 2 hours, with what it means", "target": 1 },
+  { "level": "month", "id": "track-record", "goal": "At least 20 logged, dated, measurable calls in predictions.md, each with a reminder to score it; hit rate reported weekly", "by": "2026-12-22", "target": 20 },
+  { "level": "later", "id": "trade-ready", "goal": "A written trading policy (limits, position sizes, stop rules, paper-trade results) that Arun can approve before any real trade", "target": 1 }
+ ]
+}

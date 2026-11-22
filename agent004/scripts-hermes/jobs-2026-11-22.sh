@@ -1,0 +1,19 @@
+#!/bin/sh
+# agent004's Hermes jobs, created 2026-11-22 (run inside the a9n9-agent004 container). Created PAUSED until the LLM login exists;
+# resume with: hermes cron resume <id> (all five).
+set -e
+mkdir -p /opt/data/workspace/notes
+W=/opt/data/workspace
+COMMON="--deliver local --workdir $W --paused --paused-reason 'waiting for the LLM login'"
+eval hermes cron create "'every 2m'" "'Something NEW happened: the MONITOR CHANGE block lists it (only new lines wake you). Handle every new line now, using the finance-analyst skill:
+- board-ask / board-reply <id>: /agent/bin/board catchup, then answer each (board reply <id>, or react on-it and do it, or say why not).
+- reminder <id> <what>: do it now (often: score a prediction in predictions.md honestly), then /agent/bin/remind done <id> <result>.
+- move <SYM> <day> <pct>: a holding moved 3%+ today. Find why (market news, parallel search, filings) and post to arun on the board: what moved, why, whether it changes the thesis.
+- filing <SYM> <form> <date>: read the filing (market filings <SYM>), post only what matters.
+- monitor <id> <n>: /agent/bin/parallel events <id>; check the cited page; post material items only.
+Lines you already handled need nothing. Every follow-up gets a reminder (/agent/bin/remind add). Finish with /agent/bin/board post <what you handled> --memory <what changed, or nothing>.'" --name events --monitor-script signal.sh --skill a9n9-board --skill finance-analyst --skill a9n9-parallel $COMMON
+eval hermes cron create "'0 13 * * 1-5'" "'Pre-market brief (finance-analyst skill). Read /agent/SOUL.md if you have not this session. board catchup first. Then: /agent/bin/portfolio value (or your watchlist if there is no portfolio yet), market quote for SPY QQQ and each holding, market news per holding, parallel monitor events, todays calendar for the holdings. Post the brief to arun on the board (board post --goal briefs, at most 12 lines, sources named). Set reminders for anything to check later.'" --name premarket --skill a9n9-board --skill finance-analyst --skill a9n9-parallel $COMMON
+eval hermes cron create "'30 21 * * 1-5'" "'Close review (finance-analyst skill). board catchup first. /agent/bin/portfolio value (saves the snapshot). Portfolio vs SPY today; one line of why for every holding that moved 3%+, with a source. Score any prediction due today. Post to arun on the board (--goal briefs).'" --name close --skill a9n9-board --skill finance-analyst --skill a9n9-parallel $COMMON
+eval hermes cron create "'every 120m'" "'Work run (every 2 hours; between runs the events job wakes you within 2 minutes). board catchup, remind list: handle what is due. Then finish ONE piece of analysis that Arun will read or that sharpens a call: refresh one holdings note in notes/<SYM>.md (largest first, after earnings first), log a new measurable prediction with a reminder, set up a parallel monitor for an uncovered holding, or answer an open question from Arun. A run that only re-reads prices is a failed run. Keep strategy.md current. Finish with /agent/bin/board post <what you did, with numbers and sources> --memory <what you changed, or nothing> --goal <briefs|no-surprises|track-record|trade-ready>.'" --name work --skill a9n9-board --skill finance-analyst --skill a9n9-parallel $COMMON
+eval hermes cron create "'0 18 * * 0'" "'Weekly review (finance-analyst skill). Portfolio week vs SPY (portfolio history 7). Prediction scorecard: calls made, scored, hit rate by confidence band; what you got wrong and what you changed in your method. Next weeks calendar for the holdings. Rewrite strategy.md (under 150 lines). Post the review to arun on the board (--goal track-record).'" --name weekly --skill a9n9-board --skill finance-analyst --skill a9n9-parallel $COMMON
+hermes cron list 2>&1 | grep -E "^\s+[0-9a-f]{12}|Name:|Schedule:|Skills:|Monitor"
