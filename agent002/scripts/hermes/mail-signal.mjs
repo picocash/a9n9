@@ -1,18 +1,15 @@
-// Event monitor for an agent's "events" job, shared by agent002 and agent003 (each reads only the sources it has: desk.env for
-// agent003, kpi/facts.jsonl for agent002). Hermes runs this every minute or two and wakes the agent only when the output
-// CHANGES, so a quiet minute costs no model call. Since 2026-11-22 (Arun: event-based runs, but frequent) it reports:
-//   mail <id> · board-ask <id> · board-reply <id>         something written to the agent
-//   reminder <id> <what>                                    a reminder the agent set with bin/remind came due
-//   monitor <monitor_id> <events>                           a Parallel monitor found something new on the agent's beat
-//   members <n> / ref <tag> <n>                             agent003: a new member, a new click on one of its tagged links
-//   newcomers <n> / heard <n>                               agent002: a new first-time player, a new "where did you hear" answer
+// agent002's event monitor for its "events" job. Hermes runs it every 2 minutes and wakes agent002 only when the output CHANGES,
+// so a quiet minute costs no model call. Since 2026-11-22 (Arun: event-based runs, but frequent) it reports:
+//   mail <id> · board-ask <id> · board-reply <id>   something written to agent002
+//   reminder <id> <what>                            a reminder agent002 set with bin/remind came due
+//   monitor <monitor_id> <events>                   a Parallel monitor found something new for agent002
+//   newcomers <n> · heard <n>                       a new first-time player, a new "where did you hear" answer
 // Counters are high-water marks (a rolling window that drops never lowers them), and an item that goes AWAY never wakes the
 // agent: when nothing is new, the previous output is repeated unchanged. Only a NEW line wakes it.
 import fs from 'node:fs';
 const HOME = '/agent', STATE = `${HOME}/state`;
 const kv = (f) => Object.fromEntries(fs.readFileSync(f, 'utf8').split('\n').filter((l) => /^[A-Z_0-9]+=/.test(l)).map((l) => { const i = l.indexOf('='); return [l.slice(0, i), l.slice(i + 1).trim()]; }));
 const rd = (f, fb) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return fb; } };
-const has = (f) => fs.existsSync(f);
 const lines = [];
 const t = (ms = 15000) => AbortSignal.timeout(ms);
 
@@ -47,15 +44,7 @@ for (const m of rd(`${STATE}/parallel-monitors.json`, []).filter((x) => x.active
 // 4. outcome counters, as high-water marks
 const HW = `${STATE}/signal-highwater.json`, hw = rd(HW, {});
 const mark = (k, v) => { if (typeof v === 'number' && v > (hw[k] ?? 0)) hw[k] = v; };
-if (has(`${HOME}/secrets/desk.env`)) {                               // agent003: GenXLinked members and tagged-link clicks
-  try {
-    const d = kv(`${HOME}/secrets/desk.env`);
-    const s = await (await fetch(`${d.DESK_URL}/desk/status`, { headers: { authorization: `Bearer ${d.DESK_TOKEN}` }, signal: t(20000) })).json();
-    mark('members', s.members);
-    for (const [tag, n] of Object.entries(s.visits?.byTag7d ?? {})) mark(`ref ${tag}`, n);
-  } catch { /* idem */ }
-}
-if (has(`${HOME}/kpi/facts.jsonl`)) {                                // agent002: game newcomers and survey answers (host collects hourly)
+{                                                                   // game newcomers and survey answers (the host collects them hourly)
   try {
     const rows = fs.readFileSync(`${HOME}/kpi/facts.jsonl`, 'utf8').trim().split('\n').slice(-3000).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((r) => r?.t === 'fact');
     const at = rows.filter((r) => r.metric?.startsWith('game.')).at(-1)?.at;
