@@ -23,6 +23,10 @@ VM's host crontab, unchanged: market conditions every 15 min 9-16 Mon-Fri, daily
 MSTR monitor 12:00 and 16:00, NAKA monitor every 15 min. The VM clock is America/New_York (as on the home box), so these are
 Eastern times; the agent's container stays on UTC. Node 22.22.1 is in /usr/local on the VM. Not mounted into the agent yet.
 
+## Desktop for Arun (2026-11-22)
+xrdp + XFCE on the VM, port 3389 open to 10.0.1.0/24 only (ufw). Log in as `ubuntu`; the password is in the home box's
+`~/a9n9/secrets/agent004-rdp.txt` (SSH stays key-only). From a LAN machine: `sdl-freerdp3 /v:10.0.1.46 /u:ubuntu /cert:ignore /dynamic-resolution`.
+
 ## Waiting on Arun
 1. LLM login (as agent003: an Anthropic setup-token in hermes/), then resume the five jobs.
 2. The portfolio to track.
