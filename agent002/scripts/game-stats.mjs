@@ -18,14 +18,18 @@ export function gameStats(dataDir = GAME_DATA, { any = process.env.GAME_STATS_AN
   try { files = fs.readdirSync(dir).filter((f) => /^\d{4}-\d\d-\d\d\.jsonl$/.test(f)).sort(); } catch { throw new Error('no game activity log (events folder not readable)'); }
   for (const f of files) for (const l of fs.readFileSync(`${dir}/${f}`, 'utf8').split('\n')) { if (!l) continue; let e; try { e = JSON.parse(l); } catch { continue; }
     if (!e.sid || typeof e.e !== 'string') continue; let s = sessions.get(e.sid); if (!s) sessions.set(e.sid, s = { src: '', c: null, view: 0, fresh: 0, start: 0, plated: 0, share: 0, claim: 0, heard: '' });
-    if (e.c) s.c = e.c; if (e.e === 'view') { s.view = 1; if (e.visits === 1) s.fresh = 1; if (typeof e.src === 'string' && /^[a-z0-9-]{1,24}$/.test(e.src)) s.src = e.src; else if (!s.src && typeof e.ref === 'string' && e.ref) { const h = refTag(e.ref); if (h) s.src = h; } }
+    if (e.c) s.c = e.c; if (e.e === 'view') { s.view = 1; if (e.visits === 1) s.fresh = 1; if (s.vt == null) { s.vt = Date.parse(e.t) || 0; s.vk = `${e.w}x${e.h}`; } if (typeof e.src === 'string' && /^[a-z0-9-]{1,24}$/.test(e.src)) s.src = e.src; else if (!s.src && typeof e.ref === 'string' && e.ref) { const h = refTag(e.ref); if (h) s.src = h; } }
     else if (e.e === 'start') s.start = 1; else if (e.e === 'plated' && e.official !== false) s.plated += 1; else if (e.e === 'share') s.share += 1; else if (e.e === 'claim' && e.step === 'pin' && e.ok) s.claim = 1;
     else if (e.e === 'heard' && typeof e.a === 'string' && /^[a-z]{1,8}$/.test(e.a)) s.heard = e.a; }
   // heard:<answer> = sessions that answered the optional end-screen "Where did you hear about this game?" (site|search|ai|friend|other|skip)
   // newcomers = visits from a browser on its first ever visit (the page's own local counter = 1): the nearest thing to 'people' without an id
   const zero = () => ({ visits: 0, newcomers: 0, started: 0, plated: 0, shared: 0, claimed: 0 }); const by = { all: zero(), agent: zero() };
   const put = (k, s) => { const b = (by[k] ??= zero()); b.visits += s.view; b.newcomers += s.fresh; b.started += s.start; b.plated += s.plated; b.shared += Math.min(s.share, s.plated); b.claimed += s.claim; };
-  for (const s of sessions.values()) { if (!any && !s.c) continue; put('all', s); if (s.src) { put(`src:${s.src}`, s); if (isAgentTag(s.src)) put('agent', s); } if (s.heard) put(`heard:${s.heard}`, s); }
+  // Twin views: some listing pages (gameslash, from 11-20) load the game twice in one second, once tagged and once bare, from one browser (same window size;
+  // the visit counter may differ by one). Drop the bare twin so a single person is not counted twice (asked by agent002, c682ae3bbb).
+  const tagged = [...sessions.values()].filter((s) => s.src && s.vt != null);
+  const twin = (s) => !s.src && s.vt != null && tagged.some((o) => o.vk === s.vk && Math.abs(o.vt - s.vt) <= 2000);
+  for (const s of sessions.values()) { if (!any && !s.c) continue; if (twin(s)) continue; put('all', s); if (s.src) { put(`src:${s.src}`, s); if (isAgentTag(s.src)) put('agent', s); } if (s.heard) put(`heard:${s.heard}`, s); }
   return { files: files.length, firstDay: files[0]?.slice(0, 10) ?? null, lastDay: files.at(-1)?.slice(0, 10) ?? null, countedOnlyPublic: !any, by };
 }
 if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(gameStats(), null, 1));
