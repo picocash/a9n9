@@ -62,5 +62,9 @@ const last = (() => { try { return fs.readFileSync(LAST, 'utf8'); } catch { retu
 const lastSet = new Set(last.split('\n').filter(Boolean));
 const cur = [...new Set(lines)].sort();
 let outText = last || 'idle\n';
+// While the 2-hourly work run is in progress (dispatched after its last completion, under 30 min ago), hold the old output: a new line
+// would start a second, concurrent run of the same agent on the same files (seen 11-23 05:1x and 09:1x). The line wakes it after.
+const workBusy = (() => { try { const j = JSON.parse(fs.readFileSync('/opt/data/cron/jobs.json', 'utf8')); const w = (j.jobs ?? j).find((x) => x.name === 'work'); const d = Date.parse(w?.last_dispatch?.dispatched_at ?? ''); return d > Date.parse(w?.last_run_at ?? '') && Date.now() - d < 30 * 60e3; } catch { return false; } })();
+if (workBusy) { process.stdout.write(outText); process.exit(0); }
 if (cur.some((l) => !lastSet.has(l))) { outText = (cur.length ? cur.join('\n') : 'idle') + '\n'; try { fs.writeFileSync(LAST, outText); } catch {} }
 process.stdout.write(outText);
