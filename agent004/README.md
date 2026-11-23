@@ -31,3 +31,10 @@ xrdp + XFCE on the VM, port 3389 open to 10.0.1.0/24 only (ufw). Log in as `ubun
 1. LLM login (as agent003: an Anthropic setup-token in hermes/), then resume the five jobs.
 2. The portfolio to track.
 3. Before any trading: a brokerage with an API and paper trading (e.g. Alpaca), plus written limits.
+
+## Browser (Chrome over CDP), 2026-11-22
+- Chrome stable on the VM desktop, started by `~/bin/agent004-chrome` (copy in `desktop/`). It autostarts with the XFCE session and has a desktop icon. It uses its own profile in `~/.config/agent004-chrome`, never a personal one, with DevTools on 127.0.0.1:9222.
+- `cdp-bridge.service` (socat, copy in `desktop/`) exposes it on 172.17.0.1:9222 for the container only. ufw allows 9222 in on docker0, and nothing from the LAN.
+- In Hermes `config.yaml`: `browser.cdp_url: http://172.17.0.1:9222` and `restrict_evaluate: true`.
+- Chrome lives in Arun's RDP session. If that session is logged out (not just disconnected), Chrome stops; log in again or run `~/bin/agent004-chrome`.
+- Anything signed in inside this profile is usable by agent004. Sign in only to what it should use.

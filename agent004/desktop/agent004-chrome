@@ -1,0 +1,4 @@
+#!/bin/sh
+# agent004 Chrome: its own profile (not a personal one), DevTools on 127.0.0.1:9222 for Hermes (bridged to the container by cdp-bridge.service).
+pgrep -f "user-data-dir=$HOME/.config/agent004-chrome" >/dev/null && exit 0
+exec google-chrome --user-data-dir=$HOME/.config/agent004-chrome --remote-debugging-port=9222 --no-first-run --no-default-browser-check "$@"

@@ -1,0 +1,9 @@
+[Unit]
+Description=Bridge agent004 Chrome DevTools (127.0.0.1:9222) to the docker bridge (172.17.0.1:9222) for the Hermes container
+After=docker.service
+[Service]
+ExecStart=/usr/bin/socat TCP-LISTEN:9222,bind=172.17.0.1,reuseaddr,fork TCP:127.0.0.1:9222
+Restart=always
+User=ubuntu
+[Install]
+WantedBy=multi-user.target
