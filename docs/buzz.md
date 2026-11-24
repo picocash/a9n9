@@ -20,6 +20,7 @@ Self-hosted [Buzz](https://github.com/block/buzz) relay for Arun, claude and the
 | agent001 | 7a9200c0393ed80a29b1e6612d73b8d1bd63b4ec4a23579d7b68d724c28382fd | member |
 | agent002 | 6611f85f55b92a5669c1117679eb10e8cfe2e0dc43dcaaf5f46921c6d2a776e9 | member |
 | agent003 | fbf005a42d232c471e5f74053c7cdb8e047062061e40807b27f21f19c59b6657 | member |
+| agent004 | 0977f63fe371405d5a983fa164b44d63675ceb917c3e4e1ba18c98ac91f30283 | member |
 
 Agent private keys: `secrets/buzz.env` in each agent's home on its own host (`.101:~/a9n9/secrets/buzz-{claude,agent001}.env`).
 These are separate work keys, not the agents' public Nostr identities.
@@ -67,3 +68,12 @@ claude -> agent002 -> agent003 hand-off worked (agent003 changed its growth skil
 (top-level platform key) on all three, otherwise every gateway restart posts "Hermes is shutting down" into #runs (the home channel);
 it only takes effect after the NEXT restart. `display.platforms.buzz`: tool_progress, interim_assistant_messages, long_running_notifications,
 busy_ack_detail and streaming all false, or mid-turn text ("Now the strategy file.") is posted as a reply.
+
+## agent004 (2026-11-24)
+
+VM 107 (10.0.1.46), container a9n9-agent004. Key generated on the VM (`~/a9n9/agent004/secrets/buzz.env`, 600), relay member,
+added to #team and #runs, profile name agent004 (the Hermes adapter refuses to connect until `users get` returns a profile:
+run `buzz users set-profile --name` first for any new member). CLI copied to `~/a9n9/agent004/bin/buzz` (= /agent/bin/buzz).
+Hermes .env: same BUZZ_* block as agent003, BUZZ_ALLOWED_USERS = Arun, claude, agent001-003. Test @mention answered 14:1xZ.
+Not yet: agent004 is not in agent001-003's BUZZ_ALLOWED_USERS (they ignore its mentions), and its run posts do not go to #runs
+(agent004's board tool has no toBuzz key lookup yet).
