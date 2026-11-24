@@ -1,6 +1,11 @@
 #!/usr/bin/env node
-// portfolio — Arun's portfolio as given to agent004 (/agent/portfolio.json, read-only: only the operator changes holdings).
+// portfolio — Arun's portfolio as given to agent004. Holdings live in /agent/state/portfolio.json (falls back to the operator's
+// /agent/portfolio.json). Only ARUN changes holdings: run set/remove/cash only when Arun himself told you to (Buzz message from
+// Arun, or mail from him), and pass where he said it with --from. Every change is logged in state/portfolio-changes.jsonl.
 //   portfolio show                 the holdings as given (symbol, shares, cost basis, account, notes)
+//   portfolio set <SYM> <shares> [costBasis] [--account A] [--note N] --from '<buzz|mail> <id or quote>'   add or replace a position
+//   portfolio remove <SYM> [--account A] --from '...'                                                         drop a position
+//   portfolio cash <amount> --from '...'                                                                      set the cash line
 //   portfolio value                live value: price, day change, market value, weight, unrealized gain/loss, totals;
 //                                  saves a snapshot to state/portfolio-history.jsonl (at most one an hour)
 //   portfolio history [days]       saved snapshots, newest last (default 30 days)
@@ -10,13 +15,33 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { HOME, STATE, out, readJsonl, append, paused } from './_kit.mjs';
 const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(3); }
-const F = `${HOME}/portfolio.json`, H = `${STATE}/portfolio-history.jsonl`;
-let pf; try { pf = JSON.parse(fs.readFileSync(F, 'utf8')); } catch { out({ ok: false, error: 'no portfolio yet: Arun has not given one. Ask on the board (board ask ... --to arun) and meanwhile build your watch process on a few large US stocks and ETFs.' }); process.exit(4); }
+const W = `${STATE}/portfolio.json`, F = fs.existsSync(W) ? W : `${HOME}/portfolio.json`, H = `${STATE}/portfolio-history.jsonl`, LOG = `${STATE}/portfolio-changes.jsonl`;
+const argv = process.argv.slice(2), flag = (k) => { const i = argv.indexOf(`--${k}`); if (i < 0) return null; const v = argv[i + 1]; argv.splice(i, 2); return v ?? ''; };
+const from = flag('from'), account = flag('account'), note = flag('note');
+const [cmd = 'show', a1, a2, a3] = argv;
+if (cmd === 'set' || cmd === 'remove' || cmd === 'cash') {
+  if (!from || from.trim().length < 3) { out({ ok: false, error: "say where Arun asked for this: --from 'buzz <message id>' or --from 'mail <id>'. Only Arun changes holdings." }); process.exit(2); }
+  let cur; try { cur = JSON.parse(fs.readFileSync(F, 'utf8')); } catch { cur = { currency: 'USD', cash: 0, positions: [] }; }
+  const before = JSON.stringify(cur); cur.positions ??= [];
+  const sym = String(a1 ?? '').toUpperCase().trim(), same = (x) => x.symbol.toUpperCase() === sym && (account == null || (x.account ?? null) === account);
+  if (cmd === 'cash') { const n = Number(a1); if (!Number.isFinite(n)) { out({ ok: false, error: 'usage: portfolio cash <amount> --from ...' }); process.exit(2); } cur.cash = n; }
+  else if (!/^[A-Z0-9.^=-]{1,15}$/.test(sym)) { out({ ok: false, error: `not a symbol: ${a1}` }); process.exit(2); }
+  else if (cmd === 'remove') { const n = cur.positions.length; cur.positions = cur.positions.filter((x) => !same(x)); if (cur.positions.length === n) { out({ ok: false, error: `${sym} is not in the portfolio` }); process.exit(4); } }
+  else {
+    const shares = Number(a2), cost = a3 != null ? Number(a3) : null;
+    if (!Number.isFinite(shares) || shares <= 0 || (cost != null && !Number.isFinite(cost))) { out({ ok: false, error: 'usage: portfolio set <SYM> <shares> [costBasis per share] [--account A] [--note N] --from ...' }); process.exit(2); }
+    const old = cur.positions.find(same); const row = { symbol: sym, shares, ...(cost != null ? { costBasis: cost } : old?.costBasis != null ? { costBasis: old.costBasis } : {}), ...(account ? { account } : old?.account ? { account: old.account } : {}), ...(note ? { note } : old?.note ? { note: old.note } : {}) };
+    cur.positions = cur.positions.filter((x) => !same(x)); cur.positions.push(row); cur.positions.sort((x, y) => x.symbol.localeCompare(y.symbol));
+  }
+  cur.asOf = new Date().toISOString(); fs.writeFileSync(W, JSON.stringify(cur, null, 1));
+  append(LOG, { at: cur.asOf, cmd, args: argv.slice(1), account, note, from, before: JSON.parse(before) });
+  out({ ok: true, changed: cmd, positions: cur.positions, cash: cur.cash ?? 0, note: 'saved; tell Arun exactly what changed so he can correct it' }); process.exit(0);
+}
+let pf; try { pf = JSON.parse(fs.readFileSync(F, 'utf8')); } catch { out({ ok: false, error: "no portfolio yet: Arun has not given one. Ask him (Buzz or board) and, when he does, record it with portfolio set. Meanwhile build your watch process on a few large US stocks and ETFs." }); process.exit(4); }
 const pos = pf.positions ?? [];
-const [cmd = 'show', a1] = process.argv.slice(2);
 if (cmd === 'show') { out({ ok: true, asOf: pf.asOf ?? null, currency: pf.currency ?? 'USD', cash: pf.cash ?? null, positions: pos, notes: pf.notes ?? null }); process.exit(0); }
 if (cmd === 'history') { const since = Date.now() - Number(a1 || 30) * 864e5; out({ ok: true, snapshots: readJsonl(H).filter((s) => Date.parse(s.at) >= since) }); process.exit(0); }
-if (cmd !== 'value') { out({ ok: false, error: 'usage: portfolio show | value | history [days]' }); process.exit(2); }
+if (cmd !== 'value') { out({ ok: false, error: 'usage: portfolio show | value | history [days] | set | remove | cash' }); process.exit(2); }
 const syms = [...new Set(pos.map((x) => x.symbol))];
 let q; try { q = JSON.parse(execFileSync(process.execPath, [new URL('./market', import.meta.url).pathname, 'quote', ...syms], { encoding: 'utf8' })); } catch (e) { out({ ok: false, error: `market quote failed: ${e.message.slice(0, 200)}` }); process.exit(1); }
 const bySym = Object.fromEntries((q.quotes ?? []).map((x) => [x.symbol?.toUpperCase(), x]));

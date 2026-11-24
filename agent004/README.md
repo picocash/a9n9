@@ -6,8 +6,9 @@ Created 2026-11-22. Proxmox VM 107 `agent004` (10.0.1.46, 8 vCPU / 32 GB / 200 G
 ## Tools (bin/)
 - `market`: FMP (Arun's key, US symbols on the current plan) for quotes, history, statements, TTM ratios and news; Yahoo chart
   fallback for symbols FMP refuses; SEC EDGAR filings and XBRL facts. Cached, 300 calls a day.
-- `portfolio show | value | history`: reads `/agent/portfolio.json` (written by the operator from what Arun gives; read-only to
-  the agent). Format: `{"currency":"USD","asOf":"…","cash":0,"positions":[{"symbol":"AAPL","shares":10,"costBasis":150,"account":"…"}]}`.
+- `portfolio show | value | history | set | remove | cash`: holdings in `/agent/state/portfolio.json` (falls back to the operator's
+  `/agent/portfolio.json`). The agent records holdings only when Arun himself gives them (Buzz/mail, `--from` required); every
+  change is logged in `state/portfolio-changes.jsonl`. Skill `portfolio-desk` (2026-11-24) covers prices, holdings and the monitors. Format: `{"currency":"USD","asOf":"…","cash":0,"positions":[{"symbol":"AAPL","shares":10,"costBasis":150,"account":"…"}]}`.
   No trade command exists.
 - `mail list | read | reply | done`: agent004@a9n9.net (routing rule → a9n9-email Worker, key in AGENT_MAIL_KEYS; reply-only, 20/day).
 - `parallel` (per-agent key on the tools service, $1.50/day), `remind`, `board`, `journal`.
@@ -21,7 +22,9 @@ Arun's Financial-Modeling-Prep-MCP-Server folder (FMP MCP server plus his market
 `/home/ubuntu/Financial-Modeling-Prep-MCP-Server` (old copy archived on the home box in ~/archive). Its 6 cron jobs run on the
 VM's host crontab, unchanged: market conditions every 15 min 9-16 Mon-Fri, daily summary 20:40 Mon-Fri, weekend summary Sat 10:00,
 MSTR monitor 12:00 and 16:00, NAKA monitor every 15 min. The VM clock is America/New_York (as on the home box), so these are
-Eastern times; the agent's container stays on UTC. Node 22.22.1 is in /usr/local on the VM. Not mounted into the agent yet.
+Eastern times; the agent's container stays on UTC. Node 22.22.1 is in /usr/local on the VM. Not mounted into the agent: instead
+`scripts/fmp-sync.sh` (host cron every 15 min) copies the latest outputs to `state/fmp/` (market conditions, daily summary, alert
+files, MSTR purchases). Logs rotate via `/etc/logrotate.d/fmp-monitors` (weekly or 20 MB, 4 gzipped copies, copytruncate).
 
 ## Desktop for Arun (2026-11-22)
 xrdp + XFCE on the VM, port 3389 open to 10.0.1.0/24 only (ufw). Log in as `ubuntu`; the password is in the home box's

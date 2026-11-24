@@ -45,7 +45,7 @@ for (const m of rd(`${STATE}/parallel-monitors.json`, []).filter((x) => x.active
 }
 
 // 4. holdings: price moves and SEC filings (own cache, so this does not spend the market tool's daily cap)
-const syms = [...new Set((rd(`${HOME}/portfolio.json`, {}).positions ?? []).map((p) => String(p.symbol).toUpperCase()))].slice(0, 40);
+const syms = [...new Set(((rd(`${STATE}/portfolio.json`, null) ?? rd(`${HOME}/portfolio.json`, {})).positions ?? []).map((p) => String(p.symbol).toUpperCase()))].slice(0, 40);
 const MK = `${STATE}/signal-market.json`, mk = rd(MK, { quotesAt: 0, filingsAt: 0, moves: {}, filings: {} });
 const d = new Date(), day = d.toISOString().slice(0, 10), h = d.getUTCHours(), weekday = d.getUTCDay() >= 1 && d.getUTCDay() <= 5;
 if (syms.length && weekday && h >= 13 && h < 22 && now - mk.quotesAt > 10 * 60e3) {
