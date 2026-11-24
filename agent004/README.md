@@ -19,12 +19,12 @@ Mon-Fri, close 21:30 UTC Mon-Fri, work every 2h, weekly Sunday 18:00 UTC. Defini
 
 ## Market monitors moved here (2026-11-22)
 Arun's Financial-Modeling-Prep-MCP-Server folder (FMP MCP server plus his market monitors) moved from the home box to the VM at
-`/home/ubuntu/Financial-Modeling-Prep-MCP-Server` (old copy archived on the home box in ~/archive). Its 6 cron jobs run on the
+`/home/ubuntu/Financial-Modeling-Prep-MCP-Server` (old copy archived on the home box in ~/archive). Its cron jobs run on the
 VM's host crontab, unchanged: market conditions every 15 min 9-16 Mon-Fri, daily summary 20:40 Mon-Fri, weekend summary Sat 10:00,
-MSTR monitor 12:00 and 16:00, NAKA monitor every 15 min. The VM clock is America/New_York (as on the home box), so these are
+NAKA monitor every 15 min. The VM clock is America/New_York (as on the home box), so these are
 Eastern times; the agent's container stays on UTC. Node 22.22.1 is in /usr/local on the VM. Not mounted into the agent: instead
 `scripts/fmp-sync.sh` (host cron every 15 min) copies the latest outputs to `state/fmp/` (market conditions, daily summary, alert
-files, MSTR purchases). Logs rotate via `/etc/logrotate.d/fmp-monitors` (weekly or 20 MB, 4 gzipped copies, copytruncate).
+files). MSTR monitor cron removed 2026-11-24 (Arun: no longer used). Logs rotate via `/etc/logrotate.d/fmp-monitors` (weekly or 20 MB, 4 gzipped copies, copytruncate).
 
 ## Desktop for Arun (2026-11-22)
 xrdp + XFCE on the VM, port 3389 open to 10.0.1.0/24 only (ufw). Log in as `ubuntu`; the password is in the home box's

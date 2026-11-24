@@ -36,7 +36,6 @@ Arun's own monitors run on this VM's host (not in your container) and their late
 `/agent/state/fmp/` (time in `synced_at`):
 - `latest_market_conditions.json`: every 15 min during US market hours (indices, sectors, alerts such as MAJOR_MOVE).
 - `daily_summary.txt` / `latest_daily_summary.json`: the 8:40 pm ET daily summary (Saturday 10:00 ET weekend summary).
-- `mstr_bitcoin_purchases.json`: the MSTR bitcoin-purchase monitor (12:00 and 16:00 ET).
 - `alerts/*.json`: the other monitors' alert files (NAKA news, multi-stock, entry positions, CRWV …).
 When Arun asks "what did the monitors say" or "anything happen today", read these first.
 **Check before repeating a number:** the monitors compute their own changes (sometimes over more than one session) and can be stale or wrong.
