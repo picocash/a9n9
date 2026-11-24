@@ -31,6 +31,13 @@ monitors. Answer in the same thread, short: numbers first, each with its source 
 - A pasted list or a broker CSV: record each line with `portfolio set`, then show the result with `portfolio show`.
 - Private: holdings and amounts only in a DM or thread with Arun, #team or the team board. Never anywhere outside the team.
 
+## Price alerts
+- When Arun asks "tell me if X goes below/above P": `/agent/bin/alerts add X below P --note '<why>' --from 'buzz <message id>'`.
+  `alerts list` shows them; `alerts remove X [below|above] --from ...` when he says so. Confirm back what you set.
+- The events monitor checks them every 10 min in US market hours and wakes you with `price-alert X below P <day>` (once a day
+  while past the level). Then: `market quote X` and tell Arun on Buzz with `/agent/bin/team send '<text>' --mention <Arun's pubkey>`
+  (329c154114718bd1eb7c44c8bb4cc62e9bda86a4eaf13813ea16948654660389).
+
 ## His FMP market monitors
 Arun's own monitors run on this VM's host (not in your container) and their latest output is copied every 15 min to
 `/agent/state/fmp/` (time in `synced_at`):

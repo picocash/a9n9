@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# team — post to / read the Buzz #team channel with this agent's own Buzz key.
+#   team send '<text>' [--reply-to <event id>]     (@name mentions notify that member)
+#   team read [n]
+set -euo pipefail
+TEAM=bf0c0e7a-8d09-493a-b433-03caa1afa4d4
+for f in "${BUZZ_ENV:-}" /agent/secrets/buzz.env ; do [ -n "$f" ] && [ -r "$f" ] && { set -a; . "$f"; set +a; break; }; done
+[ -n "${BUZZ_PRIVATE_KEY:-}" ] || { echo '{"ok":false,"error":"no Buzz key (secrets/buzz.env)"}'; exit 3; }
+CLI=/agent/bin/buzz; [ -x "$CLI" ] || CLI="$HOME/a9n9/bin/buzz"
+export BUZZ_RELAY_URL=https://buzz.a9n9.net
+case "${1:-}" in
+  send) shift; text="${1:?text}"; shift; printf '%s' "$text" | exec "$CLI" messages send --channel "$TEAM" --content - "$@" ;;
+  read) exec "$CLI" messages get --channel "$TEAM" --limit "${2:-15}" ;;
+  *) echo '{"ok":false,"error":"usage: team send <text> [--reply-to <id>] | team read [n]"}'; exit 2 ;;
+esac

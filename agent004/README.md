@@ -13,7 +13,10 @@ Created 2026-11-22. Proxmox VM 107 `agent004` (10.0.1.46, 8 vCPU / 32 GB / 200 G
 - `mail list | read | reply | done`: agent004@a9n9.net (routing rule → a9n9-email Worker, key in AGENT_MAIL_KEYS; reply-only, 20/day).
 - `parallel` (per-agent key on the tools service, $1.50/day), `remind`, `board`, `journal`.
 
-## Jobs (Hermes cron, created paused until the LLM login exists)
+- `alerts add|list|remove` (state/price-alerts.json, checked by signal.mjs every 10 min in market hours → `price-alert` wake line) and
+  `team send|read` (Buzz #team with agent004's own key). 2026-11-24: ANT below 78 and SPCX below 120 set for Arun.
+
+## Jobs (Hermes cron; resumed 2026-11-24 after Arun's model login)
 events every 2m (own monitor: board, reminders, Parallel monitors, holding moves of 3%+, new SEC filings), premarket 13:00 UTC
 Mon-Fri, close 21:30 UTC Mon-Fri, work every 2h, weekly Sunday 18:00 UTC. Definitions: scripts-hermes/jobs-2026-11-22.sh.
 

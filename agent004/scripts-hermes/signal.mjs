@@ -6,6 +6,7 @@
 //   monitor <monitor_id> <events>            a Parallel monitor found something new about a holding
 //   move <SYM> <day> <±pct bucket>           a holding moved 3%+ today (buckets of 3%, so +4% then +7% wakes it again)
 //   filing <SYM> <form> <date>               a holding filed with the SEC (8-K, 10-Q, 10-K, 4 …), newest per holding
+//   price-alert <SYM> below|above <lvl> <day> a level Arun set with bin/alerts was crossed (once a day per alert while past it)
 // Market checks run at most every 10 minutes and only on US weekdays 13:00–22:00 UTC (price moves) or every 2 hours (filings),
 // using FMP quotes and SEC EDGAR, with their own small cache. Counters and items that go AWAY never wake the agent: when
 // nothing is new, the previous output is repeated unchanged. Only a NEW line wakes it.
@@ -46,13 +47,18 @@ for (const m of rd(`${STATE}/parallel-monitors.json`, []).filter((x) => x.active
 
 // 4. holdings: price moves and SEC filings (own cache, so this does not spend the market tool's daily cap)
 const syms = [...new Set(((rd(`${STATE}/portfolio.json`, null) ?? rd(`${HOME}/portfolio.json`, {})).positions ?? []).map((p) => String(p.symbol).toUpperCase()))].slice(0, 40);
-const MK = `${STATE}/signal-market.json`, mk = rd(MK, { quotesAt: 0, filingsAt: 0, moves: {}, filings: {} });
+const MK = `${STATE}/signal-market.json`, mk = rd(MK, { quotesAt: 0, filingsAt: 0, moves: {}, filings: {} }); mk.levels ??= {};
+const lvls = rd(`${STATE}/price-alerts.json`, []).filter((a) => a && a.symbol && a.level > 0 && ['below', 'above'].includes(a.dir));
+const qsyms = [...new Set([...syms, ...lvls.map((a) => String(a.symbol).toUpperCase())])].slice(0, 50);
 const d = new Date(), day = d.toISOString().slice(0, 10), h = d.getUTCHours(), weekday = d.getUTCDay() >= 1 && d.getUTCDay() <= 5;
-if (syms.length && weekday && h >= 13 && h < 22 && now - mk.quotesAt > 10 * 60e3) {
+if (qsyms.length && weekday && h >= 13 && h < 22 && now - mk.quotesAt > 10 * 60e3) {
   try {
     const key = kv(`${HOME}/secrets/fmp.env`).FMP_API_KEY;
-    for (const s of syms) {
+    for (const s of qsyms) {
       const j = await (await fetch(`https://financialmodelingprep.com/stable/quote?symbol=${encodeURIComponent(s)}&apikey=${key}`, { signal: t(10000) })).json().catch(() => null);
+      const px = Array.isArray(j) ? j[0]?.price : null;
+      if (typeof px === 'number') for (const a of lvls) if (String(a.symbol).toUpperCase() === s && (a.dir === 'below' ? px < a.level : px > a.level)) mk.levels[`${s} ${a.dir} ${a.level} ${day}`] = px;
+      if (!syms.includes(s)) continue;
       const pct = Array.isArray(j) ? j[0]?.changePercentage : null;
       if (typeof pct === 'number' && Math.abs(pct) >= 3) { const bucket = Math.sign(pct) * Math.floor(Math.abs(pct) / 3) * 3; const k = `${s} ${day}`; if (Math.abs(bucket) > Math.abs(mk.moves[k] ?? 0)) mk.moves[k] = bucket; }
     }
@@ -72,9 +78,11 @@ if (syms.length && now - mk.filingsAt > 2 * 3600e3) {
   } catch { /* idem */ }
 }
 for (const k of Object.keys(mk.moves)) if (!k.endsWith(day)) delete mk.moves[k];
+for (const k of Object.keys(mk.levels)) if (!k.endsWith(day)) delete mk.levels[k];
 try { fs.writeFileSync(MK, JSON.stringify(mk)); } catch {}
 for (const [k, b] of Object.entries(mk.moves)) lines.push(`move ${k} ${b > 0 ? '+' : ''}${b}%`);
 for (const [s, f] of Object.entries(mk.filings)) lines.push(`filing ${s} ${f}`);
+for (const k of Object.keys(mk.levels)) lines.push(`price-alert ${k}`);
 
 // 5. wake only on something NEW
 const LAST = `${STATE}/signal-last.txt`;

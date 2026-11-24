@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+// alerts — price-level alerts Arun asked for. The events monitor (scripts-hermes/signal.mjs) checks them every 10 min in US market
+// hours (13:00-22:00 UTC, Mon-Fri) and wakes you with `price-alert <SYM> below|above <level> <day>` at most once a day per alert
+// while the price is past the level. Set alerts only when Arun asks (--from where he asked).
+//   alerts add <SYM> below|above <price> [--note N] --from '<buzz|mail> <id>'
+//   alerts list
+//   alerts remove <SYM> [below|above] [<price>] --from '...'
+import fs from 'node:fs';
+import { STATE, out, append } from './_kit.mjs';
+const F = `${STATE}/price-alerts.json`, LOG = `${STATE}/price-alerts-changes.jsonl`;
+const argv = process.argv.slice(2), flag = (k) => { const i = argv.indexOf(`--${k}`); if (i < 0) return null; const v = argv[i + 1]; argv.splice(i, 2); return v ?? ''; };
+const from = flag('from'), note = flag('note');
+const [cmd = 'list', a1, a2, a3] = argv;
+const list = (() => { try { return JSON.parse(fs.readFileSync(F, 'utf8')); } catch { return []; } })();
+if (cmd === 'list') { out({ ok: true, alerts: list }); process.exit(0); }
+if (!from || from.trim().length < 3) { out({ ok: false, error: "say where Arun asked: --from 'buzz <message id>' or --from 'mail <id>'" }); process.exit(2); }
+const sym = String(a1 ?? '').toUpperCase();
+if (!/^[A-Z0-9.^=-]{1,15}$/.test(sym)) { out({ ok: false, error: `not a symbol: ${a1}` }); process.exit(2); }
+let next;
+if (cmd === 'add') {
+  const dir = a2, lvl = Number(a3);
+  if (!['below', 'above'].includes(dir) || !(lvl > 0)) { out({ ok: false, error: 'usage: alerts add <SYM> below|above <price> --from ...' }); process.exit(2); }
+  next = list.filter((x) => !(x.symbol === sym && x.dir === dir)); next.push({ symbol: sym, dir, level: lvl, ...(note ? { note } : {}), since: new Date().toISOString() });
+} else if (cmd === 'remove') {
+  next = list.filter((x) => !(x.symbol === sym && (!a2 || x.dir === a2) && (!a3 || x.level === Number(a3))));
+  if (next.length === list.length) { out({ ok: false, error: `no alert for ${sym}` }); process.exit(4); }
+} else { out({ ok: false, error: 'usage: alerts add | list | remove' }); process.exit(2); }
+next.sort((x, y) => x.symbol.localeCompare(y.symbol)); fs.writeFileSync(F, JSON.stringify(next, null, 1));
+append(LOG, { at: new Date().toISOString(), cmd, args: argv.slice(1), note, from });
+out({ ok: true, alerts: next, note: 'checked every 10 min in US market hours; tell Arun what you set' });
