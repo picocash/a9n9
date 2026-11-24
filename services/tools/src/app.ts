@@ -191,6 +191,13 @@ export async function createToolsApp(opts: ToolsOptions) {
     const res = await parallel(`/v1/monitors/${id}/events${q.size ? `?${q}` : ''}`, { timeoutMs: 20_000 });
     return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
   });
+  // Cancelling a monitor is free too: it stops the checks and frees one of the active-monitor slots. Same trust as events: the id is unguessable.
+  app.post('/v1/monitor/:id/cancel', async (c) => {
+    const id = c.req.param('id');
+    if (!/^monitor_[a-z0-9]{8,64}$/.test(id) || !opts.vendorKeys.PARALLEL_API_KEY) return c.json({ error: 'unknown monitor' }, 404);
+    const res = await parallel(`/v1/monitors/${id}/cancel`, { method: 'POST', timeoutMs: 20_000 });
+    return new Response(await res.text(), { status: res.status, headers: { 'content-type': 'application/json' } });
+  });
   // A paid FindAll keeps running after the 4-minute wait; reading its result later is free (the start paid); the id is unguessable.
   app.get('/v1/findall/:id/result', async (c) => {
     const id = c.req.param('id');

@@ -11,6 +11,7 @@ parallel task '<input>' --schema '<fields wanted, in words>' [--json '<json sche
 parallel findall '<objective>' [--type companies] --match 'name=what makes it a match' [--match ...] [--generator preview|base] [--limit N]
 parallel monitor '<what to watch for>' [--weekly] [--label '<short name>'] [--domains ...]
 parallel monitors                       (what you are watching, from state/parallel-monitors.json)
+parallel monitor-stop <monitor_id>      (free: cancels a watch and frees its slot; the $0.20 is not returned)
 parallel events <monitor_id> [--group <event_group_id>]   (free)
 parallel findall-result <findall_id>    (free: the full list of a run that was still going when findall returned)`;
 export const usage = () => USAGE;
@@ -67,10 +68,12 @@ export function parseArgs(argv) {
     }
     case 'monitor': {
       if (!text) return { error: 'monitor needs a query (what to watch for)' };
+      if (text.split(/\s+/).length < 3) return { error: `"${text}" is too short to be a watch (a monitor costs $0.20 and holds a slot). To list yours: parallel monitors. To stop one: parallel monitor-stop <monitor_id>. Nothing was created.` };
       return { cmd, path: PATHS.monitor, body: { query: text, frequency: flags.weekly ? '1w' : '1d', ...(flags.label ? { label: flags.label } : {}), ...policy() } };
     }
     case 'monitors': return { cmd };
     case 'findall-result': { const id = rest[0]; if (!/^findall_[a-z0-9]{8,64}$/.test(id ?? '')) return { error: 'findall-result needs a run id (findall_…, shown by findall and in its dataset file)' }; return { cmd, id }; }
+    case 'monitor-stop': { const id = rest[0]; if (!/^monitor_[a-z0-9]{8,64}$/.test(id ?? '')) return { error: 'monitor-stop needs a monitor id (monitor_…, from parallel monitors)' }; return { cmd, id }; }
     case 'events': { const id = rest[0]; if (!/^monitor_[a-z0-9]{8,64}$/.test(id ?? '')) return { error: 'events needs a monitor id (monitor_…)' }; return { cmd, id, ...(flags.group ? { group: flags.group } : {}) }; }
     default: return { error: `usage:\n${USAGE}` };
   }

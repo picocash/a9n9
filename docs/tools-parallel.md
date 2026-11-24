@@ -30,5 +30,5 @@ Skill `a9n9-parallel` (attached to the explore and respond jobs) says which call
 ## Not done
 
 - Monitor webhooks into the inbox (Parallel signs its own way; an adapter route is needed). Until then the agent polls `parallel events` in explore runs.
-- Cancelling a monitor: no documented path was found; the operator cancels in the dashboard, the agent asks in the journal.
+- Cancelling a monitor: `POST /v1/monitor/{id}/cancel` on the service (free; vendor `POST /v1/monitors/{id}/cancel`), from the agent `parallel monitor-stop <monitor_id>` (added 2026-11-24). `parallel monitor` refuses a query shorter than three words, after `parallel monitor list` created a paid monitor by mistake.
 - Responses API, image and place search, entity search: not wired; add when a use shows up.

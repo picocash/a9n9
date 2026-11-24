@@ -22,6 +22,12 @@ if (!key) { out({ ok: false, error: 'no Parallel key for this agent (secrets/par
 const p = parseArgs(argv);
 if (p.error) { out({ ok: false, error: p.error }); process.exit(2); }
 if (p.cmd === 'monitors') { out({ ok: true, monitors: rd(MON, []) }); process.exit(0); }
+if (p.cmd === 'monitor-stop') {
+  const r = await fetch(`${TOOLS}/v1/monitor/${p.id}/cancel`, { method: 'POST' });
+  const j = await r.json().catch(() => null);
+  if (r.ok) { const mons = rd(MON, []); for (const m of mons) if (m.monitor_id === p.id) { m.active = false; m.stopped = new Date().toISOString(); } fs.writeFileSync(MON, JSON.stringify(mons, null, 1)); }
+  out({ ok: r.ok, status: r.status, monitor_id: p.id, monitor_status: j?.status ?? null, note: r.ok ? 'stopped; its slot is free' : (j?.error ?? 'not stopped') }); process.exit(r.ok ? 0 : 1);
+}
 if (p.cmd === 'events') {
   const r = await fetch(`${TOOLS}/v1/monitor/${p.id}/events${p.group ? `?event_group_id=${encodeURIComponent(p.group)}` : ''}`);
   const j = await r.json().catch(() => null);
