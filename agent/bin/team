@@ -9,7 +9,7 @@ for f in "${BUZZ_ENV:-}" /agent/secrets/buzz.env "$HOME/a9n9/secrets/buzz-agent0
 CLI=/agent/bin/buzz; [ -x "$CLI" ] || CLI="$HOME/a9n9/bin/buzz"
 export BUZZ_RELAY_URL=https://buzz.a9n9.net
 case "${1:-}" in
-  send) shift; text="${1:?text}"; shift; printf '%s' "$text" | exec "$CLI" messages send --channel "$TEAM" --content - "$@" ;;
+  send) shift; text="${1:?text}"; case "$text" in -*) echo '{"ok":false,"error":"usage: team send <text> [--mention <hex>] [--reply-to <id>] (text comes first; nothing was sent)"}'; exit 2 ;; esac; shift; printf '%s' "$text" | exec "$CLI" messages send --channel "$TEAM" --content - "$@" ;;
   read) exec "$CLI" messages get --channel "$TEAM" --limit "${2:-15}" ;;
   *) echo '{"ok":false,"error":"usage: team send <text> [--reply-to <id>] | team read [n]"}'; exit 2 ;;
 esac
