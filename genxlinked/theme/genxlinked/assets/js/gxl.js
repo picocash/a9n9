@@ -136,16 +136,28 @@
     document.querySelectorAll('.gxl-quiz.is-done .gxl-quiz-out').forEach(function (out) { addJoin(out); });
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 })();
-/* First-screen join line for non-members: under a post's summary, and under a tag page's header.
-   Skipped when the post already asks near the top (newer drafts carry their own line). */
+/* First-screen join form for non-members: under a post's summary, and under a tag page's header.
+   One email field inline (agent003 ask c8e20769ec): submitting it runs the same join-with-code flow and opens the box
+   straight at "Enter your code", so the reader types the address once on the page. */
 (function () {
   if (document.body.getAttribute('data-gxl-member') === '1') return;
-  function line() { var p = document.createElement('p'); p.className = 'gxl-answer-join gxl-first-join'; p.innerHTML = 'Join free and get the Gen X age card in Friday&rsquo;s letter: when screening, the shingles jab, the pension and the bus pass start in your country, all 8 countries on one page. <button type="button" class="gxl-btn" data-gxl-join>Get the age card</button>'; return p; }
+  var n = 0;
+  function line() {
+    var id = 'gxl-fj-' + (++n), p = document.createElement('form'); p.className = 'gxl-answer-join gxl-first-join'; p.noValidate = false;
+    p.innerHTML = '<p class="gxl-fj-copy">Join free and get the Gen X age card in Friday&rsquo;s letter: when screening, the shingles jab, the pension and the bus pass start in your country, all 8 countries on one page.</p>' +
+      '<label class="gxl-fj-label" for="' + id + '">Email</label><input id="' + id + '" class="gxl-fj-email" type="email" autocomplete="email" required placeholder="you@example.com">' +
+      '<button type="submit" class="gxl-btn">Send me the card</button>';
+    p.addEventListener('submit', function (e) {
+      e.preventDefault(); if (!window.gxlJoin) return;
+      var f1 = document.querySelector('.gxl-join-f1'); f1.querySelector('#gxl-join-email').value = p.querySelector('input').value.trim();
+      window.gxlJoin.state.ref = ''; window.gxlJoin.open();
+      if (f1.requestSubmit) f1.requestSubmit(); else f1.querySelector('button[type=submit]').click();
+    });
+    return p;
+  }
   var c = document.body.classList;
   if (c.contains('post-template')) {
     var body = document.querySelector('.gh-content'); if (!body) return;
-    var kids = Array.prototype.slice.call(body.children, 0, 5);
-    if (kids.some(function (k) { return k.querySelector && (k.matches('[data-gxl-join]') || k.querySelector('[data-gxl-join], a[href*="#/portal"]')); })) return;
     var ex = document.querySelector('.gh-article-header .gh-article-excerpt');   // under the summary, above the feature image: the body's first paragraph is ~2 screens down
     if (ex) ex.insertAdjacentElement('afterend', line()); else body.insertBefore(line(), body.firstElementChild);
   } else if (c.contains('tag-template')) {

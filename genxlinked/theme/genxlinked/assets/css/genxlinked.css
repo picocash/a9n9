@@ -371,3 +371,6 @@ h1.gh-article-title { font-family: 'Big Shoulders Display', 'Arial Narrow', sans
 .gxl-join-or::before, .gxl-join-or::after { content: ""; flex: 1; border-top: 1px solid var(--gxl-rule); }
 .gxl-answer-join { margin: 14px 0 0; font-weight: 600; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .gxl-answer-join .gxl-btn { margin: 0; }
+.gxl-first-join .gxl-fj-copy { flex: 1 0 100%; margin: 0; }
+.gxl-first-join .gxl-fj-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.gxl-first-join .gxl-fj-email { flex: 1 1 220px; min-width: 0; max-width: 360px; font: inherit; font-weight: 400; padding: 10px 12px; border: 2px solid currentColor; border-radius: 0; background: #fff; color: #222; }
