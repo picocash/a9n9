@@ -7,6 +7,8 @@
 //   move <SYM> <day> <±pct bucket>           a holding moved 3%+ today (buckets of 3%, so +4% then +7% wakes it again)
 //   filing <SYM> <form> <date>               a holding filed with the SEC (8-K, 10-Q, 10-K, 4 …), newest per holding
 //   price-alert <SYM> below|above <lvl> <day> a level Arun set with bin/alerts was crossed (once a day per alert while past it)
+//   lead <cid> <SYM> <rule>                  SCOUT: a move, a material filing or a price alert became a pipeline candidate (bin/pipeline);
+//                                            the same event collapses into one candidate, so the line is stable while the event lasts
 // Market checks run at most every 10 minutes and only on US weekdays 13:00–22:00 UTC (price moves) or every 2 hours (filings),
 // using FMP quotes and SEC EDGAR, with their own small cache. Counters and items that go AWAY never wake the agent: when
 // nothing is new, the previous output is repeated unchanged. Only a NEW line wakes it.
@@ -83,6 +85,20 @@ try { fs.writeFileSync(MK, JSON.stringify(mk)); } catch {}
 for (const [k, b] of Object.entries(mk.moves)) lines.push(`move ${k} ${b > 0 ? '+' : ''}${b}%`);
 for (const [s, f] of Object.entries(mk.filings)) lines.push(`filing ${s} ${f}`);
 for (const k of Object.keys(mk.levels)) lines.push(`price-alert ${k}`);
+
+// 4b. Scout: turn market events into compact pipeline leads (code only; duplicates collapse inside lead()).
+// Filings count only when material (not routine Form 4s) and filed in the last 3 days, so loading a portfolio does not open a flood.
+try {
+  const { lead } = await import('../bin/_desk.mjs');
+  const MATERIAL = /^(8-K|10-Q|10-K|S-1|424B\d|SC 13D|SC 13G|6-K|20-F)/i, at = new Date().toISOString();
+  for (const l of [...lines]) {
+    const w = l.split(' '); let r = null;
+    if (w[0] === 'move') r = lead({ symbol: w[1], event: `moved ${w[3]} on ${w[2]} (3% buckets)`, source: 'FMP quote via events monitor', rule: 'holding moved 3%+ in a day', key: `${w[1]}|move|${w[2]}`, observedAt: at, quiet: true });
+    else if (w[0] === 'price-alert') r = lead({ symbol: w[1], event: `price went ${w[2]} ${w[3]} on ${w[4]}`, source: 'FMP quote via events monitor', rule: `Arun's price alert ${w[2]} ${w[3]}`, key: `${w[1]}|alert|${w[2]}|${w[3]}|${w[4]}`, observedAt: at, quiet: true });
+    else if (w[0] === 'filing') { const form = w.slice(2, -1).join(' '), filed = w.at(-1); if (MATERIAL.test(form) && now - Date.parse(filed) < 3 * 864e5) r = lead({ symbol: w[1], event: `filed ${form} on ${filed}`, source: 'SEC EDGAR submissions feed', rule: `material filing (${form})`, key: `${w[1]}|filing|${form}|${filed}`, observedAt: `${filed}T00:00:00Z`, quiet: true }); }
+    if (r) lines.push(`lead ${r.cid} ${w[1]} ${w[0]}`);
+  }
+} catch { /* the scout never breaks the monitor */ }
 
 // 5. wake only on something NEW
 const LAST = `${STATE}/signal-last.txt`;

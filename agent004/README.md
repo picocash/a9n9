@@ -16,6 +16,20 @@ Created 2026-11-22. Proxmox VM 107 `agent004` (10.0.1.46, 8 vCPU / 32 GB / 200 G
 - `alerts add|list|remove` (state/price-alerts.json, checked by signal.mjs every 10 min in market hours → `price-alert` wake line) and
   `team send|read` (Buzz #team with agent004's own key). 2026-11-24: ANT below 78 and SPCX below 120 set for Arun.
 
+## Candidate pipeline (2026-11-24)
+Six stages per candidate; three are code, three are Hermes profiles (sub-agents) on the kanban board `desk`:
+Scout (code, in `scripts-hermes/signal.mjs`: moves, material filings, price alerts become leads; repeats collapse) -> `evidence`
+and `narrative` profiles -> `analyst` profile -> risk engine (code, `pipeline risk`, limits in `desk/risk.json`, read-only to the
+agent, versioned, paper mode only) -> agent004 reports to Arun on Buzz. The journal (`state/desk/journal.jsonl`, append-only)
+records every step, refusal and rejection; raw tool answers are kept in `state/desk/raw/<cid>/`.
+- Tool: `bin/pipeline` (+ `bin/_desk.mjs`). Each profile can record only its own stage (checked by HERMES_PROFILE); the analyst's
+  supporting points must reference recorded observations. Role files: `profiles/<name>/SOUL.md`. Orchestrator skill: `desk-pipeline`.
+- Setup (profiles, toolsets, shared login symlinks, board): `scripts/desk-setup.sh`, run inside the container. Profiles live in
+  `hermes/profiles/` on the VM. All profiles use the ONE Claude login via symlinks; `kanban.max_in_progress: 2`.
+- First run: c1124-ANT-1 (ANT below Arun's $78 alert), 30 observations, origin traced to Reuters, bearish "watch", risk PASS, reported on Buzz.
+- Known limits: profiles share one container and user, so "only its tools" is toolset config + role file + the stage check, not a
+  sandbox. No trading tool exists; a PASS records an intended paper order only. `paperCapitalUsd` (100000) sizes orders until a portfolio is on file.
+
 ## Jobs (Hermes cron; resumed 2026-11-24 after Arun's model login)
 events every 2m (own monitor: board, reminders, Parallel monitors, holding moves of 3%+, new SEC filings), premarket 13:00 UTC
 Mon-Fri, close 21:30 UTC Mon-Fri, work every 2h, weekly Sunday 18:00 UTC. Definitions: scripts-hermes/jobs-2026-11-22.sh.

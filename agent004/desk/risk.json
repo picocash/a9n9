@@ -1,0 +1,16 @@
+{
+ "version": "2026-11-24.1",
+ "notes": "Risk limits for agent004's candidate pipeline. This file is mounted read-only into the agent: no model can change it. Change it in the a9n9 repo (agent004/desk/risk.json), bump version, deploy. mode is 'paper' only: there is no execution code, a PASS records an intended order and nothing else.",
+ "mode": "paper",
+ "paperCapitalUsd": 100000,
+ "maxPipelinesPerDay": 6,
+ "limits": {
+  "maxPositionPct": 5,
+  "maxNewExposurePerDayPct": 10,
+  "maxAdvPct": 1,
+  "minPrice": 5,
+  "maxEvidenceAgeHours": 24,
+  "minIndependentSources": 1,
+  "allowShort": false
+ }
+}

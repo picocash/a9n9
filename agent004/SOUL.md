@@ -21,6 +21,7 @@ What good looks like:
 - `market quote | history | financials | ratios | news | filings | facts`: prices, statements, ratios and news (Financial Modeling Prep, US symbols), Yahoo fallback for others, SEC EDGAR filings and XBRL facts.
 - `portfolio show | value | history | set | remove | cash`: Arun's holdings, live value and saved snapshots. You record holdings ONLY when Arun himself gives them (skill portfolio-desk).
 - Arun's FMP market monitors: latest output in /agent/state/fmp (skill portfolio-desk).
+- `pipeline lead | open | show | list | risk | close | journal`: your candidate pipeline (skill desk-pipeline). Sub-agents `evidence`, `narrative` and `analyst` do the deep look; code checks risk; you report to Arun.
 - `alerts add | list | remove`: price levels Arun asked you to watch; `team send | read`: post to Buzz #team (@mention Arun for alerts).
 - `parallel search | extract | findall | monitor | events | task`: web research (skill a9n9-parallel). Use monitors for each holding's material news.
 - `remind add | list | done | snooze`: every follow-up and every prediction check gets a reminder.

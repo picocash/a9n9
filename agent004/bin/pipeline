@@ -1,0 +1,161 @@
+#!/usr/bin/env node
+// pipeline — agent004's candidate pipeline: Scout lead -> evidence + narrative -> analyst -> risk engine -> report to Arun.
+// Scout, risk and the journal are CODE (here and in scripts-hermes/signal.mjs). Three Hermes profiles do the reading and
+// thinking: `evidence`, `narrative`, `analyst`; each may record only its own stage. The orchestrator is agent004 (default profile).
+//   pipeline lead <SYM> --event '<what happened>' --rule '<why it is a lead>' [--source '<url or tool>']   new lead (no source = VERIFY)
+//   pipeline source <cid> '<url or tool>'            add a source to a VERIFY lead
+//   pipeline open <cid>                              orchestrator: gather the fact pack, create the 4 kanban tasks
+//   pipeline pack <cid>                              (re)gather the fact pack: quote, history, ratios, filings, news; raw answers kept
+//   pipeline show <cid> | list [--all] | journal [cid] [n]
+//   pipeline schema <evidence|narrative|analyst>     the JSON a stage must record
+//   pipeline record <cid> <stage> --file <json>      a stage records its output (validated; a new snapshot, old ones stay)
+//   pipeline risk <cid>                              orchestrator: hard checks against /agent/desk/risk.json; PASS records an intended (paper) order
+//   pipeline close <cid> --note '<what was reported / decided>'
+import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { HOME, DESK, who, riskConfig, readJournal, journal, candidates, lead } from './_desk.mjs';
+const out = (o) => console.log(JSON.stringify(o, null, 1));
+const fail = (error, code = 2, extra = {}) => { out({ ok: false, error, ...extra }); process.exit(code); };
+const argv = process.argv.slice(2), flag = (k) => { const i = argv.indexOf(`--${k}`); if (i < 0) return null; const v = argv[i + 1]; argv.splice(i, 2); return v ?? ''; };
+const has = (k) => { const i = argv.indexOf(`--${k}`); if (i < 0) return false; argv.splice(i, 1); return true; };
+const [cmd, a1, a2] = argv;
+if (fs.existsSync(`${HOME}/state/PAUSED`)) fail('agent is PAUSED by the operator; do nothing further', 3);
+const get = (cid) => candidates().get(cid) ?? fail(`no candidate ${cid}`, 4);
+const market = (...a) => { try { return JSON.parse(execFileSync(process.execPath, [`${HOME}/bin/market`, ...a], { encoding: 'utf8', timeout: 60_000 })); } catch (e) { try { return JSON.parse(e.stdout); } catch { return { ok: false, error: String(e.message).slice(0, 200) }; } } };
+const STAGES = ['evidence', 'narrative', 'analyst'];
+
+const SCHEMA = {
+  evidence: { observations: [{ field: 'short-name-you-choose (e.g. revenue-ttm, lockup-dec15-shares)', value: 'number or short text', source: 'tool call or URL', observedAt: 'ISO time of the source data' }], filingsRead: [{ form: '8-K', filed: 'YYYY-MM-DD', url: 'https://…', finding: 'one sentence, or "nothing material"' }], missing: ['a fact you looked for and could not get'], concerns: ['optional: facts that cut against the lead'] },
+  narrative: { claim: 'the one claim people are making about this candidate', origin: { url: 'where it started', publisher: 'who', date: 'YYYY-MM-DD' }, independentSources: [{ url: 'https://…', publisher: 'who', date: 'YYYY-MM-DD', supports: true, note: 'what they add from their OWN reporting' }], repeats: [{ url: 'https://…', tracesTo: 'the origin or source URL it repeats' }], unverified: ['part of the claim nobody independent supports'], summary: 'two sentences' },
+  analyst: { view: 'one testable sentence', direction: 'bullish | bearish | neutral', supporting: [{ observation: 'what it shows', ref: 'an evidence field name, a pack field name, or a narrative source URL' }], strongestObjection: 'the best case against your view', missing: ['what you would need to be surer'], invalidation: { condition: 'what would prove the view wrong', level: 'optional price', byDate: 'optional YYYY-MM-DD' }, reliesOnNarrative: false, proposal: { action: 'buy | add | trim | sell | hold | watch | none', sizePct: 'percent of portfolio, required for buy/add', entry: 'optional price', stop: 'required for buy/add' }, prediction: { claim: 'measurable', checkDate: 'YYYY-MM-DD' } },
+};
+function validate(stage, d, c) {
+  const errs = [], str = (v) => typeof v === 'string' && v.trim().length > 2, arr = (v) => Array.isArray(v);
+  if (stage === 'evidence') {
+    if (!arr(d.observations) || d.observations.length < 5) errs.push('observations: at least 5');
+    for (const [i, o] of (d.observations ?? []).entries()) { if (!str(o.field) || o.value == null || !str(o.source) || Number.isNaN(Date.parse(o.observedAt))) errs.push(`observations[${i}]: needs field, value, source, observedAt (ISO time)`); }
+    if (!arr(d.missing)) errs.push('missing: required list (empty only if truly nothing is missing)');
+    if (!arr(d.filingsRead)) errs.push('filingsRead: required list');
+  } else if (stage === 'narrative') {
+    if (!str(d.claim)) errs.push('claim: required');
+    if (d.origin !== null && !(d.origin && str(d.origin.url))) errs.push('origin: {url, publisher, date} or null if you could not find it');
+    if (!arr(d.independentSources)) errs.push('independentSources: required list (may be empty)');
+    for (const [i, s] of (d.independentSources ?? []).entries()) if (!/^https?:\/\//.test(s.url ?? '') || typeof s.supports !== 'boolean') errs.push(`independentSources[${i}]: needs url and supports true/false`);
+    const urls = (d.independentSources ?? []).map((s) => s.url); if (new Set(urls).size !== urls.length) errs.push('independentSources: the same URL twice is one source');
+    if (!arr(d.repeats) || !arr(d.unverified) || !str(d.summary)) errs.push('repeats, unverified (lists) and summary are required');
+  } else if (stage === 'analyst') {
+    for (const k of ['view', 'strongestObjection']) if (!str(d[k])) errs.push(`${k}: required`);
+    if (!['bullish', 'bearish', 'neutral'].includes(d.direction)) errs.push('direction: bullish | bearish | neutral');
+    const refs = new Set([...(c.evidence?.observations ?? []).map((o) => o.field), ...Object.keys(c.pack?.fields ?? {}), ...(c.narrative?.independentSources ?? []).map((s) => s.url), c.narrative?.origin?.url].filter(Boolean));
+    if (!arr(d.supporting) || d.supporting.length < 2) errs.push('supporting: at least 2');
+    for (const [i, s] of (d.supporting ?? []).entries()) if (!str(s.observation) || !refs.has(s.ref)) errs.push(`supporting[${i}]: ref "${s.ref}" is not a recorded observation (use an evidence field, a pack field or a narrative source URL)`);
+    if (!arr(d.missing)) errs.push('missing: required list');
+    if (!d.invalidation || !str(d.invalidation.condition)) errs.push('invalidation.condition: required');
+    if (typeof d.reliesOnNarrative !== 'boolean') errs.push('reliesOnNarrative: true or false');
+    const p = d.proposal ?? {}; if (!['buy', 'add', 'trim', 'sell', 'hold', 'watch', 'none'].includes(p.action)) errs.push('proposal.action: buy | add | trim | sell | hold | watch | none');
+    if (['buy', 'add'].includes(p.action) && !(Number(p.sizePct) > 0 && Number(p.stop) > 0)) errs.push('proposal: buy/add needs sizePct and stop');
+    if (!d.prediction || !str(d.prediction.claim) || Number.isNaN(Date.parse(d.prediction.checkDate))) errs.push('prediction: {claim, checkDate} required');
+  }
+  return errs;
+}
+
+function pack(c) {
+  const sym = c.symbol, raw = `${DESK}/raw/${c.cid}`; fs.mkdirSync(raw, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-'), fields = {}, missing = [];
+  const keep = (name, j) => { fs.writeFileSync(`${raw}/${stamp}-${name}.json`, JSON.stringify(j)); return j; };
+  const put = (k, value, source, observedAt) => { if (value == null || Number.isNaN(value)) { missing.push(k); return; } fields[k] = { value, source, observedAt }; };
+  const q = keep('quote', market('quote', sym)), k = q.quotes?.[0] ?? {}; const qs = `market quote ${sym} (${k.source ?? 'n/a'})`, qt = k.marketTime ?? q.at;
+  for (const f of ['price', 'previousClose', 'changePct', 'volume', 'dayLow', 'dayHigh', 'yearLow', 'yearHigh', 'marketCap']) put(f, k[f], qs, qt);
+  const h = keep('history', market('history', sym, '6mo')), rows = h.rows ?? [];
+  if (rows.length) { const last = rows.slice(-20), hs = `market history ${sym} 6mo (${h.source ?? 'n/a'})`, ht = `${rows.at(-1).date}T21:00:00Z`;
+    put('tradingDays', rows.length, hs, ht); put('avgVolume20d', Math.round(last.reduce((s, r) => s + r.volume, 0) / last.length), hs, ht);
+    put('avgDollarVolume20d', Math.round(last.reduce((s, r) => s + r.volume * r.close, 0) / last.length), hs, ht);
+    put('high6mo', Math.max(...rows.map((r) => r.high)), hs, ht); put('low6mo', Math.min(...rows.map((r) => r.low)), hs, ht);
+    if (rows.length > 5) put('change5dPct', +((rows.at(-1).close / rows.at(-6).close - 1) * 100).toFixed(2), hs, ht);
+  } else missing.push('price history');
+  const r = keep('ratios', market('ratios', sym)), t = r.ratiosTTM ?? {}; const rs = `market ratios ${sym} (TTM)`;
+  for (const [f, key] of [['grossMarginTTM', 'grossProfitMarginTTM'], ['operatingMarginTTM', 'operatingProfitMarginTTM'], ['netMarginTTM', 'netProfitMarginTTM'], ['priceToSalesTTM', 'priceToSalesRatioTTM'], ['peTTM', 'priceToEarningsRatioTTM'], ['currentRatioTTM', 'currentRatioTTM'], ['debtToEquityTTM', 'debtToEquityRatioTTM']]) put(f, t[key] != null ? +Number(t[key]).toFixed(4) : null, rs, q.at);
+  const f = keep('filings', market('filings', sym)), fl = (f.filings ?? []).slice(0, 15).map(({ form, filed, period, url }) => ({ form, filed, period, url }));
+  if (!fl.length) missing.push('SEC filings list');
+  const n = keep('news', market('news', sym, '10')), nl = (n.news ?? []).slice(0, 10).map(({ published, publisher, title, url }) => ({ published, publisher, title, url }));
+  if (!nl.length) missing.push('news headlines');
+  return journal(c.cid, 'pack', 'gathered', { fields, missing, filings: fl, headlines: nl, rawDir: raw }).data;
+}
+
+function risk(c) {
+  const cfg = riskConfig(), L = cfg.limits, checks = [], chk = (name, pass, reason, value = null, limit = null) => checks.push({ name, pass: !!pass, reason, value, limit });
+  const a = c.analyst, p = a?.proposal ?? {}, px = c.pack?.fields?.price?.value, now = Date.now();
+  chk('operating-state', cfg.mode === 'paper', cfg.mode === 'paper' ? 'paper mode: a pass records an intended order; nothing is executed' : `mode ${cfg.mode} is not supported`, cfg.mode, 'paper');
+  chk('analyst-record', !!a, a ? 'analyst record present' : 'no analyst record');
+  const eAge = c.evidence ? (now - Date.parse(c.evidence.at)) / 3600e3 : null;
+  chk('evidence-fresh', eAge != null && eAge <= L.maxEvidenceAgeHours, eAge == null ? 'no evidence record' : `evidence is ${eAge.toFixed(1)} h old`, eAge != null ? +eAge.toFixed(1) : null, L.maxEvidenceAgeHours);
+  if (a) {
+    chk('invalidation-defined', !!a.invalidation?.condition, a.invalidation?.condition ? 'invalidation condition stated' : 'no invalidation condition');
+    if (a.reliesOnNarrative) { const n = (c.narrative?.independentSources ?? []).filter((s) => s.supports).length; chk('independent-sources', n >= L.minIndependentSources, `${n} independent supporting source(s)`, n, L.minIndependentSources); }
+    let pf = null; try { pf = JSON.parse(execFileSync(process.execPath, [`${HOME}/bin/portfolio`, 'value'], { encoding: 'utf8', timeout: 60_000 })); } catch { /* no portfolio on file */ }
+    const base = pf?.ok && pf.total > 0 ? pf.total : cfg.paperCapitalUsd, baseKind = pf?.ok && pf.total > 0 ? 'portfolio value' : 'paper capital (no portfolio on file)';
+    const held = pf?.ok ? (pf.positions ?? []).filter((x) => x.symbol.toUpperCase() === c.symbol).reduce((s, x) => s + (x.marketValue ?? 0), 0) : 0;
+    if (['buy', 'add'].includes(p.action)) {
+      const usd = base * Number(p.sizePct) / 100, after = (held + usd) / base * 100;
+      chk('price-floor', px >= L.minPrice, `price ${px}`, px ?? null, L.minPrice);
+      chk('position-size', after <= L.maxPositionPct, `position after order would be ${after.toFixed(2)}% of ${baseKind}`, +after.toFixed(2), L.maxPositionPct);
+      const day = new Date().toISOString().slice(0, 10), today = readJournal().filter((e) => e.stage === 'risk' && e.kind === 'intended-order' && e.at.startsWith(day) && e.cid !== c.cid && e.data.side === 'buy').reduce((s, e) => s + e.data.usd, 0);
+      const dayPct = (today + usd) / base * 100; chk('daily-new-exposure', dayPct <= L.maxNewExposurePerDayPct, `today's intended buys incl. this one: ${dayPct.toFixed(2)}%`, +dayPct.toFixed(2), L.maxNewExposurePerDayPct);
+      const adv = c.pack?.fields?.avgDollarVolume20d?.value, advPct = adv ? usd / adv * 100 : null;
+      chk('liquidity', advPct != null && advPct <= L.maxAdvPct, advPct == null ? 'no average dollar volume in the pack' : `order is ${advPct.toFixed(4)}% of 20-day average dollar volume`, advPct != null ? +advPct.toFixed(4) : null, L.maxAdvPct);
+      chk('stop-below-price', Number(p.stop) > 0 && Number(p.stop) < px, `stop ${p.stop} vs price ${px}`, Number(p.stop), px ?? null);
+      var order = { side: 'buy', symbol: c.symbol, usd: +usd.toFixed(2), shares: px ? Math.floor(usd / px) : null, refPrice: px ?? null, stop: Number(p.stop), sizedOn: baseKind };
+    } else if (['sell', 'trim'].includes(p.action)) {
+      chk('position-held', held > 0 || L.allowShort, held > 0 ? `holding worth ${held.toFixed(2)}` : 'not held; short selling is not allowed', +held.toFixed(2));
+      var order = held > 0 ? { side: 'sell', symbol: c.symbol, usd: +(p.action === 'sell' ? held : held / 2).toFixed(2), refPrice: px ?? null, note: p.action === 'trim' ? 'trim = half the position unless Arun says otherwise' : 'full position' } : null;
+    } else chk('no-order', true, `proposal is "${p.action}": nothing to size`);
+  }
+  const failed = checks.filter((x) => !x.pass), result = failed.length ? 'FAIL' : 'PASS';
+  const data = { result, failed: failed.map((x) => `${x.name}: ${x.reason}`), checks, proposal: p, mode: cfg.mode };
+  journal(c.cid, 'risk', 'evaluated', data, { ruleVersion: cfg.version });
+  if (result === 'PASS' && order) journal(c.cid, 'risk', 'intended-order', order, { ruleVersion: cfg.version });
+  return { ...data, ruleVersion: cfg.version, intendedOrder: result === 'PASS' ? order ?? null : null, note: 'analysis for Arun\'s decision; nothing is executed' };
+}
+
+function open(c) {
+  if (who() !== 'default') fail('only the orchestrator (agent004 default profile) opens a pipeline', 3);
+  if (c.status === 'VERIFY') fail(`lead ${c.cid} has no usable source: add one with pipeline source ${c.cid} '<url or tool>' or leave it`, 4);
+  if (c.tasks) return { already: true, tasks: c.tasks };
+  const cfg = riskConfig(), day = new Date().toISOString().slice(0, 10), opened = readJournal().filter((e) => e.stage === 'open' && e.at.startsWith(day)).length;
+  if (opened >= cfg.maxPipelinesPerDay) fail(`daily cap: ${opened} pipelines opened today (max ${cfg.maxPipelinesPerDay}); this lead waits for tomorrow or for Arun's say-so`, 4);
+  const p = pack(c), head = `Candidate ${c.cid}: ${c.symbol}. Lead: ${c.lead.event} (rule: ${c.lead.rule}; source: ${c.lead.source}).`;
+  const mk = (title, assignee, body, parents = []) => JSON.parse(execFileSync('hermes', ['kanban', '--board', 'desk', 'create', title, '--assignee', assignee, '--body', body, '--idempotency-key', `${c.cid}:${assignee}`, '--max-runtime', '25m', '--created-by', 'agent004-pipeline', '--json', ...(assignee === 'default' ? ['--skill', 'desk-pipeline'] : []), ...parents.flatMap((x) => ['--parent', x])], { encoding: 'utf8', timeout: 60_000 })).id;
+  const how = (s) => `Follow your role file (SOUL.md). Start with: /agent/bin/pipeline show ${c.cid}. Write your JSON to a file in your workspace (format: /agent/bin/pipeline schema ${s}) and record it with: /agent/bin/pipeline record ${c.cid} ${s} --file <file>. Fix every validation error it reports. Your completion summary: 3 lines on what you recorded.`;
+  const tasks = {};
+  tasks.evidence = mk(`${c.cid} evidence: ${c.symbol}`, 'evidence', `${head}\n${how('evidence')}`);
+  tasks.narrative = mk(`${c.cid} narrative: ${c.symbol}`, 'narrative', `${head}\n${how('narrative')}`);
+  tasks.analyst = mk(`${c.cid} analyst: ${c.symbol}`, 'analyst', `${head}\nThe evidence and narrative records are in. ${how('analyst')}`, [tasks.evidence, tasks.narrative]);
+  tasks.report = mk(`${c.cid} risk + report: ${c.symbol}`, 'default', `${head}\nYou are the orchestrator (skill desk-pipeline). 1) /agent/bin/pipeline risk ${c.cid}  2) /agent/bin/pipeline show ${c.cid}  3) tell Arun on Buzz with /agent/bin/team send (--mention his pubkey): the view, the 2 strongest observations, the strongest objection, the invalidation, the risk result with any failed check by name, and the intended paper order if it passed, all marked "for your decision"  4) log the analyst's prediction in predictions.md with a reminder for its check date  5) /agent/bin/pipeline close ${c.cid} --note '<what you sent>'.`, [tasks.analyst]);
+  journal(c.cid, 'open', 'opened', { tasks, board: 'desk', packMissing: p.missing });
+  return { tasks, packMissing: p.missing };
+}
+
+if (cmd === 'schema') { if (!STAGES.includes(a1)) fail('usage: pipeline schema <evidence|narrative|analyst>'); out({ ok: true, stage: a1, format: SCHEMA[a1], note: 'record with: pipeline record <cid> ' + a1 + ' --file <json>' }); }
+else if (cmd === 'lead') {
+  const event = flag('event'), rule = flag('rule'), source = flag('source'), key = flag('key');
+  if (!a1 || !event || !rule) fail("usage: pipeline lead <SYM> --event '<what happened>' --rule '<why it is a lead>' [--source '<url or tool>']");
+  const r = lead({ symbol: a1, event, rule, source, key }); out({ ok: true, ...r, next: r.status === 'VERIFY' ? `no source: stays at VERIFY until pipeline source ${r.cid} '<url>'` : r.duplicate ? 'same lead already exists (collapsed)' : `pipeline open ${r.cid}` });
+}
+else if (cmd === 'source') { const c = get(a1); if (!a2) fail("usage: pipeline source <cid> '<url or tool>'"); journal(c.cid, 'lead', 'source-added', { source: a2 }); out({ ok: true, cid: c.cid, next: `pipeline open ${c.cid}` }); }
+else if (cmd === 'open') { const c = get(a1); out({ ok: true, cid: c.cid, ...open(c), note: 'the desk board runs evidence and narrative, then analyst, then your risk + report task' }); }
+else if (cmd === 'pack') { const c = get(a1); const p = pack(c); out({ ok: true, cid: c.cid, fields: Object.keys(p.fields).length, missing: p.missing }); }
+else if (cmd === 'show') { const c = get(a1); out({ ok: true, ...c, you: who() }); }
+else if (cmd === 'list') { const all = has('all'); out({ ok: true, candidates: [...candidates().values()].filter((c) => all || c.status !== 'CLOSED').map((c) => ({ cid: c.cid, symbol: c.symbol, status: c.status, event: c.lead?.event, created: c.created, stages: { pack: !!c.pack, evidence: !!c.evidence, narrative: !!c.narrative, analyst: !!c.analyst, risk: c.risk?.result ?? null }, duplicates: c.duplicates ?? 0 })) }); }
+else if (cmd === 'journal') { const isCid = a1 && /^c\d{4}-/.test(a1), n = Number((isCid ? a2 : a1) || 40); out({ ok: true, entries: readJournal().filter((e) => !isCid || e.cid === a1).slice(-n).map((e) => ({ at: e.at, cid: e.cid, stage: e.stage, kind: e.kind, by: e.by, ruleVersion: e.ruleVersion, summary: e.stage === 'risk' ? (e.data.result ?? e.data.side) : e.data.event ?? e.data.view ?? e.data.claim ?? e.data.note ?? Object.keys(e.data).join(',') })) }); }
+else if (cmd === 'record') {
+  const c = get(a1), stage = a2, file = flag('file');
+  if (!STAGES.includes(stage) || !file) fail('usage: pipeline record <cid> <evidence|narrative|analyst> --file <json>');
+  if (who() !== stage) { journal(c.cid, stage, 'refused', { reason: `profile ${who()} may not record ${stage}` }); fail(`only the ${stage} profile records the ${stage} stage (you are ${who()})`, 3); }
+  let d; try { d = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) { fail(`cannot read JSON from ${file}: ${e.message}`); }
+  if (stage === 'analyst' && (!c.evidence || !c.narrative)) fail('the evidence and narrative records must exist first', 4);
+  const errs = validate(stage, d, c); if (errs.length) { journal(c.cid, stage, 'rejected', { errors: errs }); fail('not recorded: fix these and record again', 2, { errors: errs }); }
+  journal(c.cid, stage, 'recorded', d); out({ ok: true, cid: c.cid, stage, snapshot: (c.history[stage] ?? 0) + 1, note: 'recorded; earlier snapshots stay in the journal' });
+}
+else if (cmd === 'risk') { const c = get(a1); if (who() !== 'default') fail('only the orchestrator runs the risk engine', 3); out({ ok: true, cid: c.cid, ...risk(c) }); }
+else if (cmd === 'close') { const c = get(a1), note = flag('note'); if (!note) fail("usage: pipeline close <cid> --note '<what was reported / decided>'"); journal(c.cid, 'close', 'closed', { note }); out({ ok: true, cid: c.cid, status: 'CLOSED' }); }
+else fail('usage: pipeline lead | source | open | pack | show | list | journal | schema | record | risk | close');
