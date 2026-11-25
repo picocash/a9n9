@@ -1,0 +1,6 @@
+// remote (xrdp) sessions of admins: no password popups for colour profiles, software refresh or network scans
+polkit.addRule(function(action, subject) {
+  if (subject.isInGroup("sudo") && (action.id.indexOf("org.freedesktop.color-manager.") == 0 ||
+      action.id == "org.freedesktop.packagekit.system-sources-refresh" ||
+      action.id == "org.freedesktop.NetworkManager.wifi.scan")) return polkit.Result.YES;
+});

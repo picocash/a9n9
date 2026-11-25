@@ -1,0 +1,4 @@
+# keep the server network on systemd-networkd; the desktop packages default to NetworkManager
+network:
+  version: 2
+  renderer: networkd

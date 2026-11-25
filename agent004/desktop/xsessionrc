@@ -1,0 +1,4 @@
+export GNOME_SHELL_SESSION_MODE=ubuntu
+export XDG_CURRENT_DESKTOP=ubuntu:GNOME
+export XDG_SESSION_DESKTOP=ubuntu
+export XDG_CONFIG_DIRS=/etc/xdg/xdg-ubuntu:/etc/xdg

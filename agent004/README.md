@@ -44,6 +44,8 @@ Eastern times; the agent's container stays on UTC. Node 22.22.1 is in /usr/local
 files). MSTR monitor cron removed 2026-11-24 (Arun: no longer used). Logs rotate via `/etc/logrotate.d/fmp-monitors` (weekly or 20 MB, 4 gzipped copies, copytruncate).
 
 ## Desktop for Arun (2026-11-22)
+
+**2026-11-25: switched to the Ubuntu GNOME desktop** (Arun asked). `ubuntu-desktop-minimal` installed; the xrdp session now starts GNOME through `~/.xsession` (`gnome-session --session=ubuntu`) and `~/.xsessionrc` (copies in `desktop/`); the XFCE line is kept in `~/.xsession.xfce-backup`. `desktop/45-xrdp-desktop.rules` (in `/etc/polkit-1/rules.d/`) stops the colour-profile password popups. The desktop packages make NetworkManager the netplan default, so `/etc/netplan/99-keep-networkd.yaml` pins `renderer: networkd`; do not remove it. Tested with a throwaway account over FreeRDP (GNOME shell came up), account deleted. The agent's Chrome autostarts from `~/.config/autostart` in GNOME too, but only once someone logs in over RDP after a reboot. Disconnect by closing the window, not by logging out.
 xrdp + XFCE on the VM, port 3389 open to 10.0.1.0/24 only (ufw). Log in as `ubuntu`; the password is in the home box's
 `~/a9n9/secrets/agent004-rdp.txt` (SSH stays key-only). From a LAN machine: `sdl-freerdp3 /v:10.0.1.46 /u:ubuntu /cert:ignore /dynamic-resolution`.
 
