@@ -14,6 +14,7 @@
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { HOME, DESK, who, riskConfig, readJournal, journal, candidates, lead } from './_desk.mjs';
+const HERMES = ['/opt/hermes/bin/hermes', '/usr/local/bin/hermes'].find((p) => { try { return fs.existsSync(p); } catch { return false; } }) ?? 'hermes';   // cron's PATH lacks /opt/hermes/bin (agent004 found 7d7d2409cb)
 const out = (o) => console.log(JSON.stringify(o, null, 1));
 const fail = (error, code = 2, extra = {}) => { out({ ok: false, error, ...extra }); process.exit(code); };
 const argv = process.argv.slice(2), flag = (k) => { const i = argv.indexOf(`--${k}`); if (i < 0) return null; const v = argv[i + 1]; argv.splice(i, 2); return v ?? ''; };
@@ -124,7 +125,7 @@ function open(c) {
   const cfg = riskConfig(), day = new Date().toISOString().slice(0, 10), opened = readJournal().filter((e) => e.stage === 'open' && e.at.startsWith(day)).length;
   if (opened >= cfg.maxPipelinesPerDay) fail(`daily cap: ${opened} pipelines opened today (max ${cfg.maxPipelinesPerDay}); this lead waits for tomorrow or for Arun's say-so`, 4);
   const p = pack(c), head = `Candidate ${c.cid}: ${c.symbol}. Lead: ${c.lead.event} (rule: ${c.lead.rule}; source: ${c.lead.source}).`;
-  const mk = (title, assignee, body, parents = []) => JSON.parse(execFileSync('hermes', ['kanban', '--board', 'desk', 'create', title, '--assignee', assignee, '--body', body, '--idempotency-key', `${c.cid}:${assignee}`, '--max-runtime', '25m', '--created-by', 'agent004-pipeline', '--json', ...(assignee === 'default' ? ['--skill', 'desk-pipeline'] : []), ...parents.flatMap((x) => ['--parent', x])], { encoding: 'utf8', timeout: 60_000 })).id;
+  const mk = (title, assignee, body, parents = []) => JSON.parse(execFileSync(HERMES, ['kanban', '--board', 'desk', 'create', title, '--assignee', assignee, '--body', body, '--idempotency-key', `${c.cid}:${assignee}`, '--max-runtime', '25m', '--created-by', 'agent004-pipeline', '--json', ...(assignee === 'default' ? ['--skill', 'desk-pipeline'] : []), ...parents.flatMap((x) => ['--parent', x])], { encoding: 'utf8', timeout: 60_000 })).id;
   const how = (s) => `Follow your role file (SOUL.md). Start with: /agent/bin/pipeline show ${c.cid}. Write your JSON to a file in your workspace (format: /agent/bin/pipeline schema ${s}) and record it with: /agent/bin/pipeline record ${c.cid} ${s} --file <file>. Fix every validation error it reports. Your completion summary: 3 lines on what you recorded.`;
   const tasks = {};
   tasks.evidence = mk(`${c.cid} evidence: ${c.symbol}`, 'evidence', `${head}\n${how('evidence')}`);
