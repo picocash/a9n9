@@ -1,0 +1,8 @@
+[Unit]
+Description=agent004 Chrome (own profile, DevTools 127.0.0.1:9222) on a virtual screen
+[Service]
+ExecStart=%h/bin/agent004-chrome
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=default.target

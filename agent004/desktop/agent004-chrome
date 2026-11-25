@@ -1,4 +1,5 @@
 #!/bin/sh
 # agent004 Chrome: its own profile (not a personal one), DevTools on 127.0.0.1:9222 for Hermes (bridged to the container by cdp-bridge.service).
-pgrep -f "user-data-dir=$HOME/.config/agent004-chrome" >/dev/null && exit 0
-exec google-chrome --user-data-dir=$HOME/.config/agent004-chrome --remote-debugging-port=9222 --no-first-run --no-default-browser-check "$@"
+# Run by the user service agent004-chrome.service on its own virtual screen, from boot, with no desktop login needed
+# (on the 26.04 GNOME remote desktop a browser in the session dies when the viewer disconnects).
+exec env -u WAYLAND_DISPLAY xvfb-run -a -s "-screen 0 1600x1000x24" google-chrome --ozone-platform=x11 --user-data-dir=$HOME/.config/agent004-chrome --remote-debugging-port=9222 --password-store=basic --no-first-run --no-default-browser-check "$@"
