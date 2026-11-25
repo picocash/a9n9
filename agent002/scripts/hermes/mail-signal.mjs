@@ -49,7 +49,9 @@ const mark = (k, v) => { if (typeof v === 'number' && v > (hw[k] ?? 0)) hw[k] = 
     const rows = fs.readFileSync(`${HOME}/kpi/facts.jsonl`, 'utf8').trim().split('\n').slice(-3000).map((l) => { try { return JSON.parse(l); } catch { return null; } }).filter((r) => r?.t === 'fact');
     const at = rows.filter((r) => r.metric?.startsWith('game.')).at(-1)?.at;
     const now_ = rows.filter((r) => r.at === at);
-    mark('newcomers', now_.find((r) => r.metric === 'game.newcomers' && r.subject === 'all')?.value);
+    // players only: the operator's ?s=selftest rounds are left out, so a test round wakes nobody (ask fb1a13e219)
+    const nc = (subject) => now_.find((r) => r.metric === 'game.newcomers' && r.subject === subject)?.value;
+    mark('newcomers', typeof nc('all') === 'number' ? nc('all') - (nc('src:selftest') ?? 0) : undefined);
     mark('heard', now_.filter((r) => r.metric === 'game.visits' && String(r.subject).startsWith('heard:')).reduce((s, r) => s + (r.value || 0), 0));
   } catch { /* idem */ }
 }
