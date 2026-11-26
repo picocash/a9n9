@@ -28,7 +28,7 @@ each call and a scored track record per writer. History window: 90 days. Use: pe
 | 13F funds and their quarterly moves | `./bin/drip funds [q]`, `./bin/drip fund <slug> [picks|trades|benchmark]` |
 | Plan, calls used, credit balance | `./bin/drip account` |
 
-200 calls a day, cached. Long text is cut to 400 characters; add `--full` to the one call where you need all of it.
+350 calls a day (raised from 200 on 2026-11-26 for the archive), cached. Long text is cut to 400 characters; add `--full` to the one call where you need all of it.
 
 ## Rules
 1. **A Drip call is an opinion, never a fact.** Report it as "<writer> (<source>, <date>) is bearish NVDA: <their reason>".

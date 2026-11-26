@@ -14,7 +14,7 @@
 //   drip funds [query] | drip fund <slug> [picks|trades|benchmark]                                 13F filers and their quarterly moves
 //   drip company <SYM|name>                                                                        company identity card
 //   drip account                                                                                   plan, requests used today, credit balance
-// Rules: 200 network calls a day, answers cached (picks/ticker/search 30 min, the rest 12 h). Long text is cut to 400 chars;
+// Rules: 350 network calls a day, answers cached (picks/ticker/search 30 min, the rest 12 h). Long text is cut to 400 chars;
 // add --full to one call when you need the whole evidence. A Drip call is a writer's OPINION: name the writer and date, never
 // report it as a fact, and check any number against a filing or price source before it reaches Arun.
 import fs from 'node:fs';
@@ -23,7 +23,7 @@ const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${
 const pk = parked('drip'); if (pk) { out({ ok: false, error: `drip is switched off by the operator: ${pk}` }); process.exit(3); }
 const KEY = (() => { try { return fs.readFileSync(`${HOME}/secrets/drip.env`, 'utf8').match(/^DRIP_API_KEY=(.+)$/m)?.[1]?.trim(); } catch { return null; } })();
 const CACHE = `${STATE}/cache/drip`; fs.mkdirSync(CACHE, { recursive: true });
-const calls = counter('drip'); const CAP = 200;
+const calls = counter('drip'); const CAP = 350;
 const argv = process.argv.slice(2); const cmd = argv[0];
 const flags = {}; const pos = [];
 for (let i = 1; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { const k = a.slice(2); if (argv[i + 1] === undefined || argv[i + 1].startsWith('--')) flags[k] = true; else flags[k] = argv[++i]; } else pos.push(a); }
