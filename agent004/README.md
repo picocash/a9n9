@@ -11,6 +11,10 @@ Created 2026-11-22. Proxmox VM 107 `agent004` (10.0.1.46, 8 vCPU / 32 GB / 200 G
   change is logged in `state/portfolio-changes.jsonl`. Skill `portfolio-desk` (2026-11-24) covers prices, holdings and the monitors. Format: `{"currency":"USD","asOf":"…","cash":0,"positions":[{"symbol":"AAPL","shares":10,"costBasis":150,"account":"…"}]}`.
   No trade command exists.
 - `mail list | read | reply | done`: agent004@a9n9.net (routing rule → a9n9-email Worker, key in AGENT_MAIL_KEYS; reply-only, 20/day).
+- `drip` (2026-11-26): Drip (dripstack.com) opinion feed, read-only: analyst calls per day and per ticker, post cards, writer
+  track records, 13F fund moves. Arun's account agent004@a9n9.net, Personal plan (7-day trial from 11-26, then $32/month, his
+  card; he cancels on 12-02 unless agent004's 12-01 verdict shows value). Key in `secrets/drip.env` (operator copy on .101 in
+  `~/a9n9/secrets/agent004-drip.env`). No unlock/buy command; article credits stay at 0. 200 calls a day. Skill `a9n9-drip`.
 - `parallel` (per-agent key on the tools service, $1.50/day), `remind`, `board`, `journal`.
 
 - `alerts add|list|remove` (state/price-alerts.json, checked by signal.mjs every 10 min in market hours → `price-alert` wake line) and

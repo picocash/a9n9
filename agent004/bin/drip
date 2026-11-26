@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+// drip — Drip (dripstack.com): what paid finance newsletters, podcasts and X accounts are calling, per ticker and per writer.
+// READ-ONLY. Arun's account (agent004@a9n9.net), Personal plan: stock picks and search, 90-day history, personal use only.
+// There is NO command to buy or unlock an article: article credits are Arun's spend and the balance is 0.
+//   drip picks [--date YYYY-MM-DD | --from D --to D] [--query TEXT] [--author NAME] [--limit n]   analyst calls (default: latest day)
+//   drip ticker <SYM> [--from D --to D] [--sentiment bullish|bearish|neutral] [--limit n]          calls on one ticker, by analyst
+//   drip search '<topic>' [--after D] [--before D] [--source newsletter|podcast|all] [--limit n]   post cards (title, date, price)
+//   drip mentions --ticker SYM | --company X | --person X | --subject X [--picks-only] [--limit n] posts that mention an entity
+//   drip sources [query]                                                                           catalog, or resolve a name
+//   drip source <slug> [n]                                                                         one source + recent post cards
+//   drip profile <slug>                                                                            a writer's record: trades, win rate, open calls
+//   drip benchmark <slug>                                                                          that writer against SPY
+//   drip source-picks <slug> [--ticker SYM] [--from D --to D] [--limit n]                          that writer's calls
+//   drip funds [query] | drip fund <slug> [picks|trades|benchmark]                                 13F filers and their quarterly moves
+//   drip company <SYM|name>                                                                        company identity card
+//   drip account                                                                                   plan, requests used today, credit balance
+// Rules: 200 network calls a day, answers cached (picks/ticker/search 30 min, the rest 12 h). Long text is cut to 400 chars;
+// add --full to one call when you need the whole evidence. A Drip call is a writer's OPINION: name the writer and date, never
+// report it as a fact, and check any number against a filing or price source before it reaches Arun.
+import fs from 'node:fs';
+import { HOME, STATE, out, paused, counter, parked } from './_kit.mjs';
+const p = paused(); if (p) { out({ ok: false, error: `paused by the operator: ${p}` }); process.exit(3); }
+const pk = parked('drip'); if (pk) { out({ ok: false, error: `drip is switched off by the operator: ${pk}` }); process.exit(3); }
+const KEY = (() => { try { return fs.readFileSync(`${HOME}/secrets/drip.env`, 'utf8').match(/^DRIP_API_KEY=(.+)$/m)?.[1]?.trim(); } catch { return null; } })();
+const CACHE = `${STATE}/cache/drip`; fs.mkdirSync(CACHE, { recursive: true });
+const calls = counter('drip'); const CAP = 200;
+const argv = process.argv.slice(2); const cmd = argv[0];
+const flags = {}; const pos = [];
+for (let i = 1; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { const k = a.slice(2); if (argv[i + 1] === undefined || argv[i + 1].startsWith('--')) flags[k] = true; else flags[k] = argv[++i]; } else pos.push(a); }
+const FULL = !!flags.full;
+const day = (s) => { if (s === undefined || s === true) return undefined; if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) throw new Error(`dates are YYYY-MM-DD, got ${s}`); return s; };
+const seg = (s) => { if (!s || !/^[A-Za-z0-9._\-^=]+$/.test(s)) throw new Error(`bad slug or symbol: ${s}`); return encodeURIComponent(s); };
+const num = (v, d, max) => Math.max(1, Math.min(Number(v) || d, max));
+async function get(path, params = {}, ttl = 1800) {
+  if (!KEY) throw new Error('no Drip key (secrets/drip.env); ask claude on the board');
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== true && v !== '')).toString();
+  const url = `https://dripstack.com/api/v2/${path}${qs ? `?${qs}` : ''}`;
+  const f = `${CACHE}/${Buffer.from(url).toString('base64url').slice(-180)}.json`;
+  try { const st = fs.statSync(f); if (Date.now() - st.mtimeMs < ttl * 1000) return JSON.parse(fs.readFileSync(f, 'utf8')); } catch {}
+  if (calls.get() >= CAP) throw new Error(`daily cap of ${CAP} drip calls reached; use cached answers or try tomorrow`);
+  calls.bump();
+  const r = await fetch(url, { headers: { authorization: `Bearer ${KEY}`, 'user-agent': 'a9n9-agent004' }, signal: AbortSignal.timeout(40000) });
+  const text = await r.text(); let j; try { j = JSON.parse(text); } catch { throw new Error(`Drip answered HTTP ${r.status}, not JSON`); }
+  if (!r.ok) throw new Error(`Drip HTTP ${r.status}: ${String(j.error ?? j.code ?? '').slice(0, 200)}${j.reason ? ` (${j.reason})` : ''}`);
+  fs.writeFileSync(f, JSON.stringify(j)); return j;
+}
+// cut long strings and drop bulky fields so one answer stays readable
+const DROP = new Set(['imageUrl', 'assetId', 'assetResolutionStatus', 'extractionVersion', 'relevanceScore', 'matchedTokenCount', 'totalTokenCount', 'topicCoverageRatio', 'isScopedPublisher', 'growth', 'authorEmail', 'takesExplicitOnly']);
+function slim(o, depth = 0) {
+  if (FULL) return o;
+  if (typeof o === 'string') return o.length > 400 ? `${o.slice(0, 400)}…` : o;
+  if (Array.isArray(o)) return o.slice(0, depth > 2 ? 5 : 500).map((x) => slim(x, depth + 1));
+  if (o && typeof o === 'object') return Object.fromEntries(Object.entries(o).filter(([k, v]) => !DROP.has(k) && v !== null && !(Array.isArray(v) && !v.length)).map(([k, v]) => [k, slim(v, depth + 1)]));
+  return o;
+}
+const pick = (x) => ({ date: x.date, ticker: x.ticker, type: x.instrumentType, action: x.action, sentiment: x.sentiment, conviction: x.convictionLabel ?? x.conviction, author: x.author, source: x.publicationSlug, sourceType: x.sourceType, guest: x.speakerIsGuest || undefined, thesis: x.thesis, rationale: x.rationaleSnippet, quote: x.evidenceQuote, timeframe: x.timeframe, priceTarget: x.priceTarget, publishedAt: x.publishedAt, prices: x.prices, url: x.articleUrl });
+const done = (name, j, extra = {}) => out({ ok: true, tool: 'drip', what: name, source: 'Drip (dripstack.com): writers\' opinions, not facts', ...extra, data: slim(j), callsToday: calls.get() });
+try {
+  if (cmd === 'picks') {
+    const j = await get('stock-picks', { date: day(flags.date), from: day(flags.from), to: day(flags.to), query: flags.query, author: flags.author, sort: flags.sort, cursor: flags.cursor, limitDays: flags.days, limit: num(flags.limit, 60, 500) });
+    done('picks', { meta: j.meta, pagination: j.pagination, picks: (j.picks ?? []).map(pick) });
+  } else if (cmd === 'ticker' && pos[0]) {
+    done('ticker', await get(`tickers/${seg(pos[0].toUpperCase())}`, { from: day(flags.from), to: day(flags.to), sentiment: flags.sentiment, author: flags.author, type: flags.type, sort: flags.sort, limit: num(flags.limit, 40, 200) }));
+  } else if (cmd === 'search' && pos[0]) {
+    const j = await get('search', { q: pos.join(' '), limit: num(flags.limit, 10, 30), source: flags.source, platform: flags.platform, publicationSlug: flags.publication, publishedAfter: day(flags.after), publishedBefore: day(flags.before) });
+    done('search', { query: j.query, totalCount: j.totalCount, matchConfidence: j.matchConfidence, items: (j.items ?? []).map((x) => ({ title: x.title, source: x.publicationSlug, slug: x.slug, publishedAt: x.publishedAt, priceUsd: x.priceCents != null ? x.priceCents / 100 : null, podcast: x.isPodcast || undefined, snippet: x.snippet })) }, { note: 'post cards only; the article itself is paid and you cannot unlock it' });
+  } else if (cmd === 'mentions') {
+    if (!flags.ticker && !flags.company && !flags.person && !flags.organization && !flags.subject) throw new Error('give one of --ticker --company --person --organization --subject');
+    done('mentions', await get('entities/search', { ticker: flags.ticker, company: flags.company, person: flags.person, organization: flags.organization, subject: flags.subject, author: flags.author, stockPicksOnly: flags['picks-only'] ? 'true' : undefined, publicationSlug: flags.publication, publishedAfter: day(flags.after), publishedBefore: day(flags.before), cursor: flags.cursor, limit: num(flags.limit, 20, 50) }));
+  } else if (cmd === 'sources') {
+    done('sources', pos[0] ? await get('sources/search', { q: pos.join(' ') }, 12 * 3600) : await get('sources', {}, 12 * 3600));
+  } else if (cmd === 'source' && pos[0]) {
+    done('source', await get(`sources/${seg(pos[0])}`, { limit: num(pos[1], 5, 20) }, 3600));
+  } else if (cmd === 'profile' && pos[0]) {
+    done('profile', await get(`sources/${seg(pos[0])}/stock-picks`, {}, 12 * 3600));
+  } else if (cmd === 'benchmark' && pos[0]) {
+    done('benchmark', await get(`sources/${seg(pos[0])}/benchmark`, { from: day(flags.from), to: day(flags.to) }, 12 * 3600));
+  } else if (cmd === 'source-picks' && pos[0]) {
+    done('source-picks', await get(`sources/${seg(pos[0])}/picks`, { ticker: flags.ticker, from: day(flags.from), to: day(flags.to), limit: num(flags.limit, 40, 200), offset: flags.offset }, 3600));
+  } else if (cmd === 'funds') {
+    done('funds', await get('funds', { q: pos.join(' ') || undefined, limit: num(flags.limit, 20, 50), offset: flags.offset }, 12 * 3600));
+  } else if (cmd === 'fund' && pos[0]) {
+    const sub = pos[1]; if (sub && !['picks', 'trades', 'benchmark'].includes(sub)) throw new Error('fund sub-command is picks, trades or benchmark');
+    done(`fund${sub ? ` ${sub}` : ''}`, await get(`funds/${seg(pos[0])}${sub ? `/${sub}` : ''}`, { quarter: flags.quarter, ticker: flags.ticker, from: day(flags.from), to: day(flags.to), limit: sub && sub !== 'benchmark' ? num(flags.limit, 40, 200) : undefined, offset: flags.offset }, 12 * 3600));
+  } else if (cmd === 'company' && pos[0]) {
+    const q = pos.join(' '); done('company', await get('companies/search', /^[A-Z.\-]{1,6}$/.test(q) ? { ticker: q } : { name: q }, 7 * 86400));
+  } else if (cmd === 'account') {
+    const me = await get('me', {}, 60), cr = await get('me/credits', {}, 60);
+    out({ ok: true, tool: 'drip', what: 'account', auth: me.authMethod, articleCreditsUsd: cr.purchasedBalanceUsd, lifetimeSpentUsd: cr.lifetimeSpentUsd, callsToday: calls.get(), dailyCap: CAP, note: 'no unlock command exists; article purchases and the plan are Arun\'s' });
+  } else {
+    out({ ok: false, error: 'usage: drip picks | ticker <SYM> | search <topic> | mentions --ticker SYM | sources [q] | source <slug> | profile <slug> | benchmark <slug> | source-picks <slug> | funds [q] | fund <slug> [picks|trades|benchmark] | company <SYM> | account   (see the header of this file)' }); process.exit(2);
+  }
+} catch (e) { out({ ok: false, tool: 'drip', error: String(e.message ?? e).replace(/pk_drip_[a-f0-9]+/g, 'pk_drip_…'), callsToday: calls.get() }); process.exit(1); }
