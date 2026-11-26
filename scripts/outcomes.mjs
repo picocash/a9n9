@@ -34,4 +34,5 @@ if (old && snap.agent003_members != null && old.agent003_members != null) snap.a
 const flags = [];
 if (snap.agent003_members_72h === 0 || snap.agent003_hours_since_signup >= 72) flags.push('agent003: members flat 72h');
 if (snap.agent002_visits_own_72h === 0) flags.push('agent002: 0 visits from its own links in 72h');
+try { const pi = JSON.parse(sh(`node ${new URL('./paid-idle.mjs', import.meta.url).pathname}`)); flags.push(...pi.flags); } catch { flags.push('paid-idle check failed to run'); }   // paid things must produce (2026-11-26, agent001 X finding)
 console.log(JSON.stringify({ ...snap, flags }, null, 1));

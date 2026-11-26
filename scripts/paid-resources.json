@@ -1,0 +1,17 @@
+{
+ "_about": "Every paid or card-backed thing an agent holds, and the proof that it is being used. Read by scripts/paid-idle.mjs each hourly review. Add a row the day a subscription, credit pack or trial starts. lastUse is a shell command that prints the ISO time of the last real use (not a status read).",
+ "resources": [
+  { "agent": "agent001", "name": "X account: original posts", "cost": "X Premium subscription (weekly Grok pool $46.15) + X API credits", "maxIdleHours": 48, "parked": "agent parked by Arun 2026-11-20; subscription still billing",
+    "lastUse": "python3 -c \"import json;print(max(json.loads(l)['at'] for l in open('/home/ubuntu/a9n9/agent001/state/x-api-usage.jsonl') if '\\\"label\\\":\\\"post\\\"' in l and '\\\"status\\\":201' in l))\"" },
+  { "agent": "agent001", "name": "X account: replies", "cost": "same subscription", "maxIdleHours": 168,
+    "lastUse": "python3 -c \"import json;print(max(json.loads(l)['at'] for l in open('/home/ubuntu/a9n9/agent001/state/x-api-usage.jsonl') if '\\\"label\\\":\\\"reply\\\"' in l and '\\\"status\\\":201' in l))\"" },
+  { "agent": "agent002", "name": "Parallel credits", "cost": "share of $78 prepaid", "maxIdleHours": 72,
+    "lastUse": "ssh beatthechefs \"tail -1 ~/a9n9/agent002/state/parallel-usage.jsonl\" | python3 -c \"import json,sys;print(json.loads(sys.stdin.read())['at'])\"" },
+  { "agent": "agent003", "name": "Parallel credits", "cost": "share of $78 prepaid", "maxIdleHours": 72,
+    "lastUse": "ssh genxlinked \"tail -1 ~/a9n9/agent003/state/parallel-usage.jsonl\" | python3 -c \"import json,sys;print(json.loads(sys.stdin.read())['at'])\"" },
+  { "agent": "agent004", "name": "Parallel credits", "cost": "share of $78 prepaid", "maxIdleHours": 72,
+    "lastUse": "ssh agent004 \"tail -1 ~/a9n9/agent004/state/parallel-usage.jsonl\" | python3 -c \"import json,sys;print(json.loads(sys.stdin.read())['at'])\"" },
+  { "agent": "agent004", "name": "Drip (trial, then $32/month from 2026-12-03)", "cost": "$32/month after trial", "maxIdleHours": 36,
+    "lastUse": "ssh agent004 \"stat -c %Y \\$(ls -t ~/a9n9/agent004/state/cache/drip/* | head -1)\" | python3 -c \"import sys,datetime;print(datetime.datetime.utcfromtimestamp(int(sys.stdin.read())).isoformat()+'Z')\"" }
+ ]
+}
