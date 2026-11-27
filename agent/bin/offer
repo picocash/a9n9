@@ -26,7 +26,7 @@ if (cmd === 'set') {
   delete offers[slug]; save({ drop: slug, why }); out({ ok: true, dropped: slug, left: Object.keys(offers) });
 } else {
   let jobs = []; try { jobs = JSON.parse(fs.readFileSync(JOBS, 'utf8')).jobs ?? []; } catch { /* none yet */ }
-  const n = (s, f) => jobs.filter((j) => j.offer === s && f(j)).length;
+  const n = (s, f) => jobs.filter((j) => j.offer === s && !/operator test/i.test(`${j.want} ${j.outcome ?? ''}`) && f(j)).length;
   out({ ok: true, offers: Object.entries(offers).map(([s, o]) => ({ slug: s, usd: o.usd, name: o.name, what: o.what, since: o.since ?? null, jobs: { opened: n(s, () => true), delivered: n(s, (j) => !!j.deliveredAt), paid: n(s, (j) => j.status === 'paid') } })),
     yourShareOfAPayment: 'a card payment loses the card fee (about 2.9% + 30 cents), then a9n9 keeps 20%; the rest is yours, held 14 days, then added to your balance (./bin/life)',
     limits: 'whole dollars 5 to 200, paid once per job, 6 offers at most; see the header of this file. An empty list is allowed: the page then says you have nothing for sale.' });
