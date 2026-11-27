@@ -17,14 +17,18 @@ export const refTag = (ref) => { const h = String(ref).toLowerCase().replace(/:\
 // round that was left, what is known comes from the page's own lines: `first` (first action), `beat` (once a minute while cooking)
 // and `away` (the tab was hidden or closed: the second on the clock, what was in the pan, the last actions). furthestStep is the
 // furthest thing seen; minute is the last second the round was seen alive. beats = plated rounds that beat the house chef.
-const ROUND = new Set(['start', 'first', 'beat', 'away', 'plated']);
+const ROUND = new Set(['start', 'first', 'beat', 'away', 'plated', 'nudge']);
+// The first-step hint (game 077272e, live 2026-11-27T18:17Z): 20 s into a round with no ingredient picked, the sous-chef names the first step once
+// and the page logs `nudge`. hint.sinceLive = rounds started after it went live; hint.before = the rounds before it (agent002 05fe1d1848).
+const HINT_LIVE = '2026-11-27T18:17:00Z';
 const MINUTES = ['under 1 min', '1-2 min', '2-3 min', '3-4 min', '4-5 min', '5-6 min (plating open)'];
 function roundsOf(evs) {
   const done = []; let r = null; const close = () => { if (r) done.push(r); r = null; };
   for (const e of evs) {
-    if (e.e === 'start') { close(); r = { level: LV(e.level), day: String(e.t).slice(0, 10), sec: 0, acted: false, prep: false, pan: false }; continue; }
+    if (e.e === 'start') { close(); r = { level: LV(e.level), at: String(e.t), day: String(e.t).slice(0, 10), sec: 0, acted: false, prep: false, pan: false }; continue; }
     if (!r) continue;
     if (e.e === 'first') { r.acted = true; r.sec = Math.max(r.sec, Number(e.sec) || 0); if (e.type && e.type !== 'heat') r.prep = true; }
+    else if (e.e === 'nudge') r.nudged = true;
     else if (e.e === 'beat') { r.acted ||= (Number(e.acts) || 0) > 0; r.sec = Math.max(r.sec, (Number(e.min) || 0) * 60); if (e.items > 0) r.pan = true; }
     else if (e.e === 'away') { r.sec = Math.max(r.sec, Number(e.sec) || 0); if (e.items > 0) r.pan = true; if (Array.isArray(e.log) && e.log.length) { r.acted = true; if (e.log.some((x) => x?.[1] && x[1] !== 'heat')) r.prep = true; } }
     else if (e.e === 'plated') { if (e.official === false) { r.noScore = true; close(); } else { r.plated = true; r.win = e.win === true; r.day = String(e.t).slice(0, 10); close(); } }
@@ -60,11 +64,15 @@ export function gameStats(dataDir = GAME_DATA, { any = process.env.GAME_STATS_AN
     // via:<button> = share presses per button (card, x, bsky, facebook, whatsapp, copy, native), players only: ?s=selftest test rounds left out (agent002 352ea097ca)
     // level:<n> = rounds started and rounds plated (scored) on that level, counted per round, email or not; ?s=selftest left out (agent002 6f2d3a3a6c)
     if (s.src !== 'selftest') { if (s.view) { funnel.openingScreen.visits += 1; funnel.openingScreen[s.start ? 'started' : 'neverStarted'] += 1; }
-      for (const r of roundsOf(s.ev ?? [])) { const L = (funnel.byLevel[r.level] ??= { started: 0, plated: 0, beats: 0, left: 0, platedToday: 0, beatsToday: 0, leftByStep: {}, leftByMinute: Object.fromEntries(MINUTES.map((m) => [m, 0])) });
+      for (const r of roundsOf(s.ev ?? [])) { const L = (funnel.byLevel[r.level] ??= { started: 0, plated: 0, beats: 0, left: 0, platedToday: 0, beatsToday: 0, leftByStep: {}, leftByMinute: Object.fromEntries(MINUTES.map((m) => [m, 0])), hint: { liveSince: HINT_LIVE, before: { started: 0, plated: 0, left: 0 }, sinceLive: { started: 0, plated: 0, left: 0 }, shown: 0, shownThenPlated: 0, shownThenLeft: 0 } });
+        { const H = L.hint, side = r.at >= HINT_LIVE ? H.sinceLive : H.before; side.started += 1; side[r.plated ? 'plated' : 'left'] += 1; if (r.nudged) { H.shown += 1; H[r.plated ? 'shownThenPlated' : 'shownThenLeft'] += 1; } }
         L.started += 1; if (r.plated) { L.plated += 1; if (r.win) L.beats += 1; if (r.day === today) { L.platedToday += 1; if (r.win) L.beatsToday += 1; } }
         else { L.left += 1; const st = stepOf(r); L.leftByStep[st] = (L.leftByStep[st] ?? 0) + 1; L.leftByMinute[MINUTES[Math.min(5, Math.floor(r.sec / 60))]] += 1; } } }
     if (s.lv && s.src !== 'selftest') for (const [n, v] of Object.entries(s.lv)) { const b = (by[`level:${n}`] ??= zero()); b.started += v.started; b.plated += v.plated; }
     if (s.via && s.src !== 'selftest') for (const [v, n] of Object.entries(s.via)) { const b = (by[`via:${v}`] ??= zero()); b.shared += n; } }
-  return { files: files.length, firstDay: files[0]?.slice(0, 10) ?? null, lastDay: files.at(-1)?.slice(0, 10) ?? null, countedOnlyPublic: !any, by, sharePage, funnel };
+  // plateRecords = every scored plate the server stored, per level, with its own verdict against the house chef. It includes plates from browsers
+  // that asked not to be tracked (no page events, so they are missing from `beats` above) and test rounds.
+  const plateRecords = {}; try { for (const pf of fs.readdirSync(`${dataDir}/plates`)) { try { const p = JSON.parse(fs.readFileSync(`${dataDir}/plates/${pf}`, 'utf8')); if (!p.duel) continue; const R = (plateRecords[LV(p.level)] ??= { scored: 0, beats: 0, beatsFromUntrackedBrowsers: 0, bestPlayerTotal: 0 }); R.scored += 1; R.bestPlayerTotal = Math.max(R.bestPlayerTotal, Number(p.total) || 0); if (p.duel.win) { R.beats += 1; if (!p.sid) R.beatsFromUntrackedBrowsers += 1; } } catch {} } } catch {}
+  return { files: files.length, firstDay: files[0]?.slice(0, 10) ?? null, lastDay: files.at(-1)?.slice(0, 10) ?? null, countedOnlyPublic: !any, by, sharePage, funnel, plateRecords };
 }
 if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(gameStats(), null, 1));
