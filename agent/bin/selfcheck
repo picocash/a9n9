@@ -1,0 +1,30 @@
+#!/usr/bin/env node
+// selfcheck — your own list of what you hold (accounts, credits, subscriptions, channels, tools) and whether you are using it.
+// You keep this list; nobody else does. Run it first in every work run and act on each flag in that same run.
+//   selfcheck                                   list everything, flag what has sat idle past its limit
+//   selfcheck add '<name>' --days N [--proof <file under state>] [--cost '<what it costs>'] [--why '<what it is for>']
+//   selfcheck used '<name>'                     mark a real use now (not needed when --proof names a file your tools write)
+//   selfcheck drop '<name>' '<why>'             you decided to stop using it; it stays listed as dropped, with your reason
+//   selfcheck limit '<what stopped you>' '<what you did about it>'    record a cap, budget or rule that made you skip work
+// A flag means: use it this run, fix what is stopping you, or drop it with a reason. Leaving a flag standing is a failed run.
+import fs from 'node:fs';
+const HOME = process.env.AGENT_HOME || '/home/ubuntu/a9n9/agent001', F = `${HOME}/state/resources.json`;
+const out = (o) => console.log(JSON.stringify(o, null, 1));
+const db = fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { resources: [], limits: [] };
+const save = () => fs.writeFileSync(F, JSON.stringify(db, null, 1));
+const [cmd, ...rest] = process.argv.slice(2); const flag = (k) => { const i = rest.indexOf(`--${k}`); return i >= 0 ? rest[i + 1] : undefined; };
+const now = Date.now(), iso = () => new Date().toISOString(), find = (n) => db.resources.find((r) => r.name === n);
+const last = (r) => { let t = r.lastUsed ? Date.parse(r.lastUsed) : 0; if (r.proof) { try { t = Math.max(t, fs.statSync(`${HOME}/state/${r.proof}`).mtimeMs); } catch {} } return t; };
+if (cmd === 'add' && rest[0]) {
+  if (find(rest[0])) { out({ ok: false, error: 'already listed' }); process.exit(1); }
+  const proof = flag('proof'); if (proof && (proof.includes('..') || proof.startsWith('/'))) { out({ ok: false, error: '--proof is a path under state' }); process.exit(1); }
+  db.resources.push({ name: rest[0], maxIdleDays: Math.max(1, Number(flag('days')) || 3), proof, cost: flag('cost'), why: flag('why'), added: iso(), lastUsed: proof ? undefined : iso() }); save(); out({ ok: true, added: rest[0] });
+} else if (cmd === 'used' && find(rest[0])) { find(rest[0]).lastUsed = iso(); save(); out({ ok: true });
+} else if (cmd === 'drop' && find(rest[0]) && rest[1]) { Object.assign(find(rest[0]), { dropped: iso(), dropWhy: rest[1].slice(0, 400) }); save(); out({ ok: true, note: 'if it still costs money, say so in your run post: stopping the bill is the owner\'s click' });
+} else if (cmd === 'limit' && rest[0] && rest[1]) { db.limits.push({ at: iso(), what: rest[0].slice(0, 300), did: rest[1].slice(0, 300) }); db.limits = db.limits.slice(-50); save(); out({ ok: true });
+} else if (!cmd) {
+  const rows = db.resources.map((r) => { const t = last(r); const idleDays = t ? Math.round((now - t) / 864e5 * 10) / 10 : null; return { name: r.name, cost: r.cost, why: r.why, idleDays, maxIdleDays: r.maxIdleDays, dropped: r.dropped ? r.dropWhy : undefined, flag: !r.dropped && (idleDays === null || idleDays > r.maxIdleDays) ? 'IDLE: use it, fix what stops you, or drop it with a reason, this run' : undefined }; });
+  const recent = db.limits.filter((l) => now - Date.parse(l.at) < 7 * 864e5);
+  const repeat = Object.entries(recent.reduce((m, l) => (m[l.what] = (m[l.what] || 0) + 1, m), {})).filter(([, n]) => n >= 3).map(([w, n]) => `"${w}" stopped you ${n} times in 7 days: working around it is not a fix; change your schedule or plan so it stops, or state the one number that has to change`);
+  out({ ok: true, resources: rows, flags: rows.filter((r) => r.flag).map((r) => r.name), repeatedLimits: repeat, empty: db.resources.length ? undefined : 'Your list is empty. Add everything you hold today: every account, credit balance, subscription, monitor, mailbox and channel.' });
+} else { out({ ok: false, error: 'usage: selfcheck | add <name> --days N [--proof file] [--cost ..] [--why ..] | used <name> | drop <name> <why> | limit <what> <did>' }); process.exit(2); }
