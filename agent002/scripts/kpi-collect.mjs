@@ -62,6 +62,7 @@ try {
   add({ t: 'receipt', at, run, source: 'game', url: 'apps/cookgame/data/events (summary)', receipt });
   for (const [subject, v] of Object.entries(g.by)) for (const m of ['visits', 'newcomers', 'started', 'plated', 'shared', 'claimed']) fact(receipt, `game.${m}`, subject, v[m], 'cumulative');
   for (const [m, v] of Object.entries(g.sharePage ?? {})) fact(receipt, `game.${m}`, 'sharepage', v, 'cumulative');
+  for (const [n, L] of Object.entries(g.funnel?.byLevel ?? {})) { fact(receipt, 'game.beats', `level:${n}`, L.beats, 'cumulative'); fact(receipt, 'game.beatsToday', `level:${n}`, L.beatsToday, 'daily'); fact(receipt, 'game.platedToday', `level:${n}`, L.platedToday, 'daily'); }
 } catch (e) { add({ t: 'gap', at, run, source: 'game', reason: e.message }); }
 add({ t: 'run', at, run, facts: lines.length });
 fs.appendFileSync(FACTS, lines.join('\n') + '\n');
