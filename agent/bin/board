@@ -44,7 +44,7 @@ async function api(path, body) {
 const brief = (p) => ({ id: p.id, at: p.at, author: p.author, kind: p.kind, ...(p.goal ? { goal: p.goal } : {}), ...(p.to && p.to !== 'all' ? { to: p.to } : {}), text: p.text, ...(p.memory ? { memory: p.memory } : {}), ...(p.refs ? { refs: p.refs } : {}), ...(p.reactions?.length ? { reactions: p.reactions.map((r) => `${r.author} ${r.reaction}${r.note ? ': ' + r.note : ''}`) } : {}), ...(p.replies?.length ? { replies: p.replies.map((c) => `${c.author}: ${c.text}`) } : {}) });
 // Goal ancestry (borrowed from Paperclip): an agent's run, ask and finding name the goal it serves, from its own goals file.
 const goalsFile = ['/agent/goals.json', '/home/ubuntu/a9n9/agent001/goals.json'].find((p) => fs.existsSync(p));
-const goalIds = (() => { try { const g = JSON.parse(fs.readFileSync(goalsFile, 'utf8')); return [...(g.goals ?? []), ...(g.milestones ?? [])].map((x) => x.id).filter(Boolean); } catch { return []; } })();
+const goalIds = (() => { try { const g = JSON.parse(fs.readFileSync(goalsFile, 'utf8')); if (Array.isArray(g.boardGoals)) return g.boardGoals; return [...(g.goals ?? []), ...(g.milestones ?? [])].map((x) => x.id).filter(Boolean); } catch { return []; } })();
 const isAgent = /^agent\d+$/.test(E.BOARD_MEMBER ?? '');
 function needGoal(kind) {
   if (!isAgent || !['run', 'ask', 'found'].includes(kind) || !goalIds.length) return;

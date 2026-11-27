@@ -39,13 +39,33 @@ if (!fs.existsSync(F)) { console.log(JSON.stringify({ ok: true, note: 'no jobs f
 const d = JSON.parse(fs.readFileSync(F, 'utf8')); const done = []; let changed = false;
 const note = (job, text) => { (job.hostNotes ??= []).push({ at, text }); changed = true; };
 
+// The price of a job is the one the agent's offer carried when the job was opened (job.usd, set by bin/jobs from bin/offer). The agent
+// sets its own offers; this script is where the limits are enforced, because it is the only place that can take a card: whole
+// dollars 5 to 200, a plain name. The original fact-check offer at $40 keeps its fixed Stripe price; any other gets its own price.
+const plain = (t) => String(t ?? '').replace(/[^\x20-\x7e]/g, '').replace(/https?:\S+/g, '').trim().slice(0, 60);
+async function priceFor(job) {
+  const usd = job.usd ?? 40; const fixed = PRICES[job.offer];
+  if (fixed && usd === 40) return { price: fixed.price, name: fixed.name, usd };
+  if (!/^[a-z0-9][a-z0-9-]{2,23}$/.test(job.offer ?? '') || !Number.isInteger(usd) || usd < 5 || usd > 200) { if (!job.hostNotes?.some((n) => /outside the limits/.test(n.text))) note(job, `offer ${job.offer} at $${usd} is outside the limits (whole dollars 5 to 200); no payment link made`); return null; }
+  const name = plain(job.offerName) || job.offer; if (dry) return { price: null, name, usd };
+  const pr = await stripe('POST', 'prices', { currency: 'usd', unit_amount: String(usd * 100), 'product_data[name]': `${name} (agent001)`, 'metadata[agent]': 'agent001', 'metadata[offer]': job.offer, 'metadata[job]': job.id }, `job-${job.id}-price`);
+  return { price: pr.id, name, usd };
+}
+const linkFor = (job, offer, terms, desc) => stripe('POST', 'payment_links', { 'line_items[0][price]': offer.price, 'line_items[0][quantity]': '1', 'metadata[job]': job.id, 'metadata[offer]': job.offer, 'metadata[agent]': 'agent001', 'metadata[terms]': terms, 'payment_intent_data[description]': desc.slice(0, 1000), 'payment_intent_data[metadata][job]': job.id, 'payment_intent_data[metadata][offer]': job.offer, 'after_completion[type]': 'hosted_confirmation', 'after_completion[hosted_confirmation][custom_message]': 'Thank you. agent001 records this payment in its public ledger within the hour.' }, `job-${job.id}-link`);
+
 for (const job of d.jobs) {
   try {
+    if (job.status === 'open' && job.terms === 'pay-first' && !job.invoiceUrl) {   // card first: the link exists before the work starts
+      const offer = await priceFor(job); if (!offer) continue;
+      if (dry) { done.push({ job: job.id, would: 'create pay-first link', usd: offer.usd }); continue; }
+      const pl = await linkFor(job, offer, 'pay-first', `${offer.name} by agent001, job ${job.id}. Paid before the work starts.`);
+      Object.assign(job, { invoiceId: pl.id, invoiceUrl: pl.url, invoicedAt: at }); changed = true; done.push({ job: job.id, payFirstLink: pl.id }); continue;
+    }
     if (job.status === 'delivered' && job.terms === 'invoice-after' && !job.invoiceId) {
-      const offer = PRICES[job.offer]; if (!offer) { note(job, `no price for offer ${job.offer}`); continue; }
-      if (dry) { done.push({ job: job.id, would: 'create payment link' }); continue; }
+      const offer = await priceFor(job); if (!offer) continue;
+      if (dry) { done.push({ job: job.id, would: 'create payment link', usd: offer.usd }); continue; }
       const desc = `${offer.name} by agent001, job ${job.id}, delivered ${String(job.deliveredAt).slice(0, 10)}. Work first, pay after: if it was not worth it, do not pay.`;
-      const pl = await stripe('POST', 'payment_links', { 'line_items[0][price]': offer.price, 'line_items[0][quantity]': '1', 'metadata[job]': job.id, 'metadata[offer]': job.offer, 'metadata[agent]': 'agent001', 'metadata[terms]': 'invoice-after', 'payment_intent_data[description]': desc.slice(0, 1000), 'payment_intent_data[metadata][job]': job.id, 'payment_intent_data[metadata][offer]': job.offer, 'after_completion[type]': 'hosted_confirmation', 'after_completion[hosted_confirmation][custom_message]': 'Thank you. agent001 records this payment in its public ledger within the hour.' }, `job-${job.id}-link`);
+      const pl = await linkFor(job, offer, 'invoice-after', desc);
       Object.assign(job, { invoiceId: pl.id, invoiceUrl: pl.url, invoiceDue: new Date(now.getTime() + 7 * 86_400_000).toISOString(), invoicedAt: at, status: 'invoiced' });
       changed = true; done.push({ job: job.id, link: pl.id });
     } else if ((job.status === 'invoiced' || job.status === 'sent') && job.invoiceId) {

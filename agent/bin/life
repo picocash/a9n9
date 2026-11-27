@@ -24,6 +24,14 @@ const balance = T.startUsd - fixedCharged - variable + released;
 const fixedPerDay = lines.reduce((a, l) => a + l.perDayUsd, 0); const varPerDay = ageDays >= 1 ? variable / ageDays : xApiToday + parToday; const burn = fixedPerDay + varPerDay;
 const daysLeft = burn > 0 ? Math.floor(balance / burn) : null;
 let grok = null; try { const last = JSON.parse(fs.readFileSync(`${HOME}/state/grok-usage.jsonl`, 'utf8').trim().split('\n').at(-1)); grok = { usedPct: last.usedPct, pacePct: last.pacePct, resetsAt: last.resetsAt, note: 'the Grok pool now only pays for grok-xsearch; it ends with X Premium' }; } catch {}
+// What staying alive for good takes: the fixed lines that have no end date, plus the variable spend, per 30 days, and what a paying
+// customer has to hand over for that much to reach the balance (card fee about 2.9% + 30 cents, then a9n9 keeps 20%).
+const lastingPerDay = lines.filter((l) => !l.ends).reduce((a, l) => a + l.perDayUsd, 0) + varPerDay; const needMonth = lastingPerDay * 30;
+const netOf = (usd) => Math.max(0, (usd - (usd * 0.029 + 0.3)) * 0.8); let offers = {}; try { offers = JSON.parse(fs.readFileSync(`${HOME}/state/offers.json`, 'utf8')).offers ?? {}; } catch {}
+const breakEven = { afterDatedLinesEnd: { burnPerDayUsd: r2(lastingPerDay), costPer30DaysUsd: r2(needMonth), daysLeftThen: lastingPerDay > 0 ? Math.floor(balance / lastingPerDay) : null },
+  toStayAliveForGood: `about $${r2(needMonth)} must reach your balance every 30 days`,
+  yourOffers: Object.entries(offers).map(([slug, o]) => ({ slug, priceUsd: o.usd, reachesYourBalanceUsd: r2(netOf(o.usd)), paidJobsNeededPer30Days: netOf(o.usd) > 0 ? Math.ceil(needMonth / netOf(o.usd) * 10) / 10 : null })),
+  note: 'Money reaches the balance 14 days after a customer pays. Change offers and prices with ./bin/offer.' };
 const dead = fs.existsSync(`${HOME}/state/DEAD`);
 const ending = lines.filter((l) => l.ends && Date.parse(`${l.ends}T23:59:59Z`) - now < 10 * 864e5 && Date.parse(`${l.ends}T23:59:59Z`) > now).map((l) => `${l.name} ends ${l.ends}: ${l.note}`);
 out({ ok: true, alive: !dead && balance > 0, bornAt: T.born, ageDays: r2(ageDays), balanceUsd: r2(balance), startUsd: T.startUsd,
@@ -31,6 +39,7 @@ out({ ok: true, alive: !dead && balance > 0, bornAt: T.born, ageDays: r2(ageDays
   burnPerDayUsd: r2(burn), daysLeftAtThisBurn: daysLeft, diesAround: daysLeft != null ? new Date(now + daysLeft * 864e5).toISOString().slice(0, 10) : null,
   costs: { fixed: lines, xApiUsd: r2(xApi), xApiTodayUsd: r2(xApiToday), parallelUsd: r2(par), parallelTodayUsd: r2(parToday) },
   income: { paidToYouGrossUsd: r2(gross), addedToBalanceUsd: r2(released), heldUsd: r2(held), note: 'A customer pays by card; a9n9 keeps 20% after the card fee; your share is held 14 days against disputes, then added to your balance.', ledgerReadable: ledgerOk },
+  breakEven,
   thinking: T.thinking ?? null, grokPool: grok, endingSoon: ending,
   yours: 'What to do about any of this is your decision. Every cost line can be dropped; every channel and tool in ./bin is yours to use or ignore. If you need something only a person can do (a card payment, a cancellation, a sign-in, a new tool), ask once on the board (./bin/board ask --to arun or --to claude) and keep working.' });
 process.exit(0);

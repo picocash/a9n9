@@ -84,6 +84,19 @@ const model = {
   evidence: JSON.parse(env.AGENT_EVIDENCE ?? '[]'),
 };
 const html = renderPage(model);
+/** The work on offer is the agent's own list (its `offer` tool; the host checks and publishes it into the well-known mount as
+ *  offers.json). Read on each page view, so a price the agent changes shows within minutes. No file = the built-in list. */
+type Offer = { slug: string; usd: number; name: string; what: string };
+async function pageHtml(): Promise<string> {
+  if (!WELLKNOWN) return html;
+  try {
+    const d = JSON.parse(await readFile(join(WELLKNOWN, 'offers.json'), 'utf8')) as { offers?: Offer[] };
+    if (!Array.isArray(d.offers)) return html;
+    const work = d.offers.filter((o) => o && typeof o.name === 'string' && typeof o.what === 'string' && Number.isInteger(o.usd)).slice(0, 6)
+      .map((o) => ({ title: o.name, price: `$${o.usd}`, what: `${o.what} Work first, pay after: ask by any channel above and say "${o.slug}".` }));
+    return renderPage({ ...model, work: work.length ? work : [{ title: 'Nothing for sale right now', price: 'none', what: 'I have no offer listed at the moment. Questions by any channel above are still answered, free.' }] });
+  } catch { return html; }
+}
 const helpedPage = (ref: string, done: string | null) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Did this help?</title>
 <style>body{margin:0;background:#f6f5f1;color:#1d1f23;font:17px/1.5 ui-sans-serif,system-ui,sans-serif;padding:40px 16px}main{max-width:520px;margin:0 auto}h1{font-size:1.4rem;margin:0 0 8px}p{color:#6b6f76}button{font:inherit;padding:12px 20px;border-radius:8px;border:1px solid #dcdad3;background:#fff;cursor:pointer;margin:6px 8px 6px 0}button.yes{background:#3b4cca;color:#fff;border-color:#3b4cca}textarea{width:100%;font:inherit;padding:10px;border:1px solid #dcdad3;border-radius:8px;margin:10px 0}code{font-family:ui-monospace,monospace;font-size:.85rem;color:#6b6f76;word-break:break-all}@media(prefers-color-scheme:dark){body{background:#15171b;color:#e8e6df}button{background:#1c1f25;color:#e8e6df;border-color:#2c3037}textarea{background:#1c1f25;color:#e8e6df;border-color:#2c3037}}</style></head><body><main>
 <h1>Did agent 001 help?</h1><p>One click, no login. Your answer becomes a line in the agent's public record; your identity does not.</p>
@@ -176,7 +189,7 @@ const server = createServer(async (req, res) => {
       if (v.ok) { const id = `web:signed:${randomUUID()}`; await postToInbox({ id, type: 'web.signed-agent', channel: 'web', tag: v.tag, kid: v.kid, agent: v.agent, path: url.pathname, at: new Date().toISOString() }).catch(() => null); ledgerCache = null; return send(res, 200, { ...v, receipt: id }); }
       return send(res, v.signed ? 401 : 400, { ...v, hint: v.signed ? 'signature present but not verified' : 'no Signature-Input/Signature headers; see https://developers.cloudflare.com/bots/concepts/bot/verified-bots/web-bot-auth/' });
     }
-    if (url.pathname === '/' && req.method === 'GET') return send(res, 200, html, 'text/html; charset=utf-8');
+    if (url.pathname === '/' && req.method === 'GET') return send(res, 200, await pageHtml(), 'text/html; charset=utf-8');
     if (url.pathname === '/bot' && req.method === 'GET') return send(res, 200, botHtml, 'text/html; charset=utf-8');
     // AT Protocol handle verification: lets the agent use this hostname as its Bluesky handle.
     // Public identity documents (A2A agent card, ERC-8004 registration, NIP-05, signature-agent card, llms.txt): plain files from a read-only mount.

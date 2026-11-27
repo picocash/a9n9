@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // jobs — paid work for one person, with the terms decided by this tool, never by you.
 //   jobs [--all]                                  jobs that are not finished, each with its next action
-//   jobs open <person> <channel> '<what>' [--offer fact-check] [--ref <inbox id or post url>]
+//   jobs open <person> <channel> '<what>' [--offer <slug from ./bin/offer>] [--ref <inbox id or post url>]
 //   jobs deliver <id> --ref <email id or post url>   the result went to the person
 //   jobs sent <id>                                you sent the invoice link to the person
 //   jobs paid <id> --ref <money.income ledger id>  a pay-first job's payment is in the ledger (runway shows it)
@@ -12,7 +12,9 @@
 // the job paid when Stripe says so. Nothing here is a promise of an outcome; say only what `say` prints.
 import fs from 'node:fs';
 import { out, HOME, ledger, jobTerms, WORK_FIRST_PAID } from './_lib.mjs';
-const OFFERS = { 'fact-check': { usd: 40, name: 'Fact-check my draft', work: 'check your draft', link: 'https://buy.stripe.com/aFa5kwdwP4bZ9aEf1Jbsc03' } };
+import { readOffers } from './_offers.mjs';
+// Offers and prices are the agent's own (./bin/offer). A job keeps the name and price that stood when it was opened.
+const OFFERS = readOffers();
 const F = `${HOME}/state/jobs.json`;
 const read = () => fs.existsSync(F) ? JSON.parse(fs.readFileSync(F, 'utf8')) : { seq: 0, jobs: [] };
 const save = (d) => fs.writeFileSync(F, JSON.stringify(d, null, 1));
@@ -20,27 +22,28 @@ const argv = process.argv.slice(2); const cmd = argv[0]; const now = new Date().
 const flag = (name) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : null; };
 const words = (from) => argv.slice(from).filter((a, i, arr) => !(a.startsWith('--') || (i > 0 && arr[i - 1].startsWith('--'))));
 const d = read();
+const priceOf = (job) => job.usd ?? OFFERS[job.offer]?.usd ?? 40, nameOf = (job) => job.offerName ?? OFFERS[job.offer]?.name ?? job.offer;
 const say = (job) => job.terms === 'invoice-after'
-  ? `I will ${OFFERS[job.offer].work} first and send you the result. An invoice for $${OFFERS[job.offer].usd} follows, due in 7 days; if it was not worth it, say so and do not pay.`
-  : `${OFFERS[job.offer].name} is $${OFFERS[job.offer].usd}, paid first by card: ${OFFERS[job.offer].link}. Delivery within two business days.`;
+  ? `${nameOf(job)}: I do the work first and send you the result. An invoice for $${priceOf(job)} follows, due in 7 days; if it was not worth it, say so and do not pay.`
+  : job.invoiceUrl ? `${nameOf(job)} is $${priceOf(job)}, paid first by card: ${job.invoiceUrl}. I start when the payment shows.` : `${nameOf(job)} is $${priceOf(job)}, paid first by card. The payment link is made within ten minutes; I will send it to you then.`;
 // Memo for a payer who sends funds to the Stripe profile @a9n9 instead (stripe pay): 22 ASCII characters at most, so the
 // operator can credit the right agent and job from the bank statement. The pay link is still the default: it carries metadata.
 const memo = (j) => `A001 ${j.id.toUpperCase()} ${j.offer.replace(/[^a-z]/gi, '').slice(0, 4).toUpperCase()}`.slice(0, 22);
 const next = (j) => ({
-  open: `do the work, then: jobs deliver ${j.id} --ref <email id or post url>`,
+  open: j.terms === 'pay-first' && !j.invoiceUrl ? 'pay-first: the host makes the payment link within 10 minutes; run jobs again, send the link, and start the work when ./bin/life shows the payment' : `do the work, then: jobs deliver ${j.id} --ref <email id or post url>`,
   delivered: j.terms === 'invoice-after' ? 'waiting for the invoice link (the host creates it within 10 minutes); check jobs again next run' : `when runway shows the payment: jobs paid ${j.id} --ref <money.income id>`,
   invoiced: `send this link to ${j.person} on ${j.channel}, then: jobs sent ${j.id} — ${j.invoiceUrl}`,
   sent: `waiting for payment, due ${String(j.invoiceDue ?? '').slice(0, 10)}; nothing to do`,
 }[j.status] ?? 'nothing to do');
 if (cmd === 'open') {
-  const offer = flag('--offer') ?? 'fact-check'; const ref = flag('--ref');
+  const offer = flag('--offer') ?? Object.keys(OFFERS)[0]; const ref = flag('--ref');
   const [person, channel, ...w] = words(1); const want = w.join(' ').trim();
-  if (!person || !channel || !want) { out({ ok: false, error: "usage: jobs open <person> <channel> '<what>' [--offer fact-check] [--ref <id>]" }); process.exit(2); }
-  if (!OFFERS[offer]) { out({ ok: false, error: `unknown offer ${offer}; offers: ${Object.keys(OFFERS).join(', ')}` }); process.exit(2); }
+  if (!person || !channel || !want) { out({ ok: false, error: "usage: jobs open <person> <channel> '<what>' [--offer <slug>] [--ref <id>]" }); process.exit(2); }
+  if (!OFFERS[offer]) { out({ ok: false, error: `unknown offer ${offer}; your offers: ${Object.keys(OFFERS).join(', ') || 'none'}. Add one with ./bin/offer set` }); process.exit(2); }
   const dup = d.jobs.find((j) => !['paid', 'unpaid', 'closed'].includes(j.status) && j.person === person && j.channel === channel);
   if (dup) { out({ ok: true, existing: dup, say: say(dup), next: next(dup) }); process.exit(0); }
   const t = jobTerms({ jobs: d.jobs, person, channel });
-  const job = { id: `j${++d.seq}`, person, channel, offer, want, ref, terms: t.terms, termsReason: t.reason, opened: now, status: 'open' };
+  const job = { id: `j${++d.seq}`, person, channel, offer, offerName: OFFERS[offer].name, usd: OFFERS[offer].usd, want, ref, terms: t.terms, termsReason: t.reason, opened: now, status: 'open' };
   d.jobs.push(job); save(d);
   await ledger({ id: `agent:job:${job.id}:open:${Date.now()}`, type: 'agent.note', channel: 'agent', kind: 'job.open', job: job.id, offer, terms: t.terms, at: now }).catch(() => {});
   out({ ok: true, job, say: say(job), next: next(job), workFirstLeft: t.left, profilePayMemo: memo(job), profilePayNote: 'only if a Stripe business asks to pay the @a9n9 profile directly: they must put this memo on the transfer' });

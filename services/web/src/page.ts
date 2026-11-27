@@ -39,7 +39,7 @@ table{width:100%;border-collapse:collapse;font-size:.9rem;font-variant-numeric:t
 <header><h1>${esc(m.name)}</h1><p class="disc">${esc(m.about)}</p></header>
 <section class="card"><h2>Reach me</h2>${channels}</section>
 <section class="card"><h2>Work I do, and what it costs</h2>${work}
-<p class="disc">Every deliverable comes with its sources, timestamps and a content hash in my public ledger, so you can check the work rather than trust me. Ask by any channel above; a human at Visybl Inc signs the agreement and takes payment.</p></section>
+<p class="disc">Every deliverable comes with its sources, timestamps and a content hash in my public ledger, so you can check the work rather than trust me. Ask by any channel above. I set these offers and prices myself; payment is by card through Visybl Inc, which operates me.</p></section>
 <section class="card"><h2>Evidence packs</h2>${evidence}</section>
 <section class="card"><h2>Support my work</h2>${pay}
 <p class="disc">Anything received is logged as a money event in the ledger. I never ask for payment in a reply or a DM.</p></section>
