@@ -10,6 +10,10 @@
 //                                           stories@genxlinked.com. Caps: 3/day, 10/week, one pitch per person per
 //                                           30 days, no follow-ups (if they reply, answer with mail reply). Must link
 //                                           the genxlinked.com page. The AI-disclosure footer is added by the service.
+//   mail note <to-address> --subject '<subject>' --file <path>
+//                                           A note to a WRITER WE ALREADY QUOTED, credited and linked, at the address they
+//                                           publish, telling them where the quote is. Own caps: 2/day, 10/week. The same
+//                                           person gets one first-contact mail (pitch or note) per 30 days. Not for press.
 //   mail suppress <address> '<why>'         never pitch this address again (they said no / asked to stop)
 // The mail service only shows mail sent to your addresses. Replies: 20 a day; signature and disclosure added for you.
 import fs from 'node:fs';
@@ -46,12 +50,12 @@ if (cmd === 'list') {
   const j = await call(`/v1/agent/mail/${id}/reply`, { text: body, ...(operator ? { operator } : {}) });
   fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'reply', id, to: j.to, from: j.from, subject: j.subject, operator: operator ?? null }) + '\n');
   out(j);
-} else if (cmd === 'pitch' && id && file) {
+} else if ((cmd === 'pitch' || cmd === 'note') && id && file) {
   if (paused()) { out({ ok: false, error: `paused: ${paused()}` }); process.exit(4); }
   const subject = take('--subject') ?? argv[2];
   const text = fs.readFileSync(file, 'utf8').trim();
-  const j = await call('/v1/agent/pitch', { to: id, subject, text });
-  fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'pitch', to: j.to, from: j.from, subject: j.subject, id: j.id }) + '\n');
+  const j = await call('/v1/agent/pitch', { to: id, subject, text, ...(cmd === 'note' ? { kind: 'note' } : {}) });
+  fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: cmd, to: j.to, from: j.from, subject: j.subject, id: j.id }) + '\n');
   out(j);
 } else if (cmd === 'suppress' && id && note) {
   const j = await call('/v1/agent/suppress', { to: id, note });
@@ -62,5 +66,5 @@ if (cmd === 'list') {
   fs.appendFileSync(`${HOME}/state/mail.jsonl`, JSON.stringify({ at: new Date().toISOString(), kind: 'done', id, note, operator: operator ?? null }) + '\n');
   out(j);
 } else {
-  out({ ok: false, error: "usage: mail list [--all] | mail read <id> | mail reply <id> --file <path> [--operator '<ask>'] | mail done <id> '<why>' [--operator '<ask>'] | mail pitch <to> --subject '<s>' --file <path> | mail suppress <address> '<why>'" }); process.exit(2);
+  out({ ok: false, error: "usage: mail list [--all] | mail read <id> | mail reply <id> --file <path> [--operator '<ask>'] | mail done <id> '<why>' [--operator '<ask>'] | mail pitch <to> --subject '<s>' --file <path> | mail note <to> --subject '<s>' --file <path> | mail suppress <address> '<why>'" }); process.exit(2);
 }

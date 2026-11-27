@@ -30,7 +30,7 @@ interface AgentEnv {
   SENDER_DOMAINS?: string;
   AGENT_SENDING?: string;
 }
-type Sending = { sendAs?: string[]; pitchPerDay?: number; pitchPerWeek?: number; footer?: string };
+type Sending = { sendAs?: string[]; pitchPerDay?: number; pitchPerWeek?: number; notePerDay?: number; notePerWeek?: number; footer?: string };
 function sendingFor(env: AgentEnv, agent: string): Sending {
   try { return (JSON.parse(env.AGENT_SENDING || '{}') as Record<string, Sending>)[agent] ?? {}; } catch { return {}; }
 }
@@ -146,7 +146,7 @@ const EMAIL_RE = /^[^\s@<>"']+@[^\s@<>"']+\.[a-z]{2,}$/i;
 
 async function pitch(request: Request, env: AgentEnv, g: Grant, p: string): Promise<Response> {
   const s = sendingFor(env, g.agent);
-  const body = (await request.json().catch(() => ({}))) as { to?: string; subject?: string; text?: string; note?: string };
+  const body = (await request.json().catch(() => ({}))) as { to?: string; subject?: string; text?: string; note?: string; kind?: string };
   const to = String(body.to ?? '').trim().toLowerCase();
   if (!EMAIL_RE.test(to)) return json({ error: 'to must be one email address' }, 400);
   const now = new Date().toISOString();
@@ -154,8 +154,11 @@ async function pitch(request: Request, env: AgentEnv, g: Grant, p: string): Prom
     await env.MAIL_DB.prepare('INSERT OR REPLACE INTO pitch_suppress (addr, at, agent, note) VALUES (?1, ?2, ?3, ?4)').bind(to, now, g.agent, String(body.note ?? '').slice(0, 300)).run();
     return json({ ok: true, suppressed: to });
   }
-  const perDay = s.pitchPerDay ?? 0, perWeek = s.pitchPerWeek ?? perDay * 3;
-  if (!perDay) return json({ error: `${g.agent} is not allowed to send first-contact email` }, 403);
+  // Two buckets (agent003 ask c978a90ee7, 2026-11-27): a pitch goes to press and organisations; a note goes to a writer the site
+  // already quoted, credited and linked. Each has its own caps; the one-per-person-per-30-days rule and the stop list cover both.
+  const isNote = body.kind === 'note', what = isNote ? 'note' : 'pitch';
+  const perDay = (isNote ? s.notePerDay : s.pitchPerDay) ?? 0, perWeek = (isNote ? s.notePerWeek : s.pitchPerWeek) ?? perDay * 3;
+  if (!perDay) return json({ error: `${g.agent} is not allowed to send a first-contact ${what}` }, 403);
   const sendable = (a: string) => (env.SENDER_DOMAINS || 'a9n9.net').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean).some((d) => a.endsWith(`@${d}`));
   const from = (s.sendAs ?? []).map((a) => a.toLowerCase()).find(sendable);
   if (!from) return json({ error: 'no sending address configured for this agent' }, 503);
@@ -171,18 +174,18 @@ async function pitch(request: Request, env: AgentEnv, g: Grant, p: string): Prom
   if (sup) return json({ error: `${to} asked not to be contacted` }, 403);
   const since30 = new Date(Date.now() - 30 * 86400_000).toISOString();
   const prior = await env.MAIL_DB.prepare("SELECT sent_at FROM outbound WHERE agent = ?1 AND lower(to_addr) = ?2 AND mail_id IS NULL AND status = 'sent' AND sent_at >= ?3 LIMIT 1").bind(g.agent, to, since30).first<{ sent_at: string }>();
-  if (prior) return json({ error: `already pitched ${to} on ${prior.sent_at.slice(0, 10)}; no follow-ups — if they reply, answer with mail reply` }, 409);
-  const count = async (since: string) => (await env.MAIL_DB.prepare("SELECT COUNT(*) AS n FROM outbound WHERE agent = ?1 AND mail_id IS NULL AND status = 'sent' AND sent_at >= ?2").bind(g.agent, since).first<{ n: number }>())?.n ?? 0;
+  if (prior) return json({ error: `already wrote to ${to} on ${prior.sent_at.slice(0, 10)}; no follow-ups — if they reply, answer with mail reply` }, 409);
+  const count = async (since: string) => (await env.MAIL_DB.prepare("SELECT COUNT(*) AS n FROM outbound WHERE agent = ?1 AND mail_id IS NULL AND status = 'sent' AND sent_at >= ?2 AND " + (isNote ? "kind = 'note'" : "kind IS NULL")).bind(g.agent, since).first<{ n: number }>())?.n ?? 0;
   const today = await count(now.slice(0, 10)), week = await count(new Date(Date.now() - 7 * 86400_000).toISOString());
-  if (today >= perDay) return json({ error: `pitch cap reached (${perDay}/day)` }, 429);
-  if (week >= perWeek) return json({ error: `pitch cap reached (${perWeek}/week)` }, 429);
+  if (today >= perDay) return json({ error: `${what} cap reached (${perDay}/day)` }, 429);
+  if (week >= perWeek) return json({ error: `${what} cap reached (${perWeek}/week)` }, 429);
   if (!env.EMAIL) return json({ error: 'sending is not configured' }, 503);
   const full = text + (s.footer ?? DEFAULT_FOOTER);
   const id = crypto.randomUUID();
   try {
     const res = await env.EMAIL.send({ from, to, subject, text: full, headers: { 'X-GenXLinked-Sender': `${g.agent} (AI agent)` } });
-    await env.MAIL_DB.prepare("INSERT INTO outbound (id, sent_at, from_addr, to_addr, subject, provider_message_id, status, agent) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'sent', ?7)").bind(id, now, from, to, subject, res.messageId ?? null, g.agent).run();
-    return json({ ok: true, id, from, to, subject, pitchesToday: today + 1, capPerDay: perDay, pitchesThisWeek: week + 1, capPerWeek: perWeek }, 202);
+    await env.MAIL_DB.prepare("INSERT INTO outbound (id, sent_at, from_addr, to_addr, subject, provider_message_id, status, agent, kind) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'sent', ?7, ?8)").bind(id, now, from, to, subject, res.messageId ?? null, g.agent, isNote ? 'note' : null).run();
+    return json({ ok: true, id, kind: what, from, to, subject, pitchesToday: today + 1, capPerDay: perDay, pitchesThisWeek: week + 1, capPerWeek: perWeek }, 202);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);
     await env.MAIL_DB.prepare("INSERT INTO outbound (id, sent_at, from_addr, to_addr, subject, status, error, agent) VALUES (?1, ?2, ?3, ?4, ?5, 'failed', ?6, ?7)").bind(id, now, from, to, subject, error, g.agent).run();
