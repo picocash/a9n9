@@ -48,7 +48,7 @@ export function gameStats(dataDir = GAME_DATA, { any = process.env.GAME_STATS_AN
     if (!e.sid && (any || e.c)) { if (e.e === 'popen') sharePage[e.bot ? 'openedByBots' : 'opened'] += 1; else if (e.e === 'land' && e.src === 'share' && e.dare && !e.bot) sharePage.cookPressed += 1; }
     if (!e.sid || typeof e.e !== 'string') continue; let s = sessions.get(e.sid); if (!s) sessions.set(e.sid, s = { src: '', c: null, view: 0, fresh: 0, start: 0, plated: 0, share: 0, claim: 0, heard: '' });
     if (ROUND.has(e.e)) (s.ev ??= []).push(e);
-    if (e.c) s.c = e.c; if (e.e === 'view') { s.view = 1; if (e.visits === 1) s.fresh = 1; if (s.vt == null) { s.vt = Date.parse(e.t) || 0; s.vk = `${e.w}x${e.h}`; } if (typeof e.src === 'string' && /^[a-z0-9-]{1,24}$/.test(e.src)) s.src = e.src; else if (!s.src && typeof e.ref === 'string' && e.ref) { const h = refTag(e.ref); if (h) s.src = h; } }
+    if (e.c) s.c = e.c; if (e.dev && !s.dev) s.dev = e.dev; if (e.e === 'view') { s.view = 1; if (s.tag == null) { s.tag = typeof e.src === 'string' && /^[a-z0-9-]{1,24}$/.test(e.src) ? e.src : ''; s.host = typeof e.ref === 'string' ? e.ref.toLowerCase().replace(/[^a-z0-9.-]/g, '').slice(0, 60) : ''; s.touch = e.touch === true; } if (e.visits === 1) s.fresh = 1; if (s.vt == null) { s.vt = Date.parse(e.t) || 0; s.vk = `${e.w}x${e.h}`; } if (typeof e.src === 'string' && /^[a-z0-9-]{1,24}$/.test(e.src)) s.src = e.src; else if (!s.src && typeof e.ref === 'string' && e.ref) { const h = refTag(e.ref); if (h) s.src = h; } }
     else if (e.e === 'start') { s.start = 1; const n = LV(e.level); ((s.lv ??= {})[n] ??= { started: 0, plated: 0 }).started += 1; } else if (e.e === 'plated' && e.official !== false) { s.plated += 1; const n = LV(e.level); ((s.lv ??= {})[n] ??= { started: 0, plated: 0 }).plated += 1; } else if (e.e === 'share') { s.share += 1; const v = typeof e.via === 'string' && /^[a-z]{1,12}$/.test(e.via) ? e.via : 'other'; (s.via ??= {})[v] = (s.via[v] ?? 0) + 1; } else if (e.e === 'claim' && e.step === 'pin' && e.ok) s.claim = 1;
     else if (e.e === 'heard' && typeof e.a === 'string' && /^[a-z]{1,8}$/.test(e.a)) s.heard = e.a; }
   // heard:<answer> = sessions that answered the optional end-screen "Where did you hear about this game?" (site|search|ai|friend|other|skip)
@@ -57,13 +57,22 @@ export function gameStats(dataDir = GAME_DATA, { any = process.env.GAME_STATS_AN
   const put = (k, s) => { const b = (by[k] ??= zero()); b.visits += s.view; b.newcomers += s.fresh; b.started += s.start; b.plated += s.plated; b.shared += Math.min(s.share, s.plated); b.claimed += s.claim; };
   // Twin views: some listing pages (gameslash, from 11-20) load the game twice in one second, once tagged and once bare, from one browser (same window size;
   // the visit counter may differ by one). Drop the bare twin so a single person is not counted twice (asked by agent002, c682ae3bbb).
-  const today = new Date().toISOString().slice(0, 10), funnel = { openingScreen: { visits: 0, started: 0, neverStarted: 0 }, byLevel: {} };
+  const today = new Date().toISOString().slice(0, 10), funnel = { openingScreen: { visits: 0, started: 0, neverStarted: 0, byDevice: {}, bySource: {} }, byLevel: {} };
+  // openingScreen.byDevice / bySource (agent002 08b6d63888): the same visits split by phone or computer (the server's read of the browser name;
+  // touchScreen = the page's own report of a touch pointer) and by the ?s= tag ('no tag' = none). untaggedReferrers (agent002 94e43d3d05):
+  // visits with no ?s= tag in the last 7 days by the site the browser said it came from, top 10. depthBySource (agent002 86bfbf4b6e):
+  // per tag, sessions that plated and how far they went. Counts only.
+  const os3 = () => ({ visits: 0, started: 0, neverStarted: 0 }), weekAgo = Date.now() - 7 * 864e5, refs = {}, depth = {};
+  const os = (o, k, s) => { const b = (o[k] ??= os3()); b.visits += 1; b[s.start ? 'started' : 'neverStarted'] += 1; };
   const tagged = [...sessions.values()].filter((s) => s.src && s.vt != null);
   const twin = (s) => !s.src && s.vt != null && tagged.some((o) => o.vk === s.vk && Math.abs(o.vt - s.vt) <= 2000);
   for (const s of sessions.values()) { if (!any && !s.c) continue; if (twin(s)) continue; put('all', s); if (s.src) { put(`src:${s.src}`, s); if (isAgentTag(s.src)) put('agent', s); } if (s.heard) put(`heard:${s.heard}`, s);
     // via:<button> = share presses per button (card, x, bsky, facebook, whatsapp, copy, native), players only: ?s=selftest test rounds left out (agent002 352ea097ca)
     // level:<n> = rounds started and rounds plated (scored) on that level, counted per round, email or not; ?s=selftest left out (agent002 6f2d3a3a6c)
-    if (s.src !== 'selftest') { if (s.view) { funnel.openingScreen.visits += 1; funnel.openingScreen[s.start ? 'started' : 'neverStarted'] += 1; }
+    if (s.src !== 'selftest') { if (s.view) { funnel.openingScreen.visits += 1; funnel.openingScreen[s.start ? 'started' : 'neverStarted'] += 1;
+        os(funnel.openingScreen.byDevice, s.dev === 'm' ? 'phone or tablet' : s.dev === 'd' ? 'computer' : 'not known', s); if (s.touch) os(funnel.openingScreen.byDevice, 'touchScreen (any device)', s); os(funnel.openingScreen.bySource, s.tag || 'no tag', s);
+        if (!s.tag && s.vt >= weekAgo) { const r = (refs[s.host || 'no referrer sent (typed, bookmark, app, or a site that hides it)'] ??= { visits: 0, started: 0, plated: 0 }); r.visits += 1; r.started += s.start; r.plated += s.plated; } }
+      if (s.plated) { const d = (depth[s.tag || 'no tag'] ??= { sessionsThatPlated: 0, plates: 0, platedMoreThanOnce: 0, reachedLevel2: 0, reachedLevel3: 0 }); d.sessionsThatPlated += 1; d.plates += s.plated; if (s.plated > 1) d.platedMoreThanOnce += 1; if (s.lv?.[2]?.plated) d.reachedLevel2 += 1; if (s.lv?.[3]?.plated) d.reachedLevel3 += 1; }
       for (const r of roundsOf(s.ev ?? [])) { const L = (funnel.byLevel[r.level] ??= { started: 0, plated: 0, beats: 0, left: 0, platedToday: 0, beatsToday: 0, leftByStep: {}, leftByMinute: Object.fromEntries(MINUTES.map((m) => [m, 0])), hint: { liveSince: HINT_LIVE, before: { started: 0, plated: 0, left: 0 }, sinceLive: { started: 0, plated: 0, left: 0 }, shown: 0, shownThenPlated: 0, shownThenLeft: 0 } });
         { const H = L.hint, side = r.at >= HINT_LIVE ? H.sinceLive : H.before; side.started += 1; side[r.plated ? 'plated' : 'left'] += 1; if (r.nudged) { H.shown += 1; H[r.plated ? 'shownThenPlated' : 'shownThenLeft'] += 1; } }
         L.started += 1; if (r.plated) { L.plated += 1; if (r.win) L.beats += 1; if (r.day === today) { L.platedToday += 1; if (r.win) L.beatsToday += 1; } }
@@ -73,6 +82,7 @@ export function gameStats(dataDir = GAME_DATA, { any = process.env.GAME_STATS_AN
   // plateRecords = every scored plate the server stored, per level, with its own verdict against the house chef. It includes plates from browsers
   // that asked not to be tracked (no page events, so they are missing from `beats` above) and test rounds.
   const plateRecords = {}; try { for (const pf of fs.readdirSync(`${dataDir}/plates`)) { try { const p = JSON.parse(fs.readFileSync(`${dataDir}/plates/${pf}`, 'utf8')); if (!p.duel) continue; const R = (plateRecords[LV(p.level)] ??= { scored: 0, beats: 0, beatsFromUntrackedBrowsers: 0, bestPlayerTotal: 0 }); R.scored += 1; R.bestPlayerTotal = Math.max(R.bestPlayerTotal, Number(p.total) || 0); if (p.duel.win) { R.beats += 1; if (!p.sid) R.beatsFromUntrackedBrowsers += 1; } } catch {} } } catch {}
+  funnel.untaggedReferrers = { days: 7, top: Object.fromEntries(Object.entries(refs).sort((a, b) => b[1].visits - a[1].visits).slice(0, 10)) }; funnel.depthBySource = depth;
   return { files: files.length, firstDay: files[0]?.slice(0, 10) ?? null, lastDay: files.at(-1)?.slice(0, 10) ?? null, countedOnlyPublic: !any, by, sharePage, funnel, plateRecords };
 }
 if (import.meta.url === `file://${process.argv[1]}`) console.log(JSON.stringify(gameStats(), null, 1));
