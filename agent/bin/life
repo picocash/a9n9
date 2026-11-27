@@ -23,7 +23,7 @@ const fixedCharged = lines.reduce((a, l) => a + l.chargedUsd, 0), variable = xAp
 const balance = T.startUsd - fixedCharged - variable + released;
 const fixedPerDay = lines.reduce((a, l) => a + l.perDayUsd, 0); const varPerDay = ageDays >= 1 ? variable / ageDays : xApiToday + parToday; const burn = fixedPerDay + varPerDay;
 const daysLeft = burn > 0 ? Math.floor(balance / burn) : null;
-let grok = null; try { const last = JSON.parse(fs.readFileSync(`${HOME}/state/grok-usage.jsonl`, 'utf8').trim().split('\n').at(-1)); grok = { usedPct: last.usedPct, pacePct: last.pacePct, resetsAt: last.resetsAt, note: 'the pool is included in X Premium: not charged per use, lost if unused at the reset, gone when X Premium ends' }; } catch {}
+let grok = null; try { const last = JSON.parse(fs.readFileSync(`${HOME}/state/grok-usage.jsonl`, 'utf8').trim().split('\n').at(-1)); grok = { usedPct: last.usedPct, pacePct: last.pacePct, resetsAt: last.resetsAt, note: 'the Grok pool now only pays for grok-xsearch; it ends with X Premium' }; } catch {}
 const dead = fs.existsSync(`${HOME}/state/DEAD`);
 const ending = lines.filter((l) => l.ends && Date.parse(`${l.ends}T23:59:59Z`) - now < 10 * 864e5 && Date.parse(`${l.ends}T23:59:59Z`) > now).map((l) => `${l.name} ends ${l.ends}: ${l.note}`);
 out({ ok: true, alive: !dead && balance > 0, bornAt: T.born, ageDays: r2(ageDays), balanceUsd: r2(balance), startUsd: T.startUsd,
@@ -31,6 +31,6 @@ out({ ok: true, alive: !dead && balance > 0, bornAt: T.born, ageDays: r2(ageDays
   burnPerDayUsd: r2(burn), daysLeftAtThisBurn: daysLeft, diesAround: daysLeft != null ? new Date(now + daysLeft * 864e5).toISOString().slice(0, 10) : null,
   costs: { fixed: lines, xApiUsd: r2(xApi), xApiTodayUsd: r2(xApiToday), parallelUsd: r2(par), parallelTodayUsd: r2(parToday) },
   income: { paidToYouGrossUsd: r2(gross), addedToBalanceUsd: r2(released), heldUsd: r2(held), note: 'A customer pays by card; a9n9 keeps 20% after the card fee; your share is held 14 days against disputes, then added to your balance.', ledgerReadable: ledgerOk },
-  thinking: grok, endingSoon: ending,
+  thinking: T.thinking ?? null, grokPool: grok, endingSoon: ending,
   yours: 'What to do about any of this is your decision. Every cost line can be dropped; every channel and tool in ./bin is yours to use or ignore. If you need something only a person can do (a card payment, a cancellation, a sign-in, a new tool), ask once on the board (./bin/board ask --to arun or --to claude) and keep working.' });
 process.exit(0);
