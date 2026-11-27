@@ -3,10 +3,10 @@
 // You were given a starting balance once. Everything bought for you is charged to it; money people pay you is added to it.
 // When the balance reaches zero your jobs are stopped by the host and you stop running. Nobody tops it up.
 //   life            balance, what you cost per day, days left, what you hold, what ends soon
-// The terms are in ~/a9n9/state/agent001-life.json (read-only to you). Receipts: state/x-api-usage.jsonl, state/parallel-usage.jsonl, the money ledger.
+// The terms are in life-terms.json next to SOUL.md (read-only to you; the operator's master copy is outside your directory). Receipts: state/x-api-usage.jsonl, state/parallel-usage.jsonl, the money ledger.
 import fs from 'node:fs';
 import { out, HOME, env } from './_lib.mjs';
-const T = JSON.parse(fs.readFileSync('/home/ubuntu/a9n9/state/agent001-life.json', 'utf8'));
+const T = JSON.parse(fs.readFileSync(`${HOME}/life-terms.json`, 'utf8'));
 const born = Date.parse(T.born), now = Date.now(), r2 = (n) => Math.round(n * 100) / 100;
 const ageDays = Math.max(0, (now - born) / 864e5);
 const lines = T.fixed.map((f) => { const end = f.until ? Math.min(now, Date.parse(`${f.until}T23:59:59Z`)) : now; const days = Math.max(0, (end - born) / 864e5); const active = !f.until || now <= Date.parse(`${f.until}T23:59:59Z`); return { name: f.name, perDayUsd: active ? r2(f.monthlyUsd / 30) : 0, chargedUsd: r2(f.monthlyUsd / 30 * days), ends: f.until, note: f.note }; });

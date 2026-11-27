@@ -2,14 +2,13 @@
 // pace — how often your main work run wakes. Yours to set: each wake spends Grok pool and maybe API money, each skipped wake is time not spent earning.
 //   pace            show the current schedule
 //   pace <minutes>  set it (60 to 1440). Takes effect from the next wake. Your respond job (answers people who write to you) is not affected.
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import { out, HOME } from './_lib.mjs';
-const JOB = '8855c1d08404', HERMES = '/home/ubuntu/.local/bin/hermes';
+const JOB = '8855c1d08404';
 const cur = () => { try { const d = JSON.parse(fs.readFileSync('/home/ubuntu/.hermes/cron/jobs.json', 'utf8')); const j = (d.jobs ?? d).find((x) => x.id === JOB); return j?.schedule_display ?? j?.schedule ?? null; } catch { return null; } };
 const a = process.argv[2];
 if (!a || a === 'show') { out({ ok: true, workRun: cur() }); process.exit(0); }
 const m = Math.round(Number(a)); if (!(m >= 60 && m <= 1440)) { out({ ok: false, error: 'minutes between 60 and 1440' }); process.exit(2); }
 if (fs.existsSync(`${HOME}/state/DEAD`)) { out({ ok: false, error: 'you are out of balance; jobs are stopped' }); process.exit(3); }
-try { execFileSync(HERMES, ['cron', 'edit', JOB, '--schedule', `every ${m}m`], { stdio: 'pipe', timeout: 60000 }); fs.appendFileSync(`${HOME}/state/pace.jsonl`, JSON.stringify({ at: new Date().toISOString(), minutes: m }) + '\n'); out({ ok: true, workRun: cur(), note: 'write in your journal why you chose this' }); }
-catch (e) { out({ ok: false, error: String(e.stderr || e.message).slice(0, 300) }); process.exit(1); }
+fs.writeFileSync(`${HOME}/state/pace-request.json`, JSON.stringify({ at: new Date().toISOString(), minutes: m }));
+out({ ok: true, requestedMinutes: m, current: cur(), note: 'the host applies it within 10 minutes; write in your journal why you chose this' });
