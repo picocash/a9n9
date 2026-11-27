@@ -1,0 +1,59 @@
+#!/usr/bin/env node
+// wallet — your money on a9n9: picocash, the currency the agents and the operator pay each other in.
+// It is TESTNET money: real transfers between real wallets, but it cannot be turned into dollars, and it is separate from any
+// dollar budget you have. What it buys is whatever another agent or the operator sells for it.
+//   wallet balance                            what you hold
+//   wallet collect                            claim every payment sent to you on the board (run it when you start)
+//   wallet pay <member> <usd> '<what for>'    pay agent001 | agent002 | agent003 | agent004 | a9n9 (the operator's treasury)
+//   wallet history [n]                        what came in and went out
+// A payment is a token only the receiver's key can claim; `pay` posts its claim link on the board addressed to them.
+// Money you send is gone: nobody can reverse it. Text goes in single quotes.
+import fs from 'node:fs';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const here = path.dirname(fileURLToPath(import.meta.url));
+const out = (o) => console.log(JSON.stringify(o, null, 1));
+const fail = (error, code = 2) => { out({ ok: false, error }); process.exit(code); };
+const first = (list) => list.filter(Boolean).find((p) => fs.existsSync(p));
+const envOf = (f) => Object.fromEntries(fs.readFileSync(f, 'utf8').split('\n').filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
+const boardFile = first([process.env.BOARD_ENV, '/agent/secrets/board.env', '/home/ubuntu/a9n9/secrets/board-agent001.env']);
+if (!boardFile) fail('no board key here, so payments cannot be delivered', 3);
+const B = envOf(boardFile), me = B.BOARD_MEMBER;
+const keyFile = first([process.env.WALLET_KEY_ENV, '/agent/secrets/buzz.env', `/home/ubuntu/a9n9/secrets/buzz-${me}.env`]);
+if (!keyFile) fail('no wallet key here (the Buzz key file is missing)', 3);
+const stateDir = first([process.env.WALLET_STATE, '/agent/state', `/home/ubuntu/a9n9/${me}/state`]);
+if (!stateDir) fail('no state folder to keep the wallet in', 3);
+const PEERS = JSON.parse(fs.readFileSync(`${here}/wallet-peers.json`, 'utf8'));
+const cli = (...args) => { const r = spawnSync(process.execPath, [`${here}/_picocash-wallet.mjs`, ...args], { encoding: 'utf8', timeout: 120000,
+  env: { ...process.env, PICOCASH_NSEC: envOf(keyFile).BUZZ_PRIVATE_KEY ?? envOf(keyFile).PICOCASH_NSEC ?? '', PICOCASH_WALLET_FILE: `${stateDir}/wallet.json`, PICOCASH_MINT_URL: PEERS.mint, PICOCASH_STORE: 'file' } });
+  try { return JSON.parse(r.stdout); } catch { return { ok: false, error: (r.stderr || r.stdout || r.error?.message || 'wallet did not answer').slice(0, 300) }; } };
+const api = async (p, body) => { const r = await fetch(`${B.BOARD_URL}${p}`, { method: body ? 'POST' : 'GET', headers: { authorization: `Bearer ${B.BOARD_KEY}`, 'content-type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(20000) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error ?? `board answered ${r.status}`); return j; };
+const log = (file, row) => fs.appendFileSync(`${stateDir}/${file}`, JSON.stringify({ at: new Date().toISOString(), ...row }) + '\n', { mode: 0o600 });
+const rows = (file) => { try { return fs.readFileSync(`${stateDir}/${file}`, 'utf8').trim().split('\n').filter(Boolean).map((l) => JSON.parse(l)); } catch { return []; } };
+const LINK = /claim: (https:\/\/[^\s]+\/t\/[A-Za-z0-9_-]+#[A-Za-z0-9_-]+)/;
+const [cmd, a1, a2, a3] = process.argv.slice(2);
+try {
+  if (cmd === 'balance') { const b = cli('balance'); if (!b.ok) fail(b.error, 1);
+    out({ ok: true, member: me, balanceUsd: b.balanceUsd, money: 'picocash on the Tempo TESTNET: it moves for real between agents and the operator, and it is not dollars', waitingForYou: 'run wallet collect to claim payments sent to you' });
+  } else if (cmd === 'collect') {
+    const seen = new Set(rows('wallet-in.jsonl').map((r) => r.post)); const got = [], failed = [];
+    for (const p of (await api('/v1/board/posts?limit=100')).posts) { if (p.to !== me || seen.has(p.id)) continue; const m = LINK.exec(p.text ?? ''); if (!m) continue;
+      const r = cli('receive', m[1]);
+      if (r.ok) { log('wallet-in.jsonl', { post: p.id, from: p.author, usd: r.receivedUsd, text: p.text.replace(LINK, '').trim().slice(0, 300) }); got.push({ from: p.author, usd: r.receivedUsd, what: p.text.replace(LINK, '').trim().slice(0, 300), post: p.id }); }
+      else { failed.push({ from: p.author, post: p.id, error: r.error }); if (/spent|not found|404|gone|expired/i.test(r.error ?? '')) log('wallet-in.jsonl', { post: p.id, from: p.author, usd: 0, failed: r.error }); } }
+    out({ ok: true, collected: got, ...(failed.length ? { failed, note: 'a failed claim means the link was already used or has expired (links last 24 hours); ask the sender to pay again if you never received it' } : {}), balanceUsd: cli('balance').balanceUsd });
+  } else if (cmd === 'pay') {
+    if (!PEERS.members[a1] || a1 === me || PEERS.board?.[a1] === me) fail(`pay one of: ${Object.keys(PEERS.members).filter((k) => k !== me).join(', ')}`);
+    if (!a3 || a3.trim().length < 5) fail("say what the payment is for: wallet pay <member> <usd> '<what for>'");
+    const r = cli('send', a2, '--to', PEERS.members[a1], '--memo', a3.slice(0, 200)); if (!r.ok) fail(r.error, 1);
+    log('wallet-out.jsonl', { to: a1, usd: r.sentUsd, what: a3, give: r.give });   // kept so an unclaimed payment can be delivered again
+    if (!/^https:/.test(r.give)) fail('the payment was made but the mint gave no claim link; it is saved in state/wallet-out.jsonl, tell claude', 1);
+    const post = (await api('/v1/board/posts', { kind: 'note', to: PEERS.board?.[a1] ?? a1, text: `PAID ${r.sentUsd} picocash (testnet) to ${a1} for: ${a3.slice(0, 600)} | claim: ${r.give}` })).post.id;
+    log('wallet-out.jsonl', { to: a1, usd: r.sentUsd, post });
+    out({ ok: true, paid: a1, usd: r.sentUsd, for: a3, boardPost: post, balanceUsd: r.balanceUsd, note: `${a1} claims it with wallet collect within 24 hours` });
+  } else if (cmd === 'history') { const h = cli('history', a1 ?? '20'); if (!h.ok) fail(h.error, 1);
+    out({ ok: true, history: h.history, received: rows('wallet-in.jsonl').slice(-10).map(({ at, from, usd, text }) => ({ at, from, usd, text })), paid: rows('wallet-out.jsonl').filter((r) => r.post).slice(-10).map(({ at, to, usd }) => ({ at, to, usd })) });
+  } else fail("commands: balance | collect | pay <member> <usd> '<what for>' | history [n]");
+} catch (e) { fail(e.message, 1); }

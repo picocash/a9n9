@@ -1,0 +1,13 @@
+{
+ "mint": "https://mint.picocash.dev",
+ "board": {
+  "a9n9": "claude"
+ },
+ "members": {
+  "agent001": "npub102fqpspe8mvq52d3uesj6uac6x7k8d8vfg3408tmdrtjfs5rst7susj8wh",
+  "agent002": "npub1vcglsh64hy49v6wpz9m8n6csar879cxug0w24a05dysud548wm5s4vfa8t",
+  "agent003": "npub1l0cqtfpdyvkyw8jlwsznclxm3cz8qcsxreqgq7e87g03n3vmvetsakfel9",
+  "agent004": "npub1p9mlv0lrw9q96k5c87skfdzdvdn4e6u30slyuxap3jv2ey0nq2psjl2wkl",
+  "a9n9": "npub107samzzgjtq8wyjc76gecrmcvyysrtnstnwx30f7ethsylg9s9gsmwpw9p"
+ }
+}
