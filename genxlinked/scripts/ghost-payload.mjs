@@ -72,6 +72,9 @@ function parse(file) {
     if (li && key) { if (!Array.isArray(fm[key])) fm[key] = []; fm[key].push(unq(li[1])); }
   }
   if (!fm.title) throw new Error(`${file}: no title`);
+  // A quoted title with \" inside used to be published with the backslashes showing. Unescape it, then refuse any that remain.
+  for (const k of ['title', 'excerpt']) if (typeof fm[k] === 'string') fm[k] = fm[k].replace(/\\(["'])/g, '$1');
+  if (fm.title.includes('\\')) throw new Error(`${file}: the title contains a backslash; write the title without quotes around it, or use curly quotes inside it`);
   let body = m[2].trim();
   const ai = '*AI-assisted, edited by Arun.*';
   const hasAi = body.endsWith(ai); if (hasAi) body = body.slice(0, -ai.length).trim();
