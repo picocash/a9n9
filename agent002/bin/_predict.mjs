@@ -15,9 +15,9 @@ export const METRICS = {
   'game.plated': 'rounds finished and scored by visitors from your links, total so far (subject = agent or src:<tag>)',
   'game.shared': 'finished rounds whose player pressed a share button, from your links, total so far (subject = agent or src:<tag>)',
 };
-export const LEDGER = `${HOME}/predictions`, INBOX = `${STATE}/predictions/inbox`;
+export const LEDGER = `${HOME}/predictions`, INBOX = `${STATE}/predictions/inbox`, VOIDS = `${STATE}/predictions/void`;
 const readDir = (d) => (fs.existsSync(d) ? fs.readdirSync(d).filter((f) => f.endsWith('.json')).map((f) => { try { return JSON.parse(fs.readFileSync(`${d}/${f}`, 'utf8')); } catch { return null; } }).filter(Boolean) : []);
-export const ledger = () => ({ open: readDir(`${LEDGER}/open`), settled: readDir(`${LEDGER}/settled`), rejected: readDir(`${LEDGER}/rejected`), queued: readDir(INBOX) });
+export const ledger = () => ({ open: readDir(`${LEDGER}/open`), settled: readDir(`${LEDGER}/settled`), rejected: readDir(`${LEDGER}/rejected`), queued: readDir(INBOX), voided: readDir(`${LEDGER}/voided`), voidRefused: readDir(`${LEDGER}/void-refused`), voidQueued: readDir(VOIDS) });
 // has the agent written down what it expects for this subject (any metric of this family) in the last `days` days?
 export function predictedRecently(family, subject, days = 7) {
   const since = Date.now() - days * 864e5; const l = ledger();
