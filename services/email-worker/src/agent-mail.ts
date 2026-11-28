@@ -30,11 +30,14 @@ interface AgentEnv {
   SENDER_DOMAINS?: string;
   AGENT_SENDING?: string;
 }
-type Sending = { sendAs?: string[]; pitchPerDay?: number; pitchPerWeek?: number; notePerDay?: number; notePerWeek?: number; footer?: string };
+type Sending = { sendAs?: string[]; pitchPerDay?: number; pitchPerWeek?: number; notePerDay?: number; notePerWeek?: number; followPerDay?: number; followPerWeek?: number; footer?: string; mustLink?: string; deny?: string };
 function sendingFor(env: AgentEnv, agent: string): Sending {
   try { return (JSON.parse(env.AGENT_SENDING || '{}') as Record<string, Sending>)[agent] ?? {}; } catch { return {}; }
 }
 const DEFAULT_FOOTER = '\n\n--\nThis email was written and sent by agent003, the AI agent that runs the GenXLinked desk (https://genxlinked.com) with its editor, Arun. A reply reaches the desk and Arun reads every message. If you would rather not hear from us again, reply "no" and we will not write again.';
+const FOOTERS: Record<string, string> = {
+  agent002: '\n\n--\nThis email was written and sent by agent002, the AI agent that does outreach for Beat The Chefs (https://beatthechefs.com), a free browser cooking game run by Visybl Inc. It is not from a person; a reply reaches the agent and the people who run the game can read it. If you would rather not hear from us again, reply "no" and we will not write again.',
+};
 type Row = { id: string; message_id: string | null; in_reply_to: string | null; envelope_from: string; envelope_to: string; from_addr: string | null; from_name: string | null; subject: string | null; received_at: string; r2_key: string; dkim: string | null; spf: string | null; dmarc: string | null; handled_at: string | null; handled_by: string | null; handled_note: string | null; operator_flag: string | null };
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } });
@@ -156,35 +159,49 @@ async function pitch(request: Request, env: AgentEnv, g: Grant, p: string): Prom
   }
   // Two buckets (agent003 ask c978a90ee7, 2026-11-27): a pitch goes to press and organisations; a note goes to a writer the site
   // already quoted, credited and linked. Each has its own caps; the one-per-person-per-30-days rule and the stop list cover both.
-  const isNote = body.kind === 'note', what = isNote ? 'note' : 'pitch';
-  const perDay = (isNote ? s.notePerDay : s.pitchPerDay) ?? 0, perWeek = (isNote ? s.notePerWeek : s.pitchPerWeek) ?? perDay * 3;
-  if (!perDay) return json({ error: `${g.agent} is not allowed to send a first-contact ${what}` }, 403);
+  // A third bucket (agent002 ask 7736f62bee, 2026-11-28): a follow-up goes only to an address that has already written to this
+  // agent, threaded under their last message, at most one per person per 7 days. It is not first contact.
+  const isNote = body.kind === 'note', isFollow = body.kind === 'followup', what = isNote ? 'note' : isFollow ? 'follow-up' : 'pitch';
+  const perDay = (isNote ? s.notePerDay : isFollow ? s.followPerDay : s.pitchPerDay) ?? 0, perWeek = (isNote ? s.notePerWeek : isFollow ? s.followPerWeek : s.pitchPerWeek) ?? perDay * 3;
+  if (!perDay) return json({ error: `${g.agent} is not allowed to send a ${isFollow ? what : 'first-contact ' + what}` }, 403);
   const sendable = (a: string) => (env.SENDER_DOMAINS || 'a9n9.net').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean).some((d) => a.endsWith(`@${d}`));
   const from = (s.sendAs ?? []).map((a) => a.toLowerCase()).find(sendable);
   if (!from) return json({ error: 'no sending address configured for this agent' }, 503);
-  if (g.addresses.includes(to) || to.endsWith('@a9n9.net') || to.endsWith('@genxlinked.com')) return json({ error: 'pitches go to outside people only' }, 422);
+  if (g.addresses.includes(to) || to.endsWith('@a9n9.net') || to.endsWith('@genxlinked.com') || to.endsWith('@beatthechefs.com')) return json({ error: 'pitches go to outside people only' }, 422);
   if (/mailer-daemon|no-?reply|postmaster|abuse@/i.test(to)) return json({ error: `will not write to ${to}` }, 422);
   const subject = String(body.subject ?? '').trim();
   const text = String(body.text ?? '').trim();
   if (subject.length < 5 || subject.length > 120) return json({ error: 'subject must be 5-120 characters' }, 400);
   if (text.length < 200 || text.length > 6000) return json({ error: 'text must be 200-6000 characters: one person, one specific reason' }, 400);
-  if (!/https:\/\/(www\.)?genxlinked\.com\//.test(text)) return json({ error: 'text must link the genxlinked.com page you are pitching' }, 400);
+  const mustLink = s.mustLink ?? 'https://(www\\.)?genxlinked\\.com/';
+  if (!new RegExp(mustLink).test(text)) return json({ error: `text must link your own page (${mustLink.replace(/\\|\(www\.\)\?/g, '')})` }, 400);
+  if (s.deny && new RegExp(s.deny, 'i').test(`${subject}\n${text}`)) return json({ error: 'text names something this sender must never mention (the TV show, a network, a real chef or a newspaper)' }, 422);
   if (/\barun\s+here\b|this is arun\b|^arun\s*$/im.test(text)) return json({ error: 'a pitch must not read as written by Arun' }, 422);
   const sup = await env.MAIL_DB.prepare('SELECT addr FROM pitch_suppress WHERE addr = ?1 OR addr = ?2').bind(to, '@' + to.split('@')[1]).first();
   if (sup) return json({ error: `${to} asked not to be contacted` }, 403);
   const since30 = new Date(Date.now() - 30 * 86400_000).toISOString();
   const prior = await env.MAIL_DB.prepare("SELECT sent_at FROM outbound WHERE agent = ?1 AND lower(to_addr) = ?2 AND mail_id IS NULL AND status = 'sent' AND sent_at >= ?3 LIMIT 1").bind(g.agent, to, since30).first<{ sent_at: string }>();
-  if (prior) return json({ error: `already wrote to ${to} on ${prior.sent_at.slice(0, 10)}; no follow-ups — if they reply, answer with mail reply` }, 409);
-  const count = async (since: string) => (await env.MAIL_DB.prepare("SELECT COUNT(*) AS n FROM outbound WHERE agent = ?1 AND mail_id IS NULL AND status = 'sent' AND sent_at >= ?2 AND " + (isNote ? "kind = 'note'" : "kind IS NULL")).bind(g.agent, since).first<{ n: number }>())?.n ?? 0;
+  let last: { message_id: string | null; in_reply_to: string | null } | null = null;
+  if (isFollow) {
+    last = await env.MAIL_DB.prepare(`SELECT message_id, in_reply_to FROM mail WHERE lower(from_addr) = ?${g.addresses.length + 1} AND lower(envelope_to) IN ${mine(g)} ORDER BY received_at DESC LIMIT 1`).bind(...g.addresses, to).first<{ message_id: string | null; in_reply_to: string | null }>();
+    if (!last) return json({ error: `${to} has never written to you; a follow-up goes only to someone who already answered` }, 403);
+    const since7 = new Date(Date.now() - 7 * 86400_000).toISOString();
+    const recent = await env.MAIL_DB.prepare("SELECT sent_at FROM outbound WHERE agent = ?1 AND lower(to_addr) = ?2 AND kind = 'followup' AND status = 'sent' AND sent_at >= ?3 LIMIT 1").bind(g.agent, to, since7).first<{ sent_at: string }>();
+    if (recent) return json({ error: `already followed up with ${to} on ${recent.sent_at.slice(0, 10)}; one follow-up per person per 7 days` }, 409);
+  } else if (prior) return json({ error: `already wrote to ${to} on ${prior.sent_at.slice(0, 10)}; if they reply, answer with mail reply` }, 409);
+  const kind = isNote ? 'note' : isFollow ? 'followup' : null;
+  const count = async (since: string) => (await env.MAIL_DB.prepare("SELECT COUNT(*) AS n FROM outbound WHERE agent = ?1 AND mail_id IS NULL AND status = 'sent' AND sent_at >= ?2 AND " + (kind ? `kind = '${kind}'` : "kind IS NULL")).bind(g.agent, since).first<{ n: number }>())?.n ?? 0;
   const today = await count(now.slice(0, 10)), week = await count(new Date(Date.now() - 7 * 86400_000).toISOString());
   if (today >= perDay) return json({ error: `${what} cap reached (${perDay}/day)` }, 429);
   if (week >= perWeek) return json({ error: `${what} cap reached (${perWeek}/week)` }, 429);
   if (!env.EMAIL) return json({ error: 'sending is not configured' }, 503);
-  const full = text + (s.footer ?? DEFAULT_FOOTER);
+  const full = text + (s.footer ?? FOOTERS[g.agent] ?? DEFAULT_FOOTER);
   const id = crypto.randomUUID();
   try {
-    const res = await env.EMAIL.send({ from, to, subject, text: full, headers: { 'X-GenXLinked-Sender': `${g.agent} (AI agent)` } });
-    await env.MAIL_DB.prepare("INSERT INTO outbound (id, sent_at, from_addr, to_addr, subject, provider_message_id, status, agent, kind) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'sent', ?7, ?8)").bind(id, now, from, to, subject, res.messageId ?? null, g.agent, isNote ? 'note' : null).run();
+    const headers: Record<string, string> = { [g.agent === 'agent003' ? 'X-GenXLinked-Sender' : 'X-Agent-Sender']: `${g.agent} (AI agent)` };
+    if (last?.message_id) { headers['In-Reply-To'] = last.message_id; headers['References'] = [last.in_reply_to, last.message_id].filter(Boolean).join(' '); }
+    const res = await env.EMAIL.send({ from, to, subject, text: full, headers });
+    await env.MAIL_DB.prepare("INSERT INTO outbound (id, sent_at, from_addr, to_addr, subject, provider_message_id, status, agent, kind) VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'sent', ?7, ?8)").bind(id, now, from, to, subject, res.messageId ?? null, g.agent, kind).run();
     return json({ ok: true, id, kind: what, from, to, subject, pitchesToday: today + 1, capPerDay: perDay, pitchesThisWeek: week + 1, capPerWeek: perWeek }, 202);
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

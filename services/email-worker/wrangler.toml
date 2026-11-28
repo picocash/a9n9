@@ -34,7 +34,7 @@ INBOX_WEBHOOK_URL = "https://inbox.a9n9.net/hooks/email"
 # Domains this Worker may send from (comma-separated); never anything else.
 SENDER_DOMAINS = "a9n9.net,beatthechefs.com,genxlinked.com"
 # Per-agent sending: reply-from addresses and first-contact pitch caps (see src/agent-mail.ts).
-AGENT_SENDING = '{"agent003": {"sendAs": ["stories@genxlinked.com"], "pitchPerDay": 5, "pitchPerWeek": 20, "notePerDay": 2, "notePerWeek": 10}}'
+AGENT_SENDING = '{"agent003": {"sendAs": ["stories@genxlinked.com"], "pitchPerDay": 5, "pitchPerWeek": 20, "notePerDay": 2, "notePerWeek": 10}, "agent002": {"sendAs": ["privacy@beatthechefs.com", "agent002@a9n9.net"], "pitchPerDay": 2, "pitchPerWeek": 6, "followPerDay": 3, "followPerWeek": 10, "mustLink": "https://beatthechefs\\.com", "deny": "\\b(GSN|Game Show Network|Food Network|New York Times|NYT|Bobby Flay)\\b"}}'
 # Optional narrower allow-list of exact addresses (comma-separated). Empty = any on SENDER_DOMAINS.
 ALLOWED_SENDERS = ""
 # What the probe checks (2xx within 10 s).
